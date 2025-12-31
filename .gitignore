@@ -17,3 +17,15 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Additional KMP ignores
+*.hprof
+*.log
+.cxx/
+.externalNativeBuild/
+
+# Secrets (if you add any)
+*.keystore
+*.jks
+secrets.properties
+api_keys.properties
