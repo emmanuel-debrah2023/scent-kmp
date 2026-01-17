@@ -1,3 +1,7 @@
+import org.gradle.api.tasks.bundling.Tar
+import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.file.DuplicatesStrategy
+
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
@@ -20,4 +24,12 @@ dependencies {
     implementation(libs.ktor.serverNetty)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
+}
+
+tasks.withType<Tar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType<Zip> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
