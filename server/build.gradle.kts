@@ -22,6 +22,11 @@ dependencies {
     implementation(libs.logback)
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.dao)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.kotlin.datetime)
+    implementation(libs.postgresql)
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
 }
