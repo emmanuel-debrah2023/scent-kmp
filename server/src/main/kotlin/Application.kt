@@ -1,11 +1,11 @@
+package org.scent.project
+
 import data.initDatabase
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.scent.project.Greeting
-import org.scent.project.SERVER_PORT
 
 fun main() {
     initDatabase()

@@ -21,6 +21,7 @@ koin = "4.1.1"
 coil = "3.3.0"
 postgresql = "42.7.10"
 exposedKotlinDatetime = "1.0.0"
+dotenv = "6.4.1"
 
 [libraries]
 # Kotlin
@@ -71,6 +72,7 @@ exposed-kotlin-datetime = { module = "org.jetbrains.exposed:exposed-kotlin-datet
 
 # Database Drivers
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+dotenv-kotlin = { module = "io.github.cdimascio:dotenv-kotlin", version.ref = "dotenv" }
 
 # Testing
 androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }
