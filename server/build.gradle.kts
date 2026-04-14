@@ -5,6 +5,7 @@ import org.gradle.api.file.DuplicatesStrategy
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.kotlinSerialization)
     application
 }
 
@@ -20,15 +21,35 @@ application {
 dependencies {
     implementation(projects.shared)
     implementation(libs.logback)
-    implementation(libs.ktor.serverCore)
-    implementation(libs.ktor.serverNetty)
+    
+    // Ktor Server
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json.server)
+    
+    // Database
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.kotlin.datetime)
     implementation(libs.postgresql)
     implementation(libs.dotenv.kotlin)
-    testImplementation(libs.ktor.serverTestHost)
+    
+    // Auth Utils
+    implementation(libs.jbcrypt)
+    implementation(libs.java.jwt)
+    implementation(libs.google.auth)
+    implementation(libs.google.api.client)
+    implementation(libs.google.api.client.gson)
+    implementation(libs.jwks.rsa)
+    
+    // Utils
+    implementation(libs.kotlinx.datetime)
+    
+    testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.testJunit)
 }
 

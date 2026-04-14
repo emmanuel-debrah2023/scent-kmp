@@ -1,29 +1,20 @@
 package data
 
-import data.schema.DecantsTable
-import data.schema.FollowsTable
-import data.schema.FragranceMediaTable
-import data.schema.FragranceNotesTable
-import data.schema.FragrancesTable
-import data.schema.MediaItemsTable
-import data.schema.MediaLikesTable
-import data.schema.OrdersTable
-import data.schema.ReviewsTable
-import data.schema.UserFragranceCollectionTable
-import data.schema.UsersTable
+import data.schema.*
 import io.github.cdimascio.dotenv.dotenv
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.SchemaUtils
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 
 fun initDatabase() {
     val dotenv = dotenv {
         ignoreIfMissing = true
     }
 
-    val dbUrl = System.getenv("DB_URL") ?: dotenv["DB_URL"] ?: "DB_URL"
-    val dbUser = System.getenv("DB_USER") ?: dotenv["DB_USER"] ?: "DB_USER"
-    val dbPassword = System.getenv("DB_PASSWORD") ?: dotenv["DB_PASSWORD"] ?: "DB_PASSWORD"
+    // Following the application.conf structure suggested by user
+    val dbUrl = System.getenv("DATABASE_URL") ?: dotenv["DATABASE_URL"] ?: "jdbc:postgresql://localhost:5432/scent"
+    val dbUser = System.getenv("DATABASE_USER") ?: dotenv["DATABASE_USER"] ?: "postgres"
+    val dbPassword = System.getenv("DATABASE_PASSWORD") ?: dotenv["DATABASE_PASSWORD"] ?: "postgres"
 
     Database.connect(
         url = dbUrl,
