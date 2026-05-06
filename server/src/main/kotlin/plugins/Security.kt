@@ -41,12 +41,12 @@ fun Application.configureSecurity() {
     }
 }
 
-fun Application.generateToken(userId: Int): String {
-    val config = environment.config
+fun generateToken(userId: Int, application: Application): String {
+    val config = application.environment.config
     val jwtSecret = config.propertyOrNull("jwt.secret")?.getString() ?: System.getenv("JWT_SECRET") ?: "secret"
     val jwtIssuer = config.propertyOrNull("jwt.issuer")?.getString() ?: "fragrances-app"
     val jwtAudience = config.propertyOrNull("jwt.audience")?.getString() ?: "fragrances-users"
-    
+
     return JWT.create()
         .withAudience(jwtAudience)
         .withIssuer(jwtIssuer)

@@ -58,7 +58,7 @@ fun Route.authRoutes() {
                 }.value
             }
             
-            val token = generateToken(userId)
+            val token = generateToken(userId, call.application)
             call.respond(HttpStatusCode.Created, AuthResponse(token, userId, request.email, request.displayName))
         }
         
@@ -87,7 +87,7 @@ fun Route.authRoutes() {
                 return@post
             }
             
-            val token = generateToken(user.id)
+            val token = generateToken(user.id, call.application)
             call.respond(HttpStatusCode.OK, AuthResponse(token, user.id, user.email, user.displayName))
         }
 
@@ -130,7 +130,7 @@ fun Route.authRoutes() {
                 }.value
             }
 
-            val token = generateToken(userId)
+            val token = generateToken(userId, call.application)
             call.respond(HttpStatusCode.OK, AuthResponse(token, userId, email, name))
         }
 
@@ -185,7 +185,7 @@ fun Route.authRoutes() {
                 }.value
             }
 
-            val token = generateToken(userId)
+            val token = generateToken(userId, call.application)
             call.respond(HttpStatusCode.OK, AuthResponse(token, userId, email ?: "", givenName))
         }
         
