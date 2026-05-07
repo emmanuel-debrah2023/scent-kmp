@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -6,6 +7,30 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+}
+
+// Load local.properties
+val localProperties = Properties().apply {
+    val localPropsFile = rootProject.file("local.properties")
+    if (!localPropsFile.exists()) {
+        throw GradleException(
+            "local.properties not found at ${localPropsFile.absolutePath}. " +
+            "Create it with the required credential keys before building."
+        )
+    }
+    localPropsFile.inputStream().use { load(it) }
+}
+
+// Helper: read a required key or fail with a clear message
+fun requireProperty(key: String, buildType: String): String {
+    val value = localProperties.getProperty(key)
+    if (value.isNullOrBlank()) {
+        throw GradleException(
+            "Missing or empty required property '$key' in local.properties " +
+            "(required for the '$buildType' build type)."
+        )
+    }
+    return value
 }
 
 kotlin {
@@ -36,6 +61,7 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
@@ -82,9 +108,22 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    buildFeatures {
+        buildConfig = true
+    }
     buildTypes {
+        getByName("debug") {
+            buildConfigField("String",  "DB_URL",      "\"${requireProperty("DATABASE_URL",      "debug")}\"")
+            buildConfigField("String",  "DB_USER",     "\"${requireProperty("DATABASE_USER",     "debug")}\"")
+            buildConfigField("String",  "DB_PASSWORD", "\"${requireProperty("DATABASE_PASSWORD", "debug")}\"")
+            buildConfigField("Boolean", "IS_SUPABASE", "false")
+        }
         getByName("release") {
             isMinifyEnabled = false
+            buildConfigField("String",  "DB_URL",      "\"${requireProperty("DB_URL",      "release")}\"")
+            buildConfigField("String",  "DB_USER",     "\"${requireProperty("DB_USER",     "release")}\"")
+            buildConfigField("String",  "DB_PASSWORD", "\"${requireProperty("DB_PASSWORD", "release")}\"")
+            buildConfigField("Boolean", "IS_SUPABASE", "true")
         }
     }
     compileOptions {
@@ -96,4 +135,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-
