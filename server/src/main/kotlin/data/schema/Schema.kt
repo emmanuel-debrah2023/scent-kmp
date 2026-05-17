@@ -1,8 +1,8 @@
 package data.schema
 
-import org.jetbrains.exposed.v1.core.Table
-import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
-import org.jetbrains.exposed.v1.datetime.datetime
+import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.kotlin.datetime.datetime
 
 // ─────────────────────────────────────────────
 // ENUMS
@@ -63,7 +63,9 @@ enum class DecantUnit {
 object UsersTable : IntIdTable("users") {
     val username        = varchar("username", 50).uniqueIndex()
     val email           = varchar("email", 100).uniqueIndex()
-    val passwordHash    = varchar("password_hash", 255)
+    val passwordHash    = varchar("password_hash", 255).nullable()
+    val googleId        = varchar("google_id", 255).nullable().uniqueIndex()
+    val appleId         = varchar("apple_id", 255).nullable().uniqueIndex()
     val displayName     = varchar("display_name", 100)
     val avatarUrl       = varchar("avatar_url", 255).nullable()
     val bio             = text("bio").nullable()
@@ -87,20 +89,18 @@ object FragrancesTable : IntIdTable("fragrances") {
     val createdAt       = datetime("created_at")
 }
 
-// Sellers can split a bottle into smaller decant listings
 object DecantsTable : IntIdTable("decants") {
-    val fragranceId     = reference("fragrance_id", FragrancesTable)  // parent fragrance listing
+    val fragranceId     = reference("fragrance_id", FragrancesTable)
     val sellerId        = reference("seller_id", UsersTable)
-    val size            = decimal("size", 6, 2)                  // e.g. 5.0, 10.0
+    val size            = decimal("size", 6, 2)
     val unit            = enumerationByName("unit", 10, DecantUnit::class).default(DecantUnit.ML)
     val price           = decimal("price", 10, 2)
     val stockQuantity   = integer("stock_quantity").default(1)
-    val description     = text("description").nullable()         // e.g. "sprayed ~5 times"
+    val description     = text("description").nullable()
     val isActive        = bool("is_active").default(true)
     val createdAt       = datetime("created_at")
 }
 
-// Many-to-many: users collecting fragrances
 object UserFragranceCollectionTable : Table("user_fragrance_collection") {
     val userId          = reference("user_id", UsersTable)
     val fragranceId     = reference("fragrance_id", FragrancesTable)
@@ -140,7 +140,7 @@ object OrdersTable : IntIdTable("orders") {
     val buyerId         = reference("buyer_id", UsersTable)
     val sellerId        = reference("seller_id", UsersTable)
     val fragranceId     = reference("fragrance_id", FragrancesTable).nullable()
-    val decantId        = reference("decant_id", DecantsTable).nullable() // either fragrance OR decant
+    val decantId        = reference("decant_id", DecantsTable).nullable()
     val quantity        = integer("quantity").default(1)
     val totalAmount     = decimal("total_amount", 10, 2)
     val status          = enumerationByName("status", 20, OrderStatus::class)
@@ -153,9 +153,9 @@ object ReviewsTable : IntIdTable("reviews") {
     val reviewerId      = reference("reviewer_id", UsersTable)
     val fragranceId     = reference("fragrance_id", FragrancesTable)
     val orderId         = reference("order_id", OrdersTable).nullable()
-    val rating          = integer("rating") // 1–5
+    val rating          = integer("rating")
     val content         = text("content").nullable()
-    val mediaItemId     = reference("media_item_id", MediaItemsTable).nullable() // video review
+    val mediaItemId     = reference("media_item_id", MediaItemsTable).nullable()
     val createdAt       = datetime("created_at")
 }
 
