@@ -4,4 +4,3 @@ import androidx.compose.runtime.Composable
 
 @Composable
 expect fun PlatformSpecificHomeScreen()
-expect fun getPlatform(): Platform
