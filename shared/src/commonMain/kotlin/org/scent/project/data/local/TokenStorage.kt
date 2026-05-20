@@ -1,7 +1,13 @@
 package org.scent.project.data.local
 
+import org.scent.project.domain.util.Result
+
 interface TokenStorage {
-    suspend fun saveToken(token: String)
-    suspend fun getToken(): String?
-    suspend fun clearToken()
+    suspend fun saveToken(token: String): Result<Unit>
+    suspend fun getToken(): Result<String?>
+    suspend fun clearToken(): Result<Unit>
+}
+
+expect class TokenStorageFactory {
+    fun create(): TokenStorage
 }

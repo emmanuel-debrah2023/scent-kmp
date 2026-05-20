@@ -59,7 +59,7 @@ fun Route.authRoutes() {
             }
             
             val token = generateToken(userId, call.application)
-            call.respond(HttpStatusCode.Created, AuthResponse(token, userId, request.email, request.displayName))
+            call.respond(HttpStatusCode.Created, AuthResponse(token, userId, request.username, request.email, request.displayName))
         }
         
         post("/login") {
@@ -75,6 +75,7 @@ fun Route.authRoutes() {
                     .map {
                         AuthUserRow(
                             id = it[UsersTable.id].value,
+                            username = it[UsersTable.username],
                             email = it[UsersTable.email],
                             passwordHash = it[UsersTable.passwordHash],
                             displayName = it[UsersTable.displayName]
@@ -88,7 +89,7 @@ fun Route.authRoutes() {
             }
             
             val token = generateToken(user.id, call.application)
-            call.respond(HttpStatusCode.OK, AuthResponse(token, user.id, user.email, user.displayName))
+            call.respond(HttpStatusCode.OK, AuthResponse(token, user.id, user.username, user.email, user.displayName))
         }
 
         post("/google") {
@@ -130,8 +131,12 @@ fun Route.authRoutes() {
                 }.value
             }
 
+            val username = transaction {
+                UsersTable.selectAll().where { UsersTable.id eq userId }
+                    .map { it[UsersTable.username] }.singleOrNull() ?: email.substringBefore("@")
+            }
             val token = generateToken(userId, call.application)
-            call.respond(HttpStatusCode.OK, AuthResponse(token, userId, email, name))
+            call.respond(HttpStatusCode.OK, AuthResponse(token, userId, username, email, name))
         }
 
         post("/apple") {
@@ -185,8 +190,12 @@ fun Route.authRoutes() {
                 }.value
             }
 
+            val appleUsername = transaction {
+                UsersTable.selectAll().where { UsersTable.id eq userId }
+                    .map { it[UsersTable.username] }.singleOrNull() ?: "apple_${appleId.take(10)}"
+            }
             val token = generateToken(userId, call.application)
-            call.respond(HttpStatusCode.OK, AuthResponse(token, userId, email ?: "", givenName))
+            call.respond(HttpStatusCode.OK, AuthResponse(token, userId, appleUsername, email ?: "", givenName))
         }
         
         authenticate("auth-jwt") {
@@ -202,9 +211,9 @@ fun Route.authRoutes() {
                 val userResponse = transaction {
                     UsersTable.selectAll().where { UsersTable.id eq userId }
                         .map {
-                            AuthResponse(
-                                token = "",
+                            UserResponse(
                                 userId = it[UsersTable.id].value,
+                                username = it[UsersTable.username],
                                 email = it[UsersTable.email],
                                 displayName = it[UsersTable.displayName]
                             )
@@ -223,6 +232,7 @@ fun Route.authRoutes() {
 
 private data class AuthUserRow(
     val id: Int,
+    val username: String,
     val email: String,
     val passwordHash: String?,
     val displayName: String
