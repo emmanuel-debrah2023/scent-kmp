@@ -20,6 +20,15 @@ data class LoginRequest(
 data class AuthResponse(
     val token: String,
     val userId: Int,
+    val username: String,
+    val email: String,
+    val displayName: String
+)
+
+@Serializable
+data class UserResponse(
+    val userId: Int,
+    val username: String,
     val email: String,
     val displayName: String
 )

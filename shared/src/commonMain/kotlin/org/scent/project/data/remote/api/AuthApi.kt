@@ -4,45 +4,38 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import org.scent.project.data.remote.dto.AuthResponseDto
+import org.scent.project.data.remote.dto.AuthResponse
+import org.scent.project.data.remote.dto.LoginRequest
+import org.scent.project.data.remote.dto.MeResponse
+import org.scent.project.data.remote.dto.RegisterRequest
 
-class AuthApi(private val client: HttpClient) {
-    private val baseUrl = "http://10.0.2.2:8080" // Local dev for Android
+interface AuthApi {
+    suspend fun register(request: RegisterRequest): AuthResponse
+    suspend fun login(request: LoginRequest): AuthResponse
+    suspend fun getCurrentUser(token: String): MeResponse
+}
 
-    suspend fun register(request: Map<String, String>): AuthResponseDto {
-        return client.post("$baseUrl/api/v1/auth/register") {
+class AuthApiImpl(
+    private val httpClient: HttpClient,
+    private val baseUrl: String
+) : AuthApi {
+
+    override suspend fun register(request: RegisterRequest): AuthResponse {
+        return httpClient.post("$baseUrl/register") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
-    suspend fun login(request: Map<String, String>): AuthResponseDto {
-        return client.post("$baseUrl/api/v1/auth/login") {
+    override suspend fun login(request: LoginRequest): AuthResponse {
+        return httpClient.post("$baseUrl/login") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
-    suspend fun googleAuth(idToken: String): AuthResponseDto {
-        return client.post("$baseUrl/api/v1/auth/google") {
-            contentType(ContentType.Application.Json)
-            setBody(mapOf("idToken" to idToken))
-        }.body()
-    }
-
-    suspend fun appleAuth(identityToken: String, email: String?, givenName: String?): AuthResponseDto {
-        return client.post("$baseUrl/api/v1/auth/apple") {
-            contentType(ContentType.Application.Json)
-            setBody(mapOf(
-                "identityToken" to identityToken,
-                "email" to email,
-                "givenName" to givenName
-            ))
-        }.body()
-    }
-
-    suspend fun getMe(token: String): AuthResponseDto {
-        return client.get("$baseUrl/api/v1/auth/me") {
+    override suspend fun getCurrentUser(token: String): MeResponse {
+        return httpClient.get("$baseUrl/me") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }.body()
     }
