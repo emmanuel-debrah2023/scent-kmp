@@ -2,69 +2,39 @@ import androidx.compose.runtime.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
-import ui.auth.AuthViewModel
-import ui.auth.LoginScreen
-import ui.auth.RegisterScreen
-import ui.base.UiState
+import org.scent.project.domain.model.AuthState
+import ui.auth.SessionViewModel
+import ui.auth.SplashGate
+import ui.navigation.AuthGraph
+import ui.navigation.MainGraph
 import ui.theme.ScentTheme
-
-enum class AppScreen {
-    Login, Register, Home
-}
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
 @Preview
 fun App() {
     ScentTheme {
-        var currentScreen by remember { mutableStateOf(AppScreen.Login) }
-        val viewModel: AuthViewModel = koinViewModel()
+        val sessionViewModel: SessionViewModel = koinViewModel()
+        val authState by sessionViewModel.authState.collectAsState()
 
-        val loginState by viewModel.loginState.collectAsState()
-        val registerState by viewModel.registerState.collectAsState()
-
-        LaunchedEffect(loginState) {
-            if (loginState is UiState.Success) {
-                currentScreen = AppScreen.Home
+        when (val state = authState) {
+            is AuthState.Unknown -> {
+                SplashGate()
             }
-        }
-
-        LaunchedEffect(registerState) {
-            if (registerState is UiState.Success) {
-                currentScreen = AppScreen.Home
-            }
-        }
-
-        when (currentScreen) {
-            AppScreen.Login -> {
-                LoginScreen(
-                    onSignInClick = { email, password ->
-                        viewModel.login(email, password)
-                    },
-                    onNavigateToRegister = {
-                        viewModel.resetState()
-                        currentScreen = AppScreen.Register
-                    },
-                    isLoading = loginState is UiState.Loading,
-                    errorMessage = (loginState as? UiState.Error)?.error?.message
+            is AuthState.Unauthenticated -> {
+                AuthGraph(
+                    onAuthSuccess = {
+                        // The repository updates the flow automatically on login/register success
+                    }
                 )
             }
-            AppScreen.Register -> {
-                RegisterScreen(
-                    onCreateAccountClick = { username, email, displayName, password ->
-                        viewModel.register(username, email, displayName, password)
-                    },
-                    onNavigateToLogin = {
-                        viewModel.resetState()
-                        currentScreen = AppScreen.Login
-                    },
-                    isLoading = registerState is UiState.Loading,
-                    errorMessage = (registerState as? UiState.Error)?.error?.message
+            is AuthState.Authenticated -> {
+                MainGraph(
+                    user = state.user,
+                    onLogout = {
+                        sessionViewModel.logout()
+                    }
                 )
-            }
-            AppScreen.Home -> {
-                // For now, just show a simple text or the previous home screen
-                org.scent.project.PlatformSpecificHomeScreen()
             }
         }
     }

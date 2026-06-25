@@ -79,7 +79,10 @@ class AuthRepositoryImpl(
                 // Any other HTTP error during hydration — stay Unknown (transient)
             }
         } catch (e: Exception) {
-            // Network / timeout / parse errors during hydration — stay Unknown
+            // Network / timeout / parse errors during hydration.
+            // Decision: Safe default to Unauthenticated to allow user to try logging in again
+            // or use the app in offline mode if supported.
+            _authState.value = AuthState.Unauthenticated
         }
     }
 
