@@ -21,6 +21,7 @@ room = "2.8.4"
 koin = "4.1.1"
 coil = "3.3.0"
 postgresql = "42.7.3"
+hikaricp = "5.1.0"
 exposedKotlinDatetime = "0.56.0"
 dotenv = "6.4.1"
 jbcrypt = "0.4"
@@ -92,6 +93,7 @@ exposed-kotlin-datetime = { module = "org.jetbrains.exposed:exposed-kotlin-datet
 
 # Database Drivers & Utils
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 dotenv-kotlin = { module = "io.github.cdimascio:dotenv-kotlin", version.ref = "dotenv" }
 jbcrypt = { module = "org.mindrot:jbcrypt", version.ref = "jbcrypt" }
 java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
