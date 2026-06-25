@@ -17,7 +17,7 @@ sealed class Either<out L, out R> {
         is Left  -> Left(value)
         is Right -> Right(f(value))
     }
-    inline fun <C> flatMap(f: (R) -> Either<L, C>): Either<L, C> = when (this) {
+    inline fun <C> flatMap(f: (R) -> Either<@UnsafeVariance L, C>): Either<L, C> = when (this) {
         is Left  -> Left(value)
         is Right -> f(value)
     }
