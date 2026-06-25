@@ -22,8 +22,8 @@ import ui.theme.ScentTheme
 fun LoginScreen(
     onSignInClick: (String, String) -> Unit,
     onNavigateToRegister: () -> Unit,
-    emailError: String? = null,
-    passwordError: String? = null,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
@@ -58,7 +58,6 @@ fun LoginScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = "Email address",
-                error = emailError,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
@@ -66,14 +65,23 @@ fun LoginScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = "Password",
-                error = passwordError,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
             PrimaryButton(
-                text = "Sign in",
+                text = if (isLoading) "Signing in..." else "Sign in",
                 onClick = { onSignInClick(email, password) },
+                enabled = !isLoading,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 

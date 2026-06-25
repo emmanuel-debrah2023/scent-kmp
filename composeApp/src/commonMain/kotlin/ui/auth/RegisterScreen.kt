@@ -22,10 +22,8 @@ import ui.theme.ScentTheme
 fun RegisterScreen(
     onCreateAccountClick: (String, String, String, String) -> Unit,
     onNavigateToLogin: () -> Unit,
-    usernameError: String? = null,
-    emailError: String? = null,
-    displayNameError: String? = null,
-    passwordError: String? = null,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     var username by remember { mutableStateOf("") }
@@ -62,7 +60,6 @@ fun RegisterScreen(
                 value = username,
                 onValueChange = { username = it },
                 label = "Username",
-                error = usernameError,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
@@ -70,7 +67,6 @@ fun RegisterScreen(
                 value = displayName,
                 onValueChange = { displayName = it },
                 label = "Display name",
-                error = displayNameError,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
@@ -78,7 +74,6 @@ fun RegisterScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = "Email address",
-                error = emailError,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
@@ -86,14 +81,23 @@ fun RegisterScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = "Password",
-                error = passwordError,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
             PrimaryButton(
-                text = "Create account",
+                text = if (isLoading) "Creating account..." else "Create account",
                 onClick = { onCreateAccountClick(username, email, displayName, password) },
+                enabled = !isLoading,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
