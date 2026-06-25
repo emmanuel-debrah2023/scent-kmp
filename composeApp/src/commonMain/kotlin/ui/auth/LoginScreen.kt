@@ -1,5 +1,6 @@
 package ui.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -31,6 +32,7 @@ fun LoginScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -117,7 +119,7 @@ fun LoginScreen(
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
     ScentTheme {
