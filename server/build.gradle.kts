@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.kotlin.datetime)
     implementation(libs.postgresql)
+    implementation(libs.hikaricp)
     implementation(libs.dotenv.kotlin)
     
     // Auth Utils
