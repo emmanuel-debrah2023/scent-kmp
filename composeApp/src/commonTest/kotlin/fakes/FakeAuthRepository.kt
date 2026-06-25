@@ -12,12 +12,17 @@ import org.scent.project.domain.util.asRight
 
 class FakeAuthRepository : AuthRepository {
     private var result: Result<AuthUser> = AppError.Unknown().asLeft()
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
 
     fun setResult(result: Result<AuthUser>) {
         this.result = result
     }
 
-    override fun observeAuthState(): Flow<AuthState> = MutableStateFlow(AuthState.Unknown)
+    fun setAuthState(state: AuthState) {
+        _authState.value = state
+    }
+
+    override fun observeAuthState(): Flow<AuthState> = _authState
 
     override suspend fun register(
         email: String,
