@@ -9,24 +9,23 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
 }
 
-// Load local.properties
-val localProperties = Properties().apply {
-    val localPropsFile = rootProject.file("local.properties")
-    if (!localPropsFile.exists()) {
-        throw GradleException(
-            "local.properties not found at ${localPropsFile.absolutePath}. " +
-            "Create it with the required credential keys before building."
-        )
+val projectProperties = Properties().apply {
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()) {
+        envFile.inputStream().use { load(it) }
     }
-    localPropsFile.inputStream().use { load(it) }
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) {
+        localPropsFile.inputStream().use { load(it) }
+    }
 }
 
-// Helper: read a required key or fail with a clear message
-fun requireProperty(key: String, buildType: String): String {
-    val value = localProperties.getProperty(key)
+fun requireProperty(key: String, buildType: String, fallbackKey: String? = null): String {
+    val value = projectProperties.getProperty(key) ?: (fallbackKey?.let { projectProperties.getProperty(it) })
     if (value.isNullOrBlank()) {
+        val keyMsg = if (fallbackKey != null) "'$key' or '$fallbackKey'" else "'$key'"
         throw GradleException(
-            "Missing or empty required property '$key' in local.properties " +
+            "Missing or empty required property $keyMsg in .env or local.properties " +
             "(required for the '$buildType' build type)."
         )
     }
@@ -117,9 +116,9 @@ android {
     }
     buildTypes {
         getByName("debug") {
-            buildConfigField("String",  "DB_URL",      "\"${requireProperty("DATABASE_URL",      "debug")}\"")
-            buildConfigField("String",  "DB_USER",     "\"${requireProperty("DATABASE_USER",     "debug")}\"")
-            buildConfigField("String",  "DB_PASSWORD", "\"${requireProperty("DATABASE_PASSWORD", "debug")}\"")
+            buildConfigField("String",  "DB_URL",      "\"${requireProperty("DATABASE_URL",      "debug", "LOCAL_DATABASE_URL")}\"")
+            buildConfigField("String",  "DB_USER",     "\"${requireProperty("DATABASE_USER",     "debug", "LOCAL_DATABASE_USER")}\"")
+            buildConfigField("String",  "DB_PASSWORD", "\"${requireProperty("DATABASE_PASSWORD", "debug", "LOCAL_DATABASE_PASSWORD")}\"")
             buildConfigField("Boolean", "IS_SUPABASE", "false")
         }
         getByName("release") {
