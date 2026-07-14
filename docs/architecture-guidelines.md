@@ -1936,57 +1936,62 @@ class SearchFragrancesUseCaseTest : KoinTest {
 }
 ```
 
-#### ViewModel Test without Koin
+#### ViewModel Test without Koin (use MockK — see section 9)
 ```kotlin
 class HomeViewModelTest {
-    
+
+    private val mockGetFeedUseCase = mockk<GetFeedUseCase>()
+    private val mockFragranceRepository = mockk<FragranceRepository>()
     private lateinit var viewModel: HomeViewModel
-    private lateinit var fakeGetFeedUseCase: FakeGetFeedUseCase
-    private lateinit var fakeFragranceRepository: FakeFragranceRepository
-    
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     @Before
     fun setup() {
-        fakeGetFeedUseCase = FakeGetFeedUseCase()
-        fakeFragranceRepository = FakeFragranceRepository()
-        
+        Dispatchers.setMain(testDispatcher)
         viewModel = HomeViewModel(
-            getFeedUseCase = fakeGetFeedUseCase,
-            fragranceRepository = fakeFragranceRepository
+            getFeedUseCase = mockGetFeedUseCase,
+            fragranceRepository = mockFragranceRepository
         )
     }
-    
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
-    fun `loadFeed updates state to Success when use case succeeds`() = runTest {
+    fun `loadFeed emits Loading then Success when use case succeeds`() = runTest {
         // Given
         val expectedPosts = listOf(
             Post(id = "1", userId = "user1", contentFormat = ContentFormat.TEXT)
         )
-        fakeGetFeedUseCase.setResult(expectedPosts.asRight())
-        
-        // When
-        viewModel.loadFeed()
-        
-        // Then
-        advanceUntilIdle()
-        val state = viewModel.uiState.value
-        assertTrue(state is UiState.Success)
-        assertEquals(expectedPosts, (state as UiState.Success).data.posts)
+        coEvery { mockGetFeedUseCase(any()) } returns expectedPosts.asRight()
+
+        // When / Then — Turbine asserts the full Idle → Loading → Success sequence
+        viewModel.uiState.test {
+            assertEquals(UiState.Idle, awaitItem())
+            viewModel.loadFeed()
+            assertEquals(UiState.Loading, awaitItem())
+            val state = awaitItem()
+            assertTrue(state is UiState.Success)
+            assertEquals(expectedPosts, (state as UiState.Success).data.posts)
+        }
     }
-    
+
     @Test
-    fun `loadFeed updates state to Error when use case fails`() = runTest {
+    fun `loadFeed emits Loading then Error when use case fails`() = runTest {
         // Given
         val error = AppError.NetworkError.NoConnection()
-        fakeGetFeedUseCase.setResult(error.asLeft())
-        
-        // When
-        viewModel.loadFeed()
-        
-        // Then
-        advanceUntilIdle()
-        val state = viewModel.uiState.value
-        assertTrue(state is UiState.Error)
-        assertEquals(error, (state as UiState.Error).error)
+        coEvery { mockGetFeedUseCase(any()) } returns error.asLeft()
+
+        viewModel.uiState.test {
+            assertEquals(UiState.Idle, awaitItem())
+            viewModel.loadFeed()
+            assertEquals(UiState.Loading, awaitItem())
+            val state = awaitItem()
+            assertTrue(state is UiState.Error)
+            assertEquals(error, (state as UiState.Error).error)
+        }
     }
 }
 ```
@@ -2079,29 +2084,35 @@ class FakeFragranceRepository : FragranceRepository {
 }
 ```
 
-### 4. Testing ViewModels with Turbine
+### 4. Testing ViewModels with Turbine (Mandatory for all Flow assertions)
+
+**All `StateFlow` and `SharedFlow` assertions in ViewModel tests MUST use Turbine.** This catches intermediate states (e.g. `Loading`) that a direct `.value` check would miss.
 
 ```kotlin
 // Add Turbine dependency
 // testImplementation("app.cash.turbine:turbine:1.0.0")
 
 class HomeViewModelTest {
-    
+
+    // ViewModel tests use MockK — see section 9
+    private val mockGetFeedUseCase = mockk<GetFeedUseCase>()
+    private lateinit var viewModel: HomeViewModel
+
     @Test
     fun `uiState emits Loading then Success when loadFeed succeeds`() = runTest {
         // Given
         val posts = listOf(Post(id = "1"))
-        fakeGetFeedUseCase.setResult(posts.asRight())
-        val viewModel = HomeViewModel(fakeGetFeedUseCase, fakeFragranceRepository)
-        
-        // When/Then
+        coEvery { mockGetFeedUseCase(any()) } returns posts.asRight()
+        viewModel = HomeViewModel(mockGetFeedUseCase)
+
+        // When/Then — Turbine captures every emission in order
         viewModel.uiState.test {
             assertEquals(UiState.Idle, awaitItem())
-            
+
             viewModel.loadFeed()
-            
+
             assertEquals(UiState.Loading, awaitItem())
-            
+
             val successState = awaitItem()
             assertTrue(successState is UiState.Success)
             assertEquals(posts, (successState as UiState.Success).data.posts)
@@ -2231,59 +2242,132 @@ class FragranceDatabaseTest {
 }
 ```
 
-### 9. MockK for Advanced Mocking (Optional)
+### 9. MockK for ViewModel Testing (Mandatory)
+
+**All ViewModel tests MUST use MockK** — this keeps the testing approach uniform and standardised across the codebase. Fakes are used for repository/use-case unit tests; mocks are used for ViewModel tests.
 
 ```kotlin
-// For complex scenarios where fakes aren't sufficient
-class ComplexViewModelTest {
-    
-    private val mockRepository = mockk<FragranceRepository>()
+// Add MockK dependency
+// testImplementation("io.mockk:mockk:1.13.x")
+
+class SearchViewModelTest {
+
+    private val mockSearchFragrancesUseCase = mockk<SearchFragrancesUseCase>()
     private lateinit var viewModel: SearchViewModel
-    
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     @Before
     fun setup() {
-        viewModel = SearchViewModel(mockRepository)
+        Dispatchers.setMain(testDispatcher)
+        viewModel = SearchViewModel(mockSearchFragrancesUseCase)
     }
-    
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
-    fun `search calls repository with correct parameters`() = runTest {
+    fun `search calls use case with correct query`() = runTest {
         // Given
-        val query = "test query"
-        coEvery { 
-            mockRepository.searchFragrances(query, any(), any()) 
-        } returns emptyList<Fragrance>().asRight()
-        
+        val query = "Sauvage"
+        coEvery { mockSearchFragrancesUseCase(any()) } returns emptyList<Fragrance>().asRight()
+
         // When
         viewModel.search(query)
-        
+
         // Then
-        coVerify { mockRepository.searchFragrances(query, 0, 20) }
+        coVerify { mockSearchFragrancesUseCase(SearchFragrancesUseCase.Params(query = query)) }
+    }
+
+    @Test
+    fun `uiState emits Loading then Success when use case succeeds`() = runTest {
+        // Given
+        val fragrances = listOf(Fragrance(id = "1", name = "Sauvage", brand = "Dior"))
+        coEvery { mockSearchFragrancesUseCase(any()) } returns fragrances.asRight()
+
+        // When / Then — use Turbine to assert the full emission sequence
+        viewModel.uiState.test {
+            assertEquals(UiState.Idle, awaitItem())
+            viewModel.search("Sauvage")
+            assertEquals(UiState.Loading, awaitItem())
+            val state = awaitItem()
+            assertTrue(state is UiState.Success)
+            assertEquals(fragrances, (state as UiState.Success).data)
+        }
+    }
+
+    @Test
+    fun `uiState emits Loading then Error when use case fails`() = runTest {
+        // Given
+        val error = AppError.NetworkError.NoConnection()
+        coEvery { mockSearchFragrancesUseCase(any()) } returns error.asLeft()
+
+        viewModel.uiState.test {
+            assertEquals(UiState.Idle, awaitItem())
+            viewModel.search("Sauvage")
+            assertEquals(UiState.Loading, awaitItem())
+            val state = awaitItem()
+            assertTrue(state is UiState.Error)
+            assertEquals(error, (state as UiState.Error).error)
+        }
     }
 }
 ```
 
+**Rule summary:**
+- Use `mockk<T>()` for every ViewModel dependency (use cases, repositories)
+- Use `coEvery { } returns` to stub suspend functions
+- Use `coVerify { }` to assert call arguments when delegation matters
+- Always use **Turbine** (`StateFlow.test { }`) to assert `UiState` emission sequences — never assert `viewModel.uiState.value` directly after `advanceUntilIdle()` in ViewModel tests, as this misses intermediate states
+
 ### 10. Test Organization
 
+**Rule: any code declared in `commonMain` is tested from `commonTest`, not from a platform-specific source set.**
+
+This applies to ViewModels, use cases, repositories, and mappers — because the same compiled logic runs on every target (Android and iOS). Testing from `androidUnitTest` or `iosTest` alone only verifies one platform; commonTest compiles and runs against every target the module supports.
+
 ```
-app/src/
-├── test/kotlin/                    # Unit tests
-│   ├── domain/
-│   │   ├── usecase/               # Use case tests
-│   │   └── validation/            # Validation tests
-│   ├── data/
-│   │   └── repository/            # Repository tests
-│   ├── ui/
-│   │   └── viewmodel/             # ViewModel tests
-│   └── fakes/                     # Fake implementations
-│       ├── FakeFragranceRepository.kt
-│       ├── FakePostRepository.kt
-│       └── FakeApiClient.kt
+composeApp/src/
+├── commonMain/kotlin/
+│   └── ui/auth/AuthViewModel.kt          # declared in commonMain
 │
-└── androidTest/kotlin/             # Instrumented tests
-    ├── database/                   # Database tests
-    ├── ui/                        # UI tests (Compose)
-    └── di/                        # DI integration tests
+├── commonTest/kotlin/                    # ✅ correct — tests commonMain code
+│   └── ui/auth/AuthViewModelTest.kt
+│
+└── androidUnitTest/kotlin/               # ❌ wrong for commonMain code
+    └── ui/auth/AuthViewModelTest.kt      # only proves Android works
 ```
+
+**Don't do this:**
+```kotlin
+// ❌ androidUnitTest/kotlin/ui/auth/AuthViewModelTest.kt
+// AuthViewModel is in commonMain — testing it here skips iOS entirely.
+@RunWith(AndroidJUnit4::class)        // also: drop Android-runner annotations in commonTest
+class AuthViewModelTest { ... }
+```
+
+**Do this instead:**
+```kotlin
+// ✅ commonTest/kotlin/ui/auth/AuthViewModelTest.kt
+// Compiles and runs against every target (Android JVM + iOS Native).
+// Uses plain kotlin.test — no JUnit4 Android runner needed.
+class AuthViewModelTest { ... }
+```
+
+Full module layout:
+```
+shared/src/
+├── commonMain/         # domain models, use cases, repositories, mappers
+└── commonTest/         # all tests for the above
+
+composeApp/src/
+├── commonMain/         # ViewModels, UI state, navigation
+├── commonTest/         # ViewModel tests (MockK + Turbine), fake implementations
+└── androidMain/        # Android-specific platform code only
+```
+
+Platform-specific test source sets (`androidUnitTest`, `iosTest`) are reserved for code declared in platform-specific source sets (`androidMain`, `iosMain`) — i.e., `expect/actual` implementations, platform-specific wiring, or instrumented UI tests.
 
 ---
 

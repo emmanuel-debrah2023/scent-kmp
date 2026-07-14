@@ -70,11 +70,30 @@ Whenever the user says to work on / implement / pick up a ticket and links a Not
 3. Confirm the status change to the user in one line, then proceed with the implementation.
 
 ### Merging a PR that corresponds to a Notion ticket
-Whenever a PR is merged (or the user says "merge the MR / PR") and there is a Notion ticket linked in the conversation:
-1. After the merge succeeds, update the ticket's `Status` to `Done`.
-2. Confirm the status change to the user in one line.
+Whenever a PR is merged (or the user says "merge the MR / PR") and there is a Notion ticket linked in the conversation, do all of the following after the merge succeeds:
 
-Use the Notion `update-page` tool with the ticket's page ID to set the `Status` property. The exact value strings are `In progress` and `Done` (match verbatim).
+1. Set `Status` to `Done` via `update-page`.
+2. Write a post-merge summary into the ticket's page body using `insert_content` (append to end). Always include:
+   - **PR link** — the GitHub PR URL (e.g. `[PR #16](https://github.com/...)`).
+   - **Scope creep** — if anything was built that wasn't in the original ticket description or acceptance criteria, list it explicitly under a "Scope creep" heading. Be specific: name the files/classes/layers added beyond scope. If there was no scope creep, omit this section entirely — don't write "No scope creep."
+   - **Unforeseen issues** — if any blockers, surprises, or workarounds came up during implementation (e.g. missing dependencies, pre-existing test failures, platform limitations, architectural gaps), document them under an "Unforeseen issues" heading. If none, omit the section.
+3. Confirm the status change and page update to the user in one or two lines.
+
+Use this markdown structure for the page body insert — only include sections that apply:
+
+```
+## Merge summary
+
+**PR:** [PR #N — branch-name](https://github.com/emmanuel-debrah2023/scent-kmp/pull/N)
+
+### Scope creep
+- <what was added beyond original scope and why>
+
+### Unforeseen issues
+- <what was discovered mid-implementation and how it was handled>
+```
+
+Use the Notion `update-page` tool with the ticket's page ID. Status value strings are `In progress` and `Done` (match verbatim).
 
 ## Answering "what's next"
 
