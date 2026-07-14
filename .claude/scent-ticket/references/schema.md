@@ -13,9 +13,11 @@ CREATE TABLE "collection://30e11d6b-186b-80be-876e-000bf0145284" (
     "date:Due date:end" TEXT,       -- for date ranges only, else NULL
     "date:Due date:is_datetime" INTEGER,
     "Priority" TEXT,                -- one of ["High", "Medium", "Low"]
-    "Task type" TEXT,               -- JSON array, zero or more of ["🐞 Bug", "💬 Feature request", "💅 Polish"]
+    "Acceptance Criteria" TEXT,     -- newline-separated checklist, required on every new ticket
+    "Task type" TEXT,               -- JSON array, zero or more of ["🐞 Bug", "💬 Feature request", "💅 Polish", "📝 Docs", "🔧 Tech Task"]
     "Description" TEXT,
     "Status" TEXT,                  -- one of ["Not started", "In progress", "Done"]
+    "Feature Branch" TEXT,          -- proposed or actual branch/PR, required on every new ticket
     "Assignee" TEXT,                -- JSON array of user IDs
     "Effort level" TEXT,            -- one of ["Small", "Medium", "Large"]
     "Task name" TEXT
@@ -26,6 +28,7 @@ CREATE TABLE "collection://30e11d6b-186b-80be-876e-000bf0145284" (
 
 - `Status` is a Notion "status" property (not select) — it has grouping semantics (`to_do` → Not started, `in_progress` → In progress, `complete` → Done). Set the literal string value; Notion handles the group.
 - `Task type` is multi-select — pass an array even for a single value, and the emoji must be included verbatim (e.g. `["🐞 Bug"]`), not just the word "Bug".
+- `Acceptance Criteria` and `Feature Branch` were added after the first batch of tickets — the original 19 tickets don't have them backfilled. Only new tickets are required to have both; don't retroactively edit old tickets unless asked.
 - `Past due` is a read-only formula property — never try to set it directly.
 - There's a default page template ("New task") at https://app.notion.com/p/30e11d6b186b80898a81d8f52b3f30d8 if you need to see the intended shape of a blank ticket.
 
