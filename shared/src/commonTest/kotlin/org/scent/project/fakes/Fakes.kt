@@ -1,5 +1,7 @@
 package org.scent.project.fakes
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.remote.api.AuthApi
 import org.scent.project.data.remote.dto.AuthResponse
@@ -7,10 +9,63 @@ import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
 import org.scent.project.domain.error.AppError
+import org.scent.project.domain.model.AuthState
+import org.scent.project.domain.model.AuthUser
+import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import org.scent.project.domain.validation.ValidatorContract
+
+// -------------------------------------------------------------------------
+// FakeAuthRepository
+// -------------------------------------------------------------------------
+
+class FakeAuthRepository : AuthRepository {
+
+    var loginResult: Result<AuthUser> = AppError.Unknown().asLeft()
+    var registerResult: Result<AuthUser> = AppError.Unknown().asLeft()
+    var getCurrentUserResult: Result<AuthUser> = AppError.Unknown().asLeft()
+    var logoutResult: Result<Unit> = Unit.asRight()
+
+    var lastLoginEmail: String? = null
+    var lastLoginPassword: String? = null
+    var lastRegisterEmail: String? = null
+    var lastRegisterPassword: String? = null
+    var lastRegisterUsername: String? = null
+    var lastRegisterDisplayName: String? = null
+
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
+
+    fun setAuthState(state: AuthState) {
+        _authState.value = state
+    }
+
+    override fun observeAuthState(): Flow<AuthState> = _authState
+
+    override suspend fun login(email: String, password: String): Result<AuthUser> {
+        lastLoginEmail = email
+        lastLoginPassword = password
+        return loginResult
+    }
+
+    override suspend fun register(
+        email: String,
+        password: String,
+        username: String,
+        displayName: String
+    ): Result<AuthUser> {
+        lastRegisterEmail = email
+        lastRegisterPassword = password
+        lastRegisterUsername = username
+        lastRegisterDisplayName = displayName
+        return registerResult
+    }
+
+    override suspend fun getCurrentUser(): Result<AuthUser> = getCurrentUserResult
+
+    override suspend fun logout(): Result<Unit> = logoutResult
+}
 
 // -------------------------------------------------------------------------
 // FakeTokenStorage
