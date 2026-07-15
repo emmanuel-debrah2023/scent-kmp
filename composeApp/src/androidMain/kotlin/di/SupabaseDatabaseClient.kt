@@ -8,7 +8,6 @@ import org.scent.project.BuildConfig
  * injected via [BuildConfig.DB_URL], [BuildConfig.DB_USER], and [BuildConfig.DB_PASSWORD].
  */
 class SupabaseDatabaseClient : DatabaseClient {
-
     override fun connect() {
         // TODO: establish JDBC connection using:
         //   url      = BuildConfig.DB_URL

@@ -13,27 +13,27 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AuthDivider(
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
             thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         HorizontalDivider(
             modifier = Modifier.weight(1f),
             thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
     }
 }

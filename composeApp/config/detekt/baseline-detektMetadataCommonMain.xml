@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ArgumentListWrapping:Res.kt$Res$("composeResources/scent.composeapp.generated.resources/" + path)</ID>
+    <ID>FunctionNaming:Drawable0.commonMain.kt$@InternalResourceApi internal fun _collectCommonMainDrawable0Resources(map: MutableMap&lt;String, DrawableResource&gt;)</ID>
+    <ID>LongMethod:FragranceCard.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun FragranceCard( name: String, brand: String, rating: Float, reviewCount: Int, imageColor: Color = OrangeGradient, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:LoginScreen.kt$@Composable fun LoginScreen( onSignInClick: (String, String) -&gt; Unit, onNavigateToRegister: () -&gt; Unit, isLoading: Boolean = false, errorMessage: String? = null, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:RegisterScreen.kt$@Composable fun RegisterScreen( onCreateAccountClick: (String, String, String, String) -&gt; Unit, onNavigateToLogin: () -&gt; Unit, isLoading: Boolean = false, errorMessage: String? = null, modifier: Modifier = Modifier, )</ID>
+    <ID>MagicNumber:FragranceCard.kt$5</ID>
+    <ID>ParameterListWrapping:Res.kt$Res$(path: String)</ID>
+    <ID>UnusedParameter:Theme.kt$darkTheme: Boolean = isSystemInDarkTheme()</ID>
+    <ID>UnusedPrivateProperty:AuthNavGraph.kt$val screen = navigationState.currentScreen.value</ID>
+    <ID>UnusedPrivateProperty:AuthViewModel.kt$AuthViewModel$private val getCurrentUserUseCase: GetCurrentUserUseCase</ID>
+    <ID>Wrapping:Drawable0.commonMain.kt$(</ID>
+    <ID>Wrapping:Drawable0.commonMain.kt$("drawable:compose_multiplatform", setOf( ResourceItem(setOf(), "${MD}drawable/compose-multiplatform.xml", -1, -1), ))</ID>
+    <ID>Wrapping:Drawable0.commonMain.kt$("drawable:ic_home", setOf( ResourceItem(setOf(), "${MD}drawable/ic_home.xml", -1, -1), ))</ID>
+  </CurrentIssues>
+</SmellBaseline>

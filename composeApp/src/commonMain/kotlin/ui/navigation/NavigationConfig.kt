@@ -7,8 +7,9 @@ import scent.composeapp.generated.resources.ic_home
 import ui.components.BottomNavItem
 
 @Composable
-fun getBottomNavTabs() = listOf(
-    BottomNavItem("Home", painterResource(Res.drawable.ic_home)),
-    BottomNavItem("Search", painterResource(Res.drawable.ic_home)),
-    BottomNavItem("Profile", painterResource(Res.drawable.ic_home))
-)
+fun getBottomNavTabs() =
+    listOf(
+        BottomNavItem("Home", painterResource(Res.drawable.ic_home)),
+        BottomNavItem("Search", painterResource(Res.drawable.ic_home)),
+        BottomNavItem("Profile", painterResource(Res.drawable.ic_home)),
+    )

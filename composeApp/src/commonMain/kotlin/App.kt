@@ -1,4 +1,6 @@
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
@@ -25,7 +27,7 @@ fun App() {
                 AuthGraph(
                     onAuthSuccess = {
                         // The repository updates the flow automatically on login/register success
-                    }
+                    },
                 )
             }
             is AuthState.Authenticated -> {
@@ -33,7 +35,7 @@ fun App() {
                     user = state.user,
                     onLogout = {
                         sessionViewModel.logout()
-                    }
+                    },
                 )
             }
         }

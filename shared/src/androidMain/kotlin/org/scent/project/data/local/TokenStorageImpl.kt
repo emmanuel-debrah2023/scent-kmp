@@ -13,12 +13,13 @@ import org.scent.project.domain.util.asRight
 
 private val Context.dataStore by preferencesDataStore(name = "auth_prefs")
 
-class TokenStorageImpl(private val context: Context) : TokenStorage {
-
+class TokenStorageImpl(
+    private val context: Context,
+) : TokenStorage {
     private val tokenKey = stringPreferencesKey("auth_token")
 
-    override suspend fun saveToken(token: String): Result<Unit> {
-        return try {
+    override suspend fun saveToken(token: String): Result<Unit> =
+        try {
             context.dataStore.edit { preferences ->
                 preferences[tokenKey] = token
             }
@@ -26,21 +27,20 @@ class TokenStorageImpl(private val context: Context) : TokenStorage {
         } catch (e: Exception) {
             AppError.StorageError.WriteFailed(cause = e).asLeft()
         }
-    }
 
-    override suspend fun getToken(): Result<String?> {
-        return try {
-            val token = context.dataStore.data
-                .map { preferences -> preferences[tokenKey] }
-                .first()
+    override suspend fun getToken(): Result<String?> =
+        try {
+            val token =
+                context.dataStore.data
+                    .map { preferences -> preferences[tokenKey] }
+                    .first()
             token.asRight()
         } catch (e: Exception) {
             AppError.StorageError.ReadFailed(cause = e).asLeft()
         }
-    }
 
-    override suspend fun clearToken(): Result<Unit> {
-        return try {
+    override suspend fun clearToken(): Result<Unit> =
+        try {
             context.dataStore.edit { preferences ->
                 preferences.remove(tokenKey)
             }
@@ -48,5 +48,4 @@ class TokenStorageImpl(private val context: Context) : TokenStorage {
         } catch (e: Exception) {
             AppError.StorageError.WriteFailed(cause = e).asLeft()
         }
-    }
 }

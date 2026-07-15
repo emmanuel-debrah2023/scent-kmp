@@ -12,6 +12,8 @@ import org.scent.project.domain.util.asRight
 
 class FakeAuthRepository : AuthRepository {
     private var result: Result<AuthUser> = AppError.Unknown().asLeft()
+
+    @Suppress("ktlint:standard:backing-property-naming") // exposed via overridden observeAuthState(), not a property
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
 
     fun setResult(result: Result<AuthUser>) {
@@ -28,10 +30,13 @@ class FakeAuthRepository : AuthRepository {
         email: String,
         password: String,
         username: String,
-        displayName: String
+        displayName: String,
     ): Result<AuthUser> = result
 
-    override suspend fun login(email: String, password: String): Result<AuthUser> = result
+    override suspend fun login(
+        email: String,
+        password: String,
+    ): Result<AuthUser> = result
 
     override suspend fun getCurrentUser(): Result<AuthUser> = result
 

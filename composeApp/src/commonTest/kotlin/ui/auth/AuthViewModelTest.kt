@@ -33,7 +33,6 @@ import kotlin.test.assertIs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
-
     private val mockLoginUseCase = mockk<LoginUseCase>()
     private val mockRegisterUseCase = mockk<RegisterUseCase>()
     private val mockGetCurrentUserUseCase = mockk<GetCurrentUserUseCase>()
@@ -43,11 +42,12 @@ class AuthViewModelTest {
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = AuthViewModel(
-            loginUseCase = mockLoginUseCase,
-            registerUseCase = mockRegisterUseCase,
-            getCurrentUserUseCase = mockGetCurrentUserUseCase
-        )
+        viewModel =
+            AuthViewModel(
+                loginUseCase = mockLoginUseCase,
+                registerUseCase = mockRegisterUseCase,
+                getCurrentUserUseCase = mockGetCurrentUserUseCase,
+            )
     }
 
     @AfterTest
@@ -60,185 +60,197 @@ class AuthViewModelTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `login with invalid email emits Error and never calls use case`() = runTest {
-        viewModel.loginState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.login("not-an-email", "password123")
-            val state = awaitItem()
-            assertIs<UiState.Error>(state)
-            assertIs<AppError.ValidationError.InvalidEmail>(state.error)
-            expectNoEvents()
+    fun `login with invalid email emits Error and never calls use case`() =
+        runTest {
+            viewModel.loginState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.login("not-an-email", "password123")
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertIs<AppError.ValidationError.InvalidEmail>(state.error)
+                expectNoEvents()
+            }
+            coVerify(exactly = 0) { mockLoginUseCase(any(), any()) }
         }
-        coVerify(exactly = 0) { mockLoginUseCase(any(), any()) }
-    }
 
     @Test
-    fun `login with short password emits Error and never calls use case`() = runTest {
-        viewModel.loginState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.login("test@example.com", "short")
-            val state = awaitItem()
-            assertIs<UiState.Error>(state)
-            assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
-            expectNoEvents()
+    fun `login with short password emits Error and never calls use case`() =
+        runTest {
+            viewModel.loginState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.login("test@example.com", "short")
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
+                expectNoEvents()
+            }
+            coVerify(exactly = 0) { mockLoginUseCase(any(), any()) }
         }
-        coVerify(exactly = 0) { mockLoginUseCase(any(), any()) }
-    }
 
     // -------------------------------------------------------------------------
     // login — use case delegation
     // -------------------------------------------------------------------------
 
     @Test
-    fun `login with valid input sets Loading before use case and emits Success`() = runTest {
-        val user = AuthUser(id = 1, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok")
-        var stateWhenUseCaseCalled: UiState<AuthUser>? = null
+    fun `login with valid input sets Loading before use case and emits Success`() =
+        runTest {
+            val user =
+                AuthUser(id = 1, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok")
+            var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-        coEvery { mockLoginUseCase(any(), any()) } answers {
-            stateWhenUseCaseCalled = viewModel.loginState.value
-            user.asRight()
+            coEvery { mockLoginUseCase(any(), any()) } answers {
+                stateWhenUseCaseCalled = viewModel.loginState.value
+                user.asRight()
+            }
+
+            viewModel.loginState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.login("alice@example.com", "password123")
+                val state = awaitItem()
+                assertIs<UiState.Success<AuthUser>>(state)
+                assertEquals(user, state.data)
+            }
+
+            assertEquals(UiState.Loading, stateWhenUseCaseCalled)
         }
-
-        viewModel.loginState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.login("alice@example.com", "password123")
-            val state = awaitItem()
-            assertIs<UiState.Success<AuthUser>>(state)
-            assertEquals(user, state.data)
-        }
-
-        assertEquals(UiState.Loading, stateWhenUseCaseCalled)
-    }
 
     @Test
-    fun `login with valid input sets Loading before use case and emits Error on failure`() = runTest {
-        val error = AppError.AuthError.InvalidCredentials()
-        var stateWhenUseCaseCalled: UiState<AuthUser>? = null
+    fun `login with valid input sets Loading before use case and emits Error on failure`() =
+        runTest {
+            val error = AppError.AuthError.InvalidCredentials()
+            var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-        coEvery { mockLoginUseCase(any(), any()) } answers {
-            stateWhenUseCaseCalled = viewModel.loginState.value
-            error.asLeft()
+            coEvery { mockLoginUseCase(any(), any()) } answers {
+                stateWhenUseCaseCalled = viewModel.loginState.value
+                error.asLeft()
+            }
+
+            viewModel.loginState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.login("alice@example.com", "password123")
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertEquals(error, state.error)
+            }
+
+            assertEquals(UiState.Loading, stateWhenUseCaseCalled)
         }
-
-        viewModel.loginState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.login("alice@example.com", "password123")
-            val state = awaitItem()
-            assertIs<UiState.Error>(state)
-            assertEquals(error, state.error)
-        }
-
-        assertEquals(UiState.Loading, stateWhenUseCaseCalled)
-    }
 
     @Test
-    fun `login forwards email and password to use case`() = runTest {
-        coEvery { mockLoginUseCase(any(), any()) } returns AppError.Unknown().asLeft()
+    fun `login forwards email and password to use case`() =
+        runTest {
+            coEvery { mockLoginUseCase(any(), any()) } returns AppError.Unknown().asLeft()
 
-        viewModel.loginState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.login("bob@example.com", "pass1234")
-            skipItems(1) // Error (Loading may be conflated without a real suspension)
+            viewModel.loginState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.login("bob@example.com", "pass1234")
+                skipItems(1) // Error (Loading may be conflated without a real suspension)
+            }
+
+            coVerify(exactly = 1) { mockLoginUseCase("bob@example.com", "pass1234") }
         }
-
-        coVerify(exactly = 1) { mockLoginUseCase("bob@example.com", "pass1234") }
-    }
 
     // -------------------------------------------------------------------------
     // register — validation
     // -------------------------------------------------------------------------
 
     @Test
-    fun `register with invalid email emits Error and never calls use case`() = runTest {
-        viewModel.registerState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.register("alice", "bad-email", "Alice", "password123")
-            val state = awaitItem()
-            assertIs<UiState.Error>(state)
-            assertIs<AppError.ValidationError.InvalidEmail>(state.error)
-            expectNoEvents()
+    fun `register with invalid email emits Error and never calls use case`() =
+        runTest {
+            viewModel.registerState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.register("alice", "bad-email", "Alice", "password123")
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertIs<AppError.ValidationError.InvalidEmail>(state.error)
+                expectNoEvents()
+            }
+            coVerify(exactly = 0) { mockRegisterUseCase(any(), any(), any(), any()) }
         }
-        coVerify(exactly = 0) { mockRegisterUseCase(any(), any(), any(), any()) }
-    }
 
     @Test
-    fun `register with short password emits Error and never calls use case`() = runTest {
-        viewModel.registerState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.register("alice", "alice@example.com", "Alice", "123")
-            val state = awaitItem()
-            assertIs<UiState.Error>(state)
-            assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
-            expectNoEvents()
+    fun `register with short password emits Error and never calls use case`() =
+        runTest {
+            viewModel.registerState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.register("alice", "alice@example.com", "Alice", "123")
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
+                expectNoEvents()
+            }
+            coVerify(exactly = 0) { mockRegisterUseCase(any(), any(), any(), any()) }
         }
-        coVerify(exactly = 0) { mockRegisterUseCase(any(), any(), any(), any()) }
-    }
 
     // -------------------------------------------------------------------------
     // register — use case delegation
     // -------------------------------------------------------------------------
 
     @Test
-    fun `register with valid input sets Loading before use case and emits Success`() = runTest {
-        val user = AuthUser(id = 2, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok2")
-        var stateWhenUseCaseCalled: UiState<AuthUser>? = null
+    fun `register with valid input sets Loading before use case and emits Success`() =
+        runTest {
+            val user =
+                AuthUser(id = 2, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok2")
+            var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-        coEvery { mockRegisterUseCase(any(), any(), any(), any()) } answers {
-            stateWhenUseCaseCalled = viewModel.registerState.value
-            user.asRight()
+            coEvery { mockRegisterUseCase(any(), any(), any(), any()) } answers {
+                stateWhenUseCaseCalled = viewModel.registerState.value
+                user.asRight()
+            }
+
+            viewModel.registerState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.register("alice", "alice@example.com", "Alice", "password123")
+                val state = awaitItem()
+                assertIs<UiState.Success<AuthUser>>(state)
+                assertEquals(user, state.data)
+            }
+
+            assertEquals(UiState.Loading, stateWhenUseCaseCalled)
         }
-
-        viewModel.registerState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.register("alice", "alice@example.com", "Alice", "password123")
-            val state = awaitItem()
-            assertIs<UiState.Success<AuthUser>>(state)
-            assertEquals(user, state.data)
-        }
-
-        assertEquals(UiState.Loading, stateWhenUseCaseCalled)
-    }
 
     @Test
-    fun `register with valid input sets Loading before use case and emits Error on failure`() = runTest {
-        val error = AppError.AuthError.UserAlreadyExists()
-        var stateWhenUseCaseCalled: UiState<AuthUser>? = null
+    fun `register with valid input sets Loading before use case and emits Error on failure`() =
+        runTest {
+            val error = AppError.AuthError.UserAlreadyExists()
+            var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-        coEvery { mockRegisterUseCase(any(), any(), any(), any()) } answers {
-            stateWhenUseCaseCalled = viewModel.registerState.value
-            error.asLeft()
+            coEvery { mockRegisterUseCase(any(), any(), any(), any()) } answers {
+                stateWhenUseCaseCalled = viewModel.registerState.value
+                error.asLeft()
+            }
+
+            viewModel.registerState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.register("alice", "alice@example.com", "Alice", "password123")
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertEquals(error, state.error)
+            }
+
+            assertEquals(UiState.Loading, stateWhenUseCaseCalled)
         }
-
-        viewModel.registerState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            viewModel.register("alice", "alice@example.com", "Alice", "password123")
-            val state = awaitItem()
-            assertIs<UiState.Error>(state)
-            assertEquals(error, state.error)
-        }
-
-        assertEquals(UiState.Loading, stateWhenUseCaseCalled)
-    }
 
     // -------------------------------------------------------------------------
     // resetState
     // -------------------------------------------------------------------------
 
     @Test
-    fun `resetState resets both loginState and registerState to Idle`() = runTest {
-        // Drive loginState to Error via validation (no mock needed)
-        viewModel.login("not-an-email", "password123")
+    fun `resetState resets both loginState and registerState to Idle`() =
+        runTest {
+            // Drive loginState to Error via validation (no mock needed)
+            viewModel.login("not-an-email", "password123")
 
-        viewModel.loginState.test {
-            assertIs<UiState.Error>(awaitItem())
-            viewModel.resetState()
-            assertEquals(UiState.Idle, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
+            viewModel.loginState.test {
+                assertIs<UiState.Error>(awaitItem())
+                viewModel.resetState()
+                assertEquals(UiState.Idle, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
 
-        viewModel.registerState.test {
-            assertEquals(UiState.Idle, awaitItem())
-            cancelAndIgnoreRemainingEvents()
+            viewModel.registerState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 }

@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:AuthRoutes.kt$fun Route.authRoutes()</ID>
+    <ID>InvalidPackageDeclaration:Application.kt$package org.scent.project</ID>
+    <ID>LongMethod:AuthRoutes.kt$fun Route.authRoutes()</ID>
+    <ID>MagicNumber:Security.kt$86400000</ID>
+    <ID>SwallowedException:AuthRoutes.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AuthRoutes.kt$e: Exception</ID>
+    <ID>UseRequire:Database.kt$throw IllegalArgumentException("DATABASE_URL must be provided in environment or application.conf")</ID>
+  </CurrentIssues>
+</SmellBaseline>

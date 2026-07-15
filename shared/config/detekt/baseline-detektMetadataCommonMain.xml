@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>Filename:FragranceDtos.kt$org.scent.project.data.remote.dto.FragranceDtos.kt</ID>
+    <ID>Filename:Navigation.kt$utils.Navigation.kt</ID>
+    <ID>Filename:UserDtos.kt$org.scent.project.data.remote.dto.UserDtos.kt</ID>
+    <ID>MagicNumber:AuthRepositoryImpl.kt$AuthRepositoryImpl$401</ID>
+    <ID>MagicNumber:Validator.kt$Validator$100</ID>
+    <ID>MagicNumber:Validator.kt$Validator$8</ID>
+    <ID>ReturnCount:AuthRepositoryImpl.kt$AuthRepositoryImpl$override suspend fun register( email: String, password: String, username: String, displayName: String, ): Result&lt;AuthUser&gt;</ID>
+    <ID>SwallowedException:AuthRepositoryImpl.kt$AuthRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AuthRepositoryImpl.kt$AuthRepositoryImpl$e: Exception</ID>
+  </CurrentIssues>
+</SmellBaseline>

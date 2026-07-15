@@ -30,12 +30,13 @@ import ui.theme.OrangeGradient
 fun HomeScreen() {
     var selectedTopTab by remember { mutableStateOf(0) }
     var selectedBottomTab by remember { mutableStateOf(0) }
-    
-    val fragrances = listOf(
-        FragranceData("Velvet Orchid", "Tom Ford", 4.5f, 215, OrangeGradient),
-        FragranceData("Santal 33", "Le Labo", 4.3f, 189, Color(0xFFE8D5B7))
-    )
-    
+
+    val fragrances =
+        listOf(
+            FragranceData("Velvet Orchid", "Tom Ford", 4.5f, 215, OrangeGradient),
+            FragranceData("Santal 33", "Le Labo", 4.3f, 189, Color(0xFFE8D5B7)),
+        )
+
     Scaffold(
         topBar = {
             Column {
@@ -43,7 +44,7 @@ fun HomeScreen() {
                 TopTabs(
                     selectedTab = selectedTopTab,
                     onTabSelected = { selectedTopTab = it },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
         },
@@ -52,18 +53,19 @@ fun HomeScreen() {
                 selectedTab = selectedBottomTab,
                 onTabSelected = { selectedBottomTab = it },
                 tabs = getBottomNavTabs(),
-                modifier = Modifier
+                modifier = Modifier,
             )
         },
-        containerColor = Cream
+        containerColor = Cream,
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
+            contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             items(fragrances) { fragrance ->
                 FragranceCard(
@@ -71,7 +73,7 @@ fun HomeScreen() {
                     brand = fragrance.brand,
                     rating = fragrance.rating,
                     reviewCount = fragrance.reviewCount,
-                    imageColor = fragrance.imageColor
+                    imageColor = fragrance.imageColor,
                 )
             }
         }
@@ -83,5 +85,5 @@ data class FragranceData(
     val brand: String,
     val rating: Float,
     val reviewCount: Int,
-    val imageColor: Color
+    val imageColor: Color,
 )

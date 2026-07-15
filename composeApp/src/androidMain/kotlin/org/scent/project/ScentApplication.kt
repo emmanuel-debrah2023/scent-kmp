@@ -13,7 +13,7 @@ class ScentApplication : Application() {
 
         initKoin(
             baseUrl = "http://10.0.2.2:8080/api/v1/auth", // Localhost for Android emulator
-            tokenStorageFactory = TokenStorageFactory(this)
+            tokenStorageFactory = TokenStorageFactory(this),
         ) {
             androidContext(this@ScentApplication)
             androidLogger(if (BuildConfig.DEBUG) Level.DEBUG else Level.NONE)

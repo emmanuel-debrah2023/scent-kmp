@@ -23,47 +23,52 @@ fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
-    
-    val containerColor = if (isHovered) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
-    
-    val contentColor = if (isHovered) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onPrimary
-    }
+
+    val containerColor =
+        if (isHovered) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.primary
+        }
+
+    val contentColor =
+        if (isHovered) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onPrimary
+        }
 
     Button(
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(52.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(52.dp),
         enabled = enabled,
         shape = RoundedCornerShape(12.dp),
         interactionSource = interactionSource,
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            focusedElevation = 0.dp,
-            hoveredElevation = 0.dp
-        ),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            disabledContainerColor = MaterialTheme.colorScheme.outlineVariant,
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        elevation =
+            ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+            ),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+                disabledContainerColor = MaterialTheme.colorScheme.outlineVariant,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
     ) {
         Text(
             text = text.uppercase(),
-            style = MaterialTheme.typography.labelLarge
+            style = MaterialTheme.typography.labelLarge,
         )
     }
 }
@@ -74,33 +79,37 @@ fun SecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    icon: (@Composable () -> Unit)? = null
+    icon: (@Composable () -> Unit)? = null,
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(52.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(52.dp),
         enabled = enabled,
         shape = RoundedCornerShape(12.dp),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            focusedElevation = 0.dp,
-            hoveredElevation = 0.dp
-        ),
+        elevation =
+            ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+            ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.primary
-        )
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary,
+            ),
     ) {
         if (icon != null) {
             icon()
-            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
+            androidx.compose.foundation.layout
+                .Spacer(modifier = Modifier.width(8.dp))
         }
         Text(
             text = text.uppercase(),
-            style = MaterialTheme.typography.labelLarge
+            style = MaterialTheme.typography.labelLarge,
         )
     }
 }

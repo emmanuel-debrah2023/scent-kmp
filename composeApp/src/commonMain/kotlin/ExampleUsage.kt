@@ -33,7 +33,11 @@ import utils.ImageLoader
  */
 sealed class Screen {
     object Home : Screen()
-    data class FragranceDetail(val fragranceId: String, val fragranceName: String) : Screen()
+
+    data class FragranceDetail(
+        val fragranceId: String,
+        val fragranceName: String,
+    ) : Screen()
 }
 
 @Composable
@@ -45,7 +49,7 @@ fun AppNavigation() {
             FragranceListScreen(
                 onFragranceClick = { id, name ->
                     currentScreen = Screen.FragranceDetail(id, name)
-                }
+                },
             )
         }
 
@@ -53,38 +57,37 @@ fun AppNavigation() {
             FragranceDetailScreen(
                 fragranceId = screen.fragranceId,
                 fragranceName = screen.fragranceName,
-                onBackClick = { currentScreen = Screen.Home }
+                onBackClick = { currentScreen = Screen.Home },
             )
         }
     }
 }
 
 @Composable
-fun FragranceListScreen(
-    onFragranceClick: (String, String) -> Unit
-) {
-    val sampleFragrances = listOf(
-        Triple("1", "Chanel No. 5", "https://example.com/chanel5.jpg"),
-        Triple("2", "Dior Sauvage", "https://example.com/sauvage.jpg"),
-        Triple("3", "Tom Ford Black Orchid", null)
-    )
+fun FragranceListScreen(onFragranceClick: (String, String) -> Unit) {
+    val sampleFragrances =
+        listOf(
+            Triple("1", "Chanel No. 5", "https://example.com/chanel5.jpg"),
+            Triple("2", "Dior Sauvage", "https://example.com/sauvage.jpg"),
+            Triple("3", "Tom Ford Black Orchid", null),
+        )
 
     Column {
         Text(
             text = "Fragrances",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
         )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(sampleFragrances) { (id, name, imageUrl) ->
                 FragranceCard(
                     name = name,
                     imageUrl = imageUrl,
-                    onClick = { onFragranceClick(id, name) }
+                    onClick = { onFragranceClick(id, name) },
                 )
             }
         }
@@ -96,7 +99,7 @@ fun FragranceListScreen(
 fun FragranceDetailScreen(
     fragranceId: String,
     fragranceName: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
 ) {
     Column {
         TopAppBar(
@@ -105,27 +108,28 @@ fun FragranceDetailScreen(
                 TextButton(onClick = onBackClick) {
                     Text("← Back")
                 }
-            }
+            },
         )
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AsyncImage(
                 model = ImageLoader.getImageUrl(null),
                 contentDescription = fragranceName,
                 modifier = Modifier.size(200.dp),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = fragranceName,
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -133,15 +137,17 @@ fun FragranceDetailScreen(
             Text(
                 text = "Fragrance ID: $fragranceId",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "This is a detailed view of the fragrance. In a real app, you would load fragrance details, reviews, notes, and other information here.",
+                text =
+                    "This is a detailed view of the fragrance. In a real app, you would load " +
+                        "fragrance details, reviews, notes, and other information here.",
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
     }
@@ -151,29 +157,29 @@ fun FragranceDetailScreen(
 fun FragranceCard(
     name: String,
     imageUrl: String?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Using Coil for image loading with placeholder
             AsyncImage(
                 model = ImageLoader.getImageUrl(imageUrl),
                 contentDescription = name,
                 modifier = Modifier.size(60.dp),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Text(
                 text = name,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
         }
     }

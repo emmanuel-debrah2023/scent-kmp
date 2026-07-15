@@ -27,7 +27,6 @@ import kotlin.test.assertIs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionViewModelTest {
-
     private val mockObserveAuthStateUseCase = mockk<ObserveAuthStateUseCase>()
     private val mockLogoutUseCase = mockk<LogoutUseCase>()
     private lateinit var viewModel: SessionViewModel
@@ -53,76 +52,82 @@ class SessionViewModelTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `initial authState is Unknown`() = runTest {
-        viewModel.authState.test {
-            assertEquals(AuthState.Unknown, awaitItem())
-            cancelAndIgnoreRemainingEvents()
+    fun `initial authState is Unknown`() =
+        runTest {
+            viewModel.authState.test {
+                assertEquals(AuthState.Unknown, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `authState reflects Authenticated when flow emits`() = runTest {
-        val user = AuthUser(1, "alice", "Alice", "alice@example.com", "tok")
+    fun `authState reflects Authenticated when flow emits`() =
+        runTest {
+            val user = AuthUser(1, "alice", "Alice", "alice@example.com", "tok")
 
-        viewModel.authState.test {
-            assertEquals(AuthState.Unknown, awaitItem())
+            viewModel.authState.test {
+                assertEquals(AuthState.Unknown, awaitItem())
+                authStateFlow.value = AuthState.Authenticated(user)
+                assertEquals(AuthState.Authenticated(user), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `authState reflects Unauthenticated after logout`() =
+        runTest {
+            val user = AuthUser(1, "alice", "Alice", "alice@example.com", "tok")
             authStateFlow.value = AuthState.Authenticated(user)
-            assertEquals(AuthState.Authenticated(user), awaitItem())
-            cancelAndIgnoreRemainingEvents()
+
+            viewModel.authState.test {
+                assertEquals(AuthState.Authenticated(user), awaitItem())
+                authStateFlow.value = AuthState.Unauthenticated
+                assertEquals(AuthState.Unauthenticated, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `authState reflects Unauthenticated after logout`() = runTest {
-        val user = AuthUser(1, "alice", "Alice", "alice@example.com", "tok")
-        authStateFlow.value = AuthState.Authenticated(user)
+    fun `authState emits full sequence — Unknown to Authenticated to Unauthenticated`() =
+        runTest {
+            val user = AuthUser(2, "bob", "Bob", "bob@example.com", "tok2")
 
-        viewModel.authState.test {
-            assertEquals(AuthState.Authenticated(user), awaitItem())
-            authStateFlow.value = AuthState.Unauthenticated
-            assertEquals(AuthState.Unauthenticated, awaitItem())
-            cancelAndIgnoreRemainingEvents()
+            viewModel.authState.test {
+                assertEquals(AuthState.Unknown, awaitItem())
+                authStateFlow.value = AuthState.Authenticated(user)
+                assertEquals(AuthState.Authenticated(user), awaitItem())
+                authStateFlow.value = AuthState.Unauthenticated
+                assertEquals(AuthState.Unauthenticated, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
-
-    @Test
-    fun `authState emits full sequence — Unknown to Authenticated to Unauthenticated`() = runTest {
-        val user = AuthUser(2, "bob", "Bob", "bob@example.com", "tok2")
-
-        viewModel.authState.test {
-            assertEquals(AuthState.Unknown, awaitItem())
-            authStateFlow.value = AuthState.Authenticated(user)
-            assertEquals(AuthState.Authenticated(user), awaitItem())
-            authStateFlow.value = AuthState.Unauthenticated
-            assertEquals(AuthState.Unauthenticated, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
 
     // -------------------------------------------------------------------------
     // logout
     // -------------------------------------------------------------------------
 
     @Test
-    fun `logout calls LogoutUseCase`() = runTest {
-        coEvery { mockLogoutUseCase() } returns Unit.asRight()
+    fun `logout calls LogoutUseCase`() =
+        runTest {
+            coEvery { mockLogoutUseCase() } returns Unit.asRight()
 
-        viewModel.logout()
+            viewModel.logout()
 
-        coVerify(exactly = 1) { mockLogoutUseCase() }
-    }
+            coVerify(exactly = 1) { mockLogoutUseCase() }
+        }
 
     @Test
-    fun `logout emits error to error flow on use case failure`() = runTest {
-        val error = AppError.NetworkError.ServerError(statusCode = 500)
-        coEvery { mockLogoutUseCase() } returns error.asLeft()
+    fun `logout emits error to error flow on use case failure`() =
+        runTest {
+            val error = AppError.NetworkError.ServerError(statusCode = 500)
+            coEvery { mockLogoutUseCase() } returns error.asLeft()
 
-        viewModel.error.test {
-            viewModel.logout()
-            val emitted = awaitItem()
-            assertIs<AppError.NetworkError.ServerError>(emitted)
-            assertEquals(500, emitted.statusCode)
-            cancelAndIgnoreRemainingEvents()
+            viewModel.error.test {
+                viewModel.logout()
+                val emitted = awaitItem()
+                assertIs<AppError.NetworkError.ServerError>(emitted)
+                assertEquals(500, emitted.statusCode)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 }

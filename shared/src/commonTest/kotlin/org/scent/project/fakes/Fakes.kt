@@ -22,7 +22,6 @@ import org.scent.project.domain.validation.ValidatorContract
 // -------------------------------------------------------------------------
 
 class FakeAuthRepository : AuthRepository {
-
     var loginResult: Result<AuthUser> = AppError.Unknown().asLeft()
     var registerResult: Result<AuthUser> = AppError.Unknown().asLeft()
     var getCurrentUserResult: Result<AuthUser> = AppError.Unknown().asLeft()
@@ -35,6 +34,7 @@ class FakeAuthRepository : AuthRepository {
     var lastRegisterUsername: String? = null
     var lastRegisterDisplayName: String? = null
 
+    @Suppress("ktlint:standard:backing-property-naming") // exposed via overridden observeAuthState(), not a property
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
 
     fun setAuthState(state: AuthState) {
@@ -43,7 +43,10 @@ class FakeAuthRepository : AuthRepository {
 
     override fun observeAuthState(): Flow<AuthState> = _authState
 
-    override suspend fun login(email: String, password: String): Result<AuthUser> {
+    override suspend fun login(
+        email: String,
+        password: String,
+    ): Result<AuthUser> {
         lastLoginEmail = email
         lastLoginPassword = password
         return loginResult
@@ -53,7 +56,7 @@ class FakeAuthRepository : AuthRepository {
         email: String,
         password: String,
         username: String,
-        displayName: String
+        displayName: String,
     ): Result<AuthUser> {
         lastRegisterEmail = email
         lastRegisterPassword = password
@@ -72,7 +75,6 @@ class FakeAuthRepository : AuthRepository {
 // -------------------------------------------------------------------------
 
 class FakeTokenStorage : TokenStorage {
-
     var storedToken: String? = null
     var saveError: AppError.StorageError? = null
     var getError: AppError.StorageError? = null
@@ -101,7 +103,6 @@ class FakeTokenStorage : TokenStorage {
 // -------------------------------------------------------------------------
 
 class FakeAuthApi : AuthApi {
-
     var registerResponse: AuthResponse? = null
     var registerException: Exception? = null
 
@@ -135,18 +136,13 @@ class FakeValidator(
     private val emailResult: Result<String>? = null,
     private val passwordResult: Result<String>? = null,
     private val usernameResult: Result<String>? = null,
-    private val displayNameResult: Result<String>? = null
+    private val displayNameResult: Result<String>? = null,
 ) : ValidatorContract {
+    override fun validateEmail(email: String): Result<String> = emailResult ?: email.asRight()
 
-    override fun validateEmail(email: String): Result<String> =
-        emailResult ?: email.asRight()
+    override fun validatePassword(password: String): Result<String> = passwordResult ?: password.asRight()
 
-    override fun validatePassword(password: String): Result<String> =
-        passwordResult ?: password.asRight()
+    override fun validateUsername(username: String): Result<String> = usernameResult ?: username.asRight()
 
-    override fun validateUsername(username: String): Result<String> =
-        usernameResult ?: username.asRight()
-
-    override fun validateDisplayName(displayName: String): Result<String> =
-        displayNameResult ?: displayName.asRight()
+    override fun validateDisplayName(displayName: String): Result<String> = displayNameResult ?: displayName.asRight()
 }

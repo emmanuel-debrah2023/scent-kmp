@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:HttpClientFactory.android.kt$30_000</ID>
+    <ID>TooGenericExceptionCaught:TokenStorageFactory.android.kt$TokenStorageFactory.&lt;no name provided&gt;$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TokenStorageImpl.kt$TokenStorageImpl$e: Exception</ID>
+  </CurrentIssues>
+</SmellBaseline>

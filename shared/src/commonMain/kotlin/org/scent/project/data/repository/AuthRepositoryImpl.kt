@@ -1,7 +1,7 @@
 package org.scent.project.data.repository
 
-import io.ktor.client.plugins.*
-import io.ktor.client.statement.*
+import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.ResponseException
 import io.ktor.utils.io.errors.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,9 +25,9 @@ import org.scent.project.domain.validation.ValidatorContract
 class AuthRepositoryImpl(
     private val api: AuthApi,
     private val tokenStorage: TokenStorage,
-    private val validator: ValidatorContract = Validator
+    private val validator: ValidatorContract = Validator,
 ) : AuthRepository {
-
+    @Suppress("ktlint:standard:backing-property-naming") // exposed via overridden observeAuthState(), not a property
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
 
     // -------------------------------------------------------------------------
@@ -68,7 +68,7 @@ class AuthRepositoryImpl(
                 },
                 ifRight = { user ->
                     _authState.value = AuthState.Authenticated(user)
-                }
+                },
             )
         } catch (e: ResponseException) {
             when (e.response.status.value) {
@@ -94,7 +94,7 @@ class AuthRepositoryImpl(
         email: String,
         password: String,
         username: String,
-        displayName: String
+        displayName: String,
     ): Result<AuthUser> {
         // Validate inputs before any network call
         validator.validateEmail(email).onLeft { return it.asLeft() }
@@ -108,16 +108,17 @@ class AuthRepositoryImpl(
                     409 -> AppError.AuthError.UserAlreadyExists().asLeft()
                     else -> AppError.NetworkError.ServerError(statusCode = status).asLeft()
                 }
-            }
+            },
         ) {
-            val response = api.register(
-                RegisterRequest(
-                    email = email,
-                    password = password,
-                    username = username,
-                    displayName = displayName
+            val response =
+                api.register(
+                    RegisterRequest(
+                        email = email,
+                        password = password,
+                        username = username,
+                        displayName = displayName,
+                    ),
                 )
-            )
             val userResult = response.toAuthUser()
             userResult.fold(
                 ifLeft = { it.asLeft() },
@@ -125,7 +126,7 @@ class AuthRepositoryImpl(
                     tokenStorage.saveToken(user.token)
                     _authState.value = AuthState.Authenticated(user)
                     user.asRight()
-                }
+                },
             )
         }
     }
@@ -134,7 +135,10 @@ class AuthRepositoryImpl(
     // login
     // -------------------------------------------------------------------------
 
-    override suspend fun login(email: String, password: String): Result<AuthUser> {
+    override suspend fun login(
+        email: String,
+        password: String,
+    ): Result<AuthUser> {
         // Validate inputs before any network call
         validator.validateEmail(email).onLeft { return it.asLeft() }
         validator.validatePassword(password).onLeft { return it.asLeft() }
@@ -145,7 +149,7 @@ class AuthRepositoryImpl(
                     401 -> AppError.AuthError.InvalidCredentials().asLeft()
                     else -> AppError.NetworkError.ServerError(statusCode = status).asLeft()
                 }
-            }
+            },
         ) {
             val response = api.login(LoginRequest(email = email, password = password))
             val userResult = response.toAuthUser()
@@ -155,7 +159,7 @@ class AuthRepositoryImpl(
                     tokenStorage.saveToken(user.token)
                     _authState.value = AuthState.Authenticated(user)
                     user.asRight()
-                }
+                },
             )
         }
     }
@@ -166,8 +170,9 @@ class AuthRepositoryImpl(
 
     override suspend fun getCurrentUser(): Result<AuthUser> {
         val tokenResult = tokenStorage.getToken()
-        val token = tokenResult.getOrNull()
-            ?: return AppError.AuthError.Unauthorized().asLeft()
+        val token =
+            tokenResult.getOrNull()
+                ?: return AppError.AuthError.Unauthorized().asLeft()
 
         return safeApiCall(
             onHttpError = { status ->
@@ -180,7 +185,7 @@ class AuthRepositoryImpl(
                     404 -> AppError.AuthError.Unauthorized().asLeft()
                     else -> AppError.NetworkError.ServerError(statusCode = status).asLeft()
                 }
-            }
+            },
         ) {
             val meResponse = api.getCurrentUser(token)
             val userResult = meResponse.toAuthUser(token)
@@ -189,7 +194,7 @@ class AuthRepositoryImpl(
                 ifRight = { user ->
                     _authState.value = AuthState.Authenticated(user)
                     user.asRight()
-                }
+                },
             )
         }
     }
@@ -221,9 +226,9 @@ class AuthRepositoryImpl(
      */
     private suspend fun <T> safeApiCall(
         onHttpError: suspend (statusCode: Int) -> Result<T>,
-        block: suspend () -> Result<T>
-    ): Result<T> {
-        return try {
+        block: suspend () -> Result<T>,
+    ): Result<T> =
+        try {
             block()
         } catch (e: ResponseException) {
             onHttpError(e.response.status.value)
@@ -236,5 +241,4 @@ class AuthRepositoryImpl(
         } catch (e: Exception) {
             AppError.Unknown(message = e.message ?: "An unexpected error occurred", cause = e).asLeft()
         }
-    }
 }

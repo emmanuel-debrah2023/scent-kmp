@@ -16,16 +16,18 @@ import ui.base.UiState
 class AuthViewModel(
     private val loginUseCase: LoginUseCase,
     private val registerUseCase: RegisterUseCase,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
 ) : BaseViewModel() {
-
     private val _loginState = MutableStateFlow<UiState<AuthUser>>(UiState.Idle)
     val loginState: StateFlow<UiState<AuthUser>> = _loginState.asStateFlow()
 
     private val _registerState = MutableStateFlow<UiState<AuthUser>>(UiState.Idle)
     val registerState: StateFlow<UiState<AuthUser>> = _registerState.asStateFlow()
 
-    fun login(email: String, password: String) {
+    fun login(
+        email: String,
+        password: String,
+    ) {
         val emailResult = Validator.validateEmail(email)
         val passwordResult = Validator.validatePassword(password)
 
@@ -46,12 +48,17 @@ class AuthViewModel(
                 },
                 onError = { error ->
                     _loginState.value = UiState.Error(error)
-                }
+                },
             )
         }
     }
 
-    fun register(username: String, email: String, displayName: String, password: String) {
+    fun register(
+        username: String,
+        email: String,
+        displayName: String,
+        password: String,
+    ) {
         val usernameResult = Validator.validateUsername(username)
         val emailResult = Validator.validateEmail(email)
         val displayNameResult = Validator.validateDisplayName(displayName)
@@ -82,7 +89,7 @@ class AuthViewModel(
                 },
                 onError = { error ->
                     _registerState.value = UiState.Error(error)
-                }
+                },
             )
         }
     }

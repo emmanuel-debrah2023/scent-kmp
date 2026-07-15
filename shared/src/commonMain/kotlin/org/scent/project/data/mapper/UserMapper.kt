@@ -8,7 +8,6 @@ import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 
 object UserMapper {
-
     /**
      * Maps a [UserResponse] DTO to a [Result<User>] domain model.
      *
@@ -22,14 +21,17 @@ object UserMapper {
      * - [UserResponse.bio] → empty string
      */
     fun UserResponse.toUser(): Result<User> {
-        val id = id
-            ?: return AppError.NetworkError.ParseError(fieldName = "id").asLeft()
+        val id =
+            id
+                ?: return AppError.NetworkError.ParseError(fieldName = "id").asLeft()
 
-        val username = username?.takeIf { it.isNotBlank() }
-            ?: return AppError.NetworkError.ParseError(fieldName = "username").asLeft()
+        val username =
+            username?.takeIf { it.isNotBlank() }
+                ?: return AppError.NetworkError.ParseError(fieldName = "username").asLeft()
 
-        val displayName = displayName?.takeIf { it.isNotBlank() }
-            ?: return AppError.NetworkError.ParseError(fieldName = "displayName").asLeft()
+        val displayName =
+            displayName?.takeIf { it.isNotBlank() }
+                ?: return AppError.NetworkError.ParseError(fieldName = "displayName").asLeft()
 
         return User(
             id = id,
@@ -37,7 +39,7 @@ object UserMapper {
             displayName = displayName,
             email = email.orEmpty(),
             avatarUrl = avatarUrl.orEmpty(),
-            bio = bio.orEmpty()
+            bio = bio.orEmpty(),
         ).asRight()
     }
 }

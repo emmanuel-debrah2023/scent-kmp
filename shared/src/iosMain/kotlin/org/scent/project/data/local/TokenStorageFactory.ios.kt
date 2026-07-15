@@ -7,38 +7,34 @@ import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import platform.Foundation.NSUserDefaults
 
-actual class TokenStorageFactory() {
+actual class TokenStorageFactory {
+    actual fun create(): TokenStorage =
+        object : TokenStorage {
+            private val defaults = NSUserDefaults.standardUserDefaults
+            private val tokenKey = "auth_token"
 
-    actual fun create(): TokenStorage = object : TokenStorage {
+            override suspend fun saveToken(token: String): Result<Unit> =
+                try {
+                    defaults.setObject(token, forKey = tokenKey)
+                    Unit.asRight()
+                } catch (e: Exception) {
+                    AppError.StorageError.WriteFailed(cause = e).asLeft()
+                }
 
-        private val defaults = NSUserDefaults.standardUserDefaults
-        private val tokenKey = "auth_token"
+            override suspend fun getToken(): Result<String?> =
+                try {
+                    val token = defaults.stringForKey(tokenKey)
+                    token.asRight()
+                } catch (e: Exception) {
+                    AppError.StorageError.ReadFailed(cause = e).asLeft()
+                }
 
-        override suspend fun saveToken(token: String): Result<Unit> {
-            return try {
-                defaults.setObject(token, forKey = tokenKey)
-                Unit.asRight()
-            } catch (e: Exception) {
-                AppError.StorageError.WriteFailed(cause = e).asLeft()
-            }
+            override suspend fun clearToken(): Result<Unit> =
+                try {
+                    defaults.removeObjectForKey(tokenKey)
+                    Unit.asRight()
+                } catch (e: Exception) {
+                    AppError.StorageError.WriteFailed(cause = e).asLeft()
+                }
         }
-
-        override suspend fun getToken(): Result<String?> {
-            return try {
-                val token = defaults.stringForKey(tokenKey)
-                token.asRight()
-            } catch (e: Exception) {
-                AppError.StorageError.ReadFailed(cause = e).asLeft()
-            }
-        }
-
-        override suspend fun clearToken(): Result<Unit> {
-            return try {
-                defaults.removeObjectForKey(tokenKey)
-                Unit.asRight()
-            } catch (e: Exception) {
-                AppError.StorageError.WriteFailed(cause = e).asLeft()
-            }
-        }
-    }
 }

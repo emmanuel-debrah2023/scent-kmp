@@ -7,38 +7,45 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 // Note: Using default Serif/SansSerif as fallbacks until Playfair/DM Sans are added to resources
-val ScentTypography = Typography(
-    displayLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 64.sp,
-        letterSpacing = (-0.05).sp
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 24.sp
-    ),
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp
-    ),
-    labelMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        letterSpacing = 0.1.sp
-    ),
-    labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        letterSpacing = 0.15.sp
+val ScentTypography =
+    Typography(
+        displayLarge =
+            TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Bold,
+                fontSize = 64.sp,
+                letterSpacing = (-0.05).sp,
+            ),
+        headlineSmall =
+            TextStyle(
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 24.sp,
+            ),
+        bodyLarge =
+            TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 16.sp,
+            ),
+        bodyMedium =
+            TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
+            ),
+        labelMedium =
+            TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                letterSpacing = 0.1.sp,
+            ),
+        labelLarge =
+            TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                letterSpacing = 0.15.sp,
+            ),
     )
-)

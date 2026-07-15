@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:function-naming") // iOS factory functions follow UIViewController PascalCase convention
+
 package org.scent.project
 
 import App
