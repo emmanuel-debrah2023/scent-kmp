@@ -1,7 +1,9 @@
 package ui.auth
 
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.scent.project.domain.model.AuthState
 import org.scent.project.domain.usecase.LogoutUseCase
@@ -10,15 +12,15 @@ import ui.base.BaseViewModel
 
 class SessionViewModel(
     observeAuthStateUseCase: ObserveAuthStateUseCase,
-    private val logoutUseCase: LogoutUseCase
+    private val logoutUseCase: LogoutUseCase,
 ) : BaseViewModel() {
-
-    val authState: StateFlow<AuthState> = observeAuthStateUseCase()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = AuthState.Unknown
-        )
+    val authState: StateFlow<AuthState> =
+        observeAuthStateUseCase()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = AuthState.Unknown,
+            )
 
     fun logout() {
         viewModelScope.launch {
@@ -28,7 +30,7 @@ class SessionViewModel(
                 },
                 onError = { error ->
                     handleError(error)
-                }
+                },
             )
         }
     }

@@ -7,5 +7,5 @@ data class Fragrance(
     val description: String = "",
     val imageUrl: String = "",
     val rating: Float = 0f,
-    val reviewCount: Int = 0
+    val reviewCount: Int = 0,
 )

@@ -7,11 +7,11 @@ import org.scent.project.data.local.TokenStorageFactory
 fun initKoin(
     baseUrl: String,
     tokenStorageFactory: TokenStorageFactory,
-    appDeclaration: KoinAppDeclaration = {}
+    appDeclaration: KoinAppDeclaration = {},
 ) = startKoin {
     appDeclaration()
     modules(
         sharedModule(baseUrl, tokenStorageFactory),
-        viewModelModule
+        viewModelModule,
     )
 }

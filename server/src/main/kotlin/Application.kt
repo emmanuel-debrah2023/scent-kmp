@@ -1,24 +1,26 @@
 package org.scent.project
 
 import data.initDatabase
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.github.cdimascio.dotenv.dotenv
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.netty.EngineMain
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
 import plugins.configureSecurity
 import routing.authRoutes
 
-import io.github.cdimascio.dotenv.dotenv
-
 fun main(args: Array<String>) {
-    val dotEnv = dotenv {
-        directory = if (java.io.File(".env").exists()) "." else ".."
-        ignoreIfMalformed = true
-        ignoreIfMissing = true
-    }
-    
+    val dotEnv =
+        dotenv {
+            directory = if (java.io.File(".env").exists()) "." else ".."
+            ignoreIfMalformed = true
+            ignoreIfMissing = true
+        }
+
     // Load .env entries into System properties
     dotEnv.entries().forEach { entry ->
         System.setProperty(entry.key, entry.value)
@@ -38,7 +40,7 @@ fun main(args: Array<String>) {
     if (System.getProperty("DATABASE_PASSWORD").isNullOrBlank()) {
         fallbackPassword?.let { System.setProperty("DATABASE_PASSWORD", it) }
     }
-    
+
     EngineMain.main(args)
 }
 
@@ -48,7 +50,7 @@ fun Application.module() {
         json()
     }
     configureSecurity()
-    
+
     routing {
         get("/") {
             call.respondText("Scent API is running")

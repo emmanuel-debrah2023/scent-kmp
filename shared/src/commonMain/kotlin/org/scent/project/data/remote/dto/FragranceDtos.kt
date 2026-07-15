@@ -11,5 +11,5 @@ data class FragranceResponse(
     @SerialName("description") val description: String? = null,
     @SerialName("image_url") val imageUrl: String? = null,
     @SerialName("rating") val rating: Float? = null,
-    @SerialName("review_count") val reviewCount: Int? = null
+    @SerialName("review_count") val reviewCount: Int? = null,
 )

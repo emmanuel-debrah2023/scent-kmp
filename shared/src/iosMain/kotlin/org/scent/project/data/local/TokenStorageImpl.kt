@@ -34,12 +34,11 @@ import platform.Security.kSecValueData
 
 @OptIn(ExperimentalForeignApi::class)
 class TokenStorageImpl : TokenStorage {
-
     private val service = "org.scent.project.auth"
     private val account = "auth_token"
 
-    override suspend fun saveToken(token: String): Result<Unit> {
-        return try {
+    override suspend fun saveToken(token: String): Result<Unit> =
+        try {
             val query = CFDictionaryCreateMutable(null, 0, null, null)
             CFDictionaryAddValue(query, kSecClass, kSecClassGenericPassword)
             CFDictionaryAddValue(query, kSecAttrService, service.toCFType())
@@ -55,14 +54,14 @@ class TokenStorageImpl : TokenStorage {
             if (status == errSecSuccess) {
                 Unit.asRight()
             } else {
-                AppError.StorageError.WriteFailed(
-                    cause = RuntimeException("Keychain SecItemAdd failed with status: $status")
-                ).asLeft()
+                AppError.StorageError
+                    .WriteFailed(
+                        cause = RuntimeException("Keychain SecItemAdd failed with status: $status"),
+                    ).asLeft()
             }
         } catch (e: Exception) {
             AppError.StorageError.WriteFailed(cause = e).asLeft()
         }
-    }
 
     override suspend fun getToken(): Result<String?> {
         return try {
@@ -73,28 +72,35 @@ class TokenStorageImpl : TokenStorage {
             CFDictionaryAddValue(query, kSecReturnData, true.toCFType())
             CFDictionaryAddValue(query, kSecMatchLimit, kSecMatchLimitOne)
 
-            val token = memScoped {
-                val ptr = alloc<ObjCObjectVar<NSData?>>()
-                val status = SecItemCopyMatching(query, ptr.ptr.reinterpret())
-                when (status) {
-                    errSecSuccess -> ptr.value?.let {
-                        NSString.create(data = it, encoding = NSUTF8StringEncoding)?.toString()
+            val token =
+                memScoped {
+                    val ptr = alloc<ObjCObjectVar<NSData?>>()
+                    val status = SecItemCopyMatching(query, ptr.ptr.reinterpret())
+                    when (status) {
+                        errSecSuccess ->
+                            ptr.value?.let {
+                                NSString.create(data = it, encoding = NSUTF8StringEncoding)?.toString()
+                            }
+                        // errSecItemNotFound (-25300) — no token stored, not an error
+                        -25300 -> null
+                        else ->
+                            return AppError.StorageError
+                                .ReadFailed(
+                                    cause =
+                                        RuntimeException(
+                                            "Keychain SecItemCopyMatching failed with status: $status",
+                                        ),
+                                ).asLeft()
                     }
-                    // errSecItemNotFound (-25300) — no token stored, not an error
-                    -25300 -> null
-                    else -> return AppError.StorageError.ReadFailed(
-                        cause = RuntimeException("Keychain SecItemCopyMatching failed with status: $status")
-                    ).asLeft()
                 }
-            }
             token.asRight()
         } catch (e: Exception) {
             AppError.StorageError.ReadFailed(cause = e).asLeft()
         }
     }
 
-    override suspend fun clearToken(): Result<Unit> {
-        return try {
+    override suspend fun clearToken(): Result<Unit> =
+        try {
             val query = CFDictionaryCreateMutable(null, 0, null, null)
             CFDictionaryAddValue(query, kSecClass, kSecClassGenericPassword)
             CFDictionaryAddValue(query, kSecAttrService, service.toCFType())
@@ -106,14 +112,14 @@ class TokenStorageImpl : TokenStorage {
             if (status == errSecSuccess || status == -25300) {
                 Unit.asRight()
             } else {
-                AppError.StorageError.WriteFailed(
-                    cause = RuntimeException("Keychain SecItemDelete failed with status: $status")
-                ).asLeft()
+                AppError.StorageError
+                    .WriteFailed(
+                        cause = RuntimeException("Keychain SecItemDelete failed with status: $status"),
+                    ).asLeft()
             }
         } catch (e: Exception) {
             AppError.StorageError.WriteFailed(cause = e).asLeft()
         }
-    }
 
     private fun Any?.toCFType() = this as CFTypeRef?
 }

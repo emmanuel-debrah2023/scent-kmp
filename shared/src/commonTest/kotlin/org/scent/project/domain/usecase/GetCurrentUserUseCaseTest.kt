@@ -13,7 +13,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class GetCurrentUserUseCaseTest {
-
     private lateinit var repository: FakeAuthRepository
     private lateinit var useCase: GetCurrentUserUseCase
 
@@ -24,46 +23,51 @@ class GetCurrentUserUseCaseTest {
     }
 
     @Test
-    fun `returns Right with AuthUser when session is active`() = runTest {
-        val user = AuthUser(id = 3, username = "dan", displayName = "Dan", email = "dan@example.com", token = "tok3")
-        repository.getCurrentUserResult = user.asRight()
+    fun `returns Right with AuthUser when session is active`() =
+        runTest {
+            val user =
+                AuthUser(id = 3, username = "dan", displayName = "Dan", email = "dan@example.com", token = "tok3")
+            repository.getCurrentUserResult = user.asRight()
 
-        val result = useCase()
+            val result = useCase()
 
-        assertTrue(result.isRight)
-        assertEquals(user, result.getOrNull())
-    }
-
-    @Test
-    fun `returns Left with Unauthorized when token is expired`() = runTest {
-        val error = AppError.AuthError.Unauthorized()
-        repository.getCurrentUserResult = error.asLeft()
-
-        val result = useCase()
-
-        assertTrue(result.isLeft)
-        assertIs<AppError.AuthError.Unauthorized>(result.leftOrNull())
-    }
+            assertTrue(result.isRight)
+            assertEquals(user, result.getOrNull())
+        }
 
     @Test
-    fun `returns Left with TokenExpired when token has expired`() = runTest {
-        val error = AppError.AuthError.TokenExpired()
-        repository.getCurrentUserResult = error.asLeft()
+    fun `returns Left with Unauthorized when token is expired`() =
+        runTest {
+            val error = AppError.AuthError.Unauthorized()
+            repository.getCurrentUserResult = error.asLeft()
 
-        val result = useCase()
+            val result = useCase()
 
-        assertTrue(result.isLeft)
-        assertIs<AppError.AuthError.TokenExpired>(result.leftOrNull())
-    }
+            assertTrue(result.isLeft)
+            assertIs<AppError.AuthError.Unauthorized>(result.leftOrNull())
+        }
 
     @Test
-    fun `returns Left with NetworkError on no connection`() = runTest {
-        val error = AppError.NetworkError.NoConnection()
-        repository.getCurrentUserResult = error.asLeft()
+    fun `returns Left with TokenExpired when token has expired`() =
+        runTest {
+            val error = AppError.AuthError.TokenExpired()
+            repository.getCurrentUserResult = error.asLeft()
 
-        val result = useCase()
+            val result = useCase()
 
-        assertTrue(result.isLeft)
-        assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
-    }
+            assertTrue(result.isLeft)
+            assertIs<AppError.AuthError.TokenExpired>(result.leftOrNull())
+        }
+
+    @Test
+    fun `returns Left with NetworkError on no connection`() =
+        runTest {
+            val error = AppError.NetworkError.NoConnection()
+            repository.getCurrentUserResult = error.asLeft()
+
+            val result = useCase()
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
+        }
 }

@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 120
+ktlint_standard_no-wildcard-imports = enabled
+ktlint_standard_import-ordering = enabled
+# Allow trailing commas in multi-line expressions (Kotlin convention)
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+# Composable and Preview functions use PascalCase by convention — don't flag them
+ktlint_function_naming_ignore_when_annotated_with = Composable, Preview
+# KMP uses ClassName.platform.kt naming for actual implementations — conflicts with ktlint's filename rule
+ktlint_standard_filename = disabled

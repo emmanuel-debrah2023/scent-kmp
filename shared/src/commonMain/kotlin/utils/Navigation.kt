@@ -8,6 +8,6 @@ object Routes {
     const val FRAGRANCE_DETAIL = "fragrance_detail/{fragranceId}"
     const val PROFILE = "profile"
     const val SEARCH = "search"
-    
+
     fun fragranceDetail(fragranceId: String) = "fragrance_detail/$fragranceId"
 }

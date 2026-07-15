@@ -8,25 +8,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.painterResource
-import scent.composeapp.generated.resources.Res
-import scent.composeapp.generated.resources.ic_home
 import ui.theme.BackgroundLight
 import ui.theme.DeepForestGreen
 import ui.theme.LightGray
-
 
 @Composable
 fun BottomNavigation(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
     tabs: List<BottomNavItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     NavigationBar(
         modifier = modifier,
         containerColor = BackgroundLight,
-        contentColor = LightGray
+        contentColor = LightGray,
     ) {
         tabs.forEachIndexed { index, item ->
             NavigationBarItem(
@@ -36,16 +32,16 @@ fun BottomNavigation(
                     Icon(
                         painter = item.icon,
                         contentDescription = item.title,
-                        tint = if (selectedTab == index) DeepForestGreen else LightGray
+                        tint = if (selectedTab == index) DeepForestGreen else LightGray,
                     )
                 },
                 label = {
                     Text(
                         text = item.title,
                         fontSize = 12.sp,
-                        color = if (selectedTab == index) DeepForestGreen else LightGray
+                        color = if (selectedTab == index) DeepForestGreen else LightGray,
                     )
-                }
+                },
             )
         }
     }
@@ -53,5 +49,5 @@ fun BottomNavigation(
 
 data class BottomNavItem(
     val title: String,
-    val icon: Painter
+    val icon: Painter,
 )

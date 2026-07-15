@@ -6,14 +6,19 @@ import androidx.compose.runtime.mutableStateOf
 
 sealed class Screen {
     data object Login : Screen()
+
     data object Register : Screen()
+
     data object Home : Screen()
 }
 
-class NavigationState(initialScreen: Screen = Screen.Login) {
+class NavigationState(
+    initialScreen: Screen = Screen.Login,
+) {
     private val _currentScreen = mutableStateOf<Screen>(initialScreen)
     val currentScreen: State<Screen> = _currentScreen
 
+    @Suppress("ktlint:standard:backing-property-naming") // exposed as canGoBack boolean, not a backStack property
     private val _backStack = mutableStateListOf<Screen>()
     val canGoBack: Boolean get() = _backStack.isNotEmpty()
 
@@ -24,20 +29,19 @@ class NavigationState(initialScreen: Screen = Screen.Login) {
         }
     }
 
-    fun goBack(): Boolean {
-        return if (_backStack.isNotEmpty()) {
+    fun goBack(): Boolean =
+        if (_backStack.isNotEmpty()) {
             _currentScreen.value = _backStack.removeAt(_backStack.size - 1)
             true
         } else {
             false
         }
-    }
 
     fun popToRoot(rootScreen: Screen) {
         _backStack.clear()
         _currentScreen.value = rootScreen
     }
-    
+
     fun reset(screen: Screen) {
         _backStack.clear()
         _currentScreen.value = screen

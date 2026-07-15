@@ -9,21 +9,21 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class UserMapperTest {
-
     // -------------------------------------------------------------------------
     // Success path
     // -------------------------------------------------------------------------
 
     @Test
     fun `toUser returns Right with fully populated User for valid DTO`() {
-        val dto = UserResponse(
-            id = 10,
-            username = "scentlover",
-            displayName = "Scent Lover",
-            email = "scent@example.com",
-            avatarUrl = "https://example.com/avatar.jpg",
-            bio = "Fragrance enthusiast"
-        )
+        val dto =
+            UserResponse(
+                id = 10,
+                username = "scentlover",
+                displayName = "Scent Lover",
+                email = "scent@example.com",
+                avatarUrl = "https://example.com/avatar.jpg",
+                bio = "Fragrance enthusiast",
+            )
 
         val result = dto.toUser()
 
@@ -145,11 +145,12 @@ class UserMapperTest {
 
     @Test
     fun `toUser round-trip — any DTO with non-null non-blank required fields produces Right`() {
-        val validDtos = listOf(
-            UserResponse(1, "alice", "Alice", "alice@example.com", "https://img.com/a.jpg", "Bio here"),
-            UserResponse(2, "bob", "Bob", null, null, null),
-            UserResponse(3, "carol_smith", "Carol Smith", "", "", "")
-        )
+        val validDtos =
+            listOf(
+                UserResponse(1, "alice", "Alice", "alice@example.com", "https://img.com/a.jpg", "Bio here"),
+                UserResponse(2, "bob", "Bob", null, null, null),
+                UserResponse(3, "carol_smith", "Carol Smith", "", "", ""),
+            )
 
         validDtos.forEach { dto ->
             assertTrue(dto.toUser().isRight, "Expected Right for dto: $dto")

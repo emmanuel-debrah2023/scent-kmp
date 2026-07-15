@@ -11,6 +11,9 @@ import org.scent.project.BuildConfig
  */
 object DatabaseClientFactory {
     fun create(): DatabaseClient =
-        if (BuildConfig.IS_SUPABASE) SupabaseDatabaseClient()
-        else LocalDatabaseClient()
+        if (BuildConfig.IS_SUPABASE) {
+            SupabaseDatabaseClient()
+        } else {
+            LocalDatabaseClient()
+        }
 }

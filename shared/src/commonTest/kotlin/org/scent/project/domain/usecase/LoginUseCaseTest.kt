@@ -13,7 +13,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class LoginUseCaseTest {
-
     private lateinit var repository: FakeAuthRepository
     private lateinit var useCase: LoginUseCase
 
@@ -24,47 +23,52 @@ class LoginUseCaseTest {
     }
 
     @Test
-    fun `returns Right with AuthUser on success`() = runTest {
-        val user = AuthUser(id = 1, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok")
-        repository.loginResult = user.asRight()
+    fun `returns Right with AuthUser on success`() =
+        runTest {
+            val user =
+                AuthUser(id = 1, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok")
+            repository.loginResult = user.asRight()
 
-        val result = useCase("alice@example.com", "secret123")
+            val result = useCase("alice@example.com", "secret123")
 
-        assertTrue(result.isRight)
-        assertEquals(user, result.getOrNull())
-    }
-
-    @Test
-    fun `returns Left with InvalidCredentials on auth failure`() = runTest {
-        val error = AppError.AuthError.InvalidCredentials()
-        repository.loginResult = error.asLeft()
-
-        val result = useCase("alice@example.com", "wrong")
-
-        assertTrue(result.isLeft)
-        assertIs<AppError.AuthError.InvalidCredentials>(result.leftOrNull())
-    }
+            assertTrue(result.isRight)
+            assertEquals(user, result.getOrNull())
+        }
 
     @Test
-    fun `returns Left with NetworkError on server error`() = runTest {
-        val error = AppError.NetworkError.ServerError(statusCode = 500)
-        repository.loginResult = error.asLeft()
+    fun `returns Left with InvalidCredentials on auth failure`() =
+        runTest {
+            val error = AppError.AuthError.InvalidCredentials()
+            repository.loginResult = error.asLeft()
 
-        val result = useCase("alice@example.com", "secret123")
+            val result = useCase("alice@example.com", "wrong")
 
-        assertTrue(result.isLeft)
-        val left = result.leftOrNull()
-        assertIs<AppError.NetworkError.ServerError>(left)
-        assertEquals(500, left.statusCode)
-    }
+            assertTrue(result.isLeft)
+            assertIs<AppError.AuthError.InvalidCredentials>(result.leftOrNull())
+        }
 
     @Test
-    fun `forwards email and password to repository`() = runTest {
-        repository.loginResult = AppError.Unknown().asLeft()
+    fun `returns Left with NetworkError on server error`() =
+        runTest {
+            val error = AppError.NetworkError.ServerError(statusCode = 500)
+            repository.loginResult = error.asLeft()
 
-        useCase("bob@example.com", "pass456")
+            val result = useCase("alice@example.com", "secret123")
 
-        assertEquals("bob@example.com", repository.lastLoginEmail)
-        assertEquals("pass456", repository.lastLoginPassword)
-    }
+            assertTrue(result.isLeft)
+            val left = result.leftOrNull()
+            assertIs<AppError.NetworkError.ServerError>(left)
+            assertEquals(500, left.statusCode)
+        }
+
+    @Test
+    fun `forwards email and password to repository`() =
+        runTest {
+            repository.loginResult = AppError.Unknown().asLeft()
+
+            useCase("bob@example.com", "pass456")
+
+            assertEquals("bob@example.com", repository.lastLoginEmail)
+            assertEquals("pass456", repository.lastLoginPassword)
+        }
 }

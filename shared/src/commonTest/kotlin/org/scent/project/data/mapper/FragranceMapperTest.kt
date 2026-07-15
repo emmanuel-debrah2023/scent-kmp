@@ -9,22 +9,22 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class FragranceMapperTest {
-
     // -------------------------------------------------------------------------
     // Success path
     // -------------------------------------------------------------------------
 
     @Test
     fun `toFragrance returns Right with fully populated Fragrance for valid DTO`() {
-        val dto = FragranceResponse(
-            id = 1,
-            name = "Bleu de Chanel",
-            brand = "Chanel",
-            description = "A fresh woody aromatic fragrance",
-            imageUrl = "https://example.com/bleu.jpg",
-            rating = 4.5f,
-            reviewCount = 320
-        )
+        val dto =
+            FragranceResponse(
+                id = 1,
+                name = "Bleu de Chanel",
+                brand = "Chanel",
+                description = "A fresh woody aromatic fragrance",
+                imageUrl = "https://example.com/bleu.jpg",
+                rating = 4.5f,
+                reviewCount = 320,
+            )
 
         val result = dto.toFragrance()
 
@@ -157,11 +157,12 @@ class FragranceMapperTest {
 
     @Test
     fun `toFragrance round-trip — any DTO with non-null non-blank required fields produces Right`() {
-        val validDtos = listOf(
-            FragranceResponse(1, "Aventus", "Creed", "Bold", "https://img.com/1.jpg", 4.8f, 500),
-            FragranceResponse(2, "Oud Wood", "Tom Ford", null, null, null, null),
-            FragranceResponse(3, "Light Blue", "Dolce & Gabbana", "", "", 0f, 0)
-        )
+        val validDtos =
+            listOf(
+                FragranceResponse(1, "Aventus", "Creed", "Bold", "https://img.com/1.jpg", 4.8f, 500),
+                FragranceResponse(2, "Oud Wood", "Tom Ford", null, null, null, null),
+                FragranceResponse(3, "Light Blue", "Dolce & Gabbana", "", "", 0f, 0),
+            )
 
         validDtos.forEach { dto ->
             assertTrue(dto.toFragrance().isRight, "Expected Right for dto: $dto")

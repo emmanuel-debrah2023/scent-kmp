@@ -10,7 +10,6 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.util.Either
 
 abstract class BaseViewModel : ViewModel() {
-
     private val _error = MutableSharedFlow<AppError>()
     val error: SharedFlow<AppError> = _error.asSharedFlow()
 
@@ -22,7 +21,7 @@ abstract class BaseViewModel : ViewModel() {
 
     protected fun <T> Either<AppError, T>.handleResult(
         onSuccess: (T) -> Unit,
-        onError: ((AppError) -> Unit)? = null
+        onError: ((AppError) -> Unit)? = null,
     ) {
         fold(
             ifLeft = { error ->
@@ -30,7 +29,7 @@ abstract class BaseViewModel : ViewModel() {
             },
             ifRight = { data ->
                 onSuccess(data)
-            }
+            },
         )
     }
 }

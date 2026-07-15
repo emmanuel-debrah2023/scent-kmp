@@ -1,6 +1,6 @@
+import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
-import org.gradle.api.file.DuplicatesStrategy
 
 plugins {
     alias(libs.plugins.kotlinJvm)
@@ -13,7 +13,7 @@ group = "org.scent.project"
 version = "1.0.0"
 application {
     mainClass.set("org.scent.project.ApplicationKt")
-    
+
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
@@ -27,7 +27,7 @@ configurations.all {
 dependencies {
     implementation(projects.shared)
     implementation(libs.logback)
-    
+
     // Ktor Server
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
@@ -35,7 +35,7 @@ dependencies {
     implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json.server)
-    
+
     // Database
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
@@ -44,7 +44,7 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.hikaricp)
     implementation(libs.dotenv.kotlin)
-    
+
     // Auth Utils
     implementation(libs.jbcrypt)
     implementation(libs.java.jwt)
@@ -52,10 +52,10 @@ dependencies {
     implementation(libs.google.api.client)
     implementation(libs.google.api.client.gson)
     implementation(libs.jwks.rsa)
-    
+
     // Utils
     implementation(libs.kotlinx.datetime)
-    
+
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.testJunit)
 }

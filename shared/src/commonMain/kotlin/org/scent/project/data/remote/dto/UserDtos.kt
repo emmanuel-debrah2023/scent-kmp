@@ -10,5 +10,5 @@ data class UserResponse(
     @SerialName("display_name") val displayName: String? = null,
     @SerialName("email") val email: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
-    @SerialName("bio") val bio: String? = null
+    @SerialName("bio") val bio: String? = null,
 )

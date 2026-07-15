@@ -3,9 +3,9 @@ package org.scent.project.di
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.scent.project.data.local.TokenStorageFactory
-import org.scent.project.data.remote.createHttpClient
 import org.scent.project.data.remote.api.AuthApi
 import org.scent.project.data.remote.api.AuthApiImpl
+import org.scent.project.data.remote.createHttpClient
 import org.scent.project.data.repository.AuthRepositoryImpl
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.usecase.GetCurrentUserUseCase
@@ -16,8 +16,10 @@ import org.scent.project.domain.usecase.RegisterUseCase
 import org.scent.project.domain.validation.Validator
 import org.scent.project.domain.validation.ValidatorContract
 
-fun sharedModule(baseUrl: String, tokenStorageFactory: TokenStorageFactory) = module {
-
+fun sharedModule(
+    baseUrl: String,
+    tokenStorageFactory: TokenStorageFactory,
+) = module {
     // -------------------------------------------------------------------------
     // Singles
     // -------------------------------------------------------------------------

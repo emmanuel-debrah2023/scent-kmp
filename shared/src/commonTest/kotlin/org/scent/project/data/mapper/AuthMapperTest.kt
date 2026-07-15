@@ -10,20 +10,20 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class AuthMapperTest {
-
     // -------------------------------------------------------------------------
     // AuthResponse.toAuthUser()
     // -------------------------------------------------------------------------
 
     @Test
     fun `toAuthUser returns Right with populated AuthUser for valid AuthResponse`() {
-        val response = AuthResponse(
-            token = "jwt-token",
-            userId = 42,
-            username = "johndoe",
-            email = "john@example.com",
-            displayName = "John Doe"
-        )
+        val response =
+            AuthResponse(
+                token = "jwt-token",
+                userId = 42,
+                username = "johndoe",
+                email = "john@example.com",
+                displayName = "John Doe",
+            )
 
         val result = response.toAuthUser()
 
@@ -38,12 +38,13 @@ class AuthMapperTest {
 
     @Test
     fun `toAuthUser returns ParseError when token is null`() {
-        val response = AuthResponse(
-            token = null,
-            userId = 42,
-            username = "johndoe",
-            displayName = "John Doe"
-        )
+        val response =
+            AuthResponse(
+                token = null,
+                userId = 42,
+                username = "johndoe",
+                displayName = "John Doe",
+            )
 
         val result = response.toAuthUser()
 
@@ -55,12 +56,13 @@ class AuthMapperTest {
 
     @Test
     fun `toAuthUser returns ParseError when token is blank`() {
-        val response = AuthResponse(
-            token = "   ",
-            userId = 42,
-            username = "johndoe",
-            displayName = "John Doe"
-        )
+        val response =
+            AuthResponse(
+                token = "   ",
+                userId = 42,
+                username = "johndoe",
+                displayName = "John Doe",
+            )
 
         val result = response.toAuthUser()
 
@@ -72,12 +74,13 @@ class AuthMapperTest {
 
     @Test
     fun `toAuthUser returns ParseError when userId is null`() {
-        val response = AuthResponse(
-            token = "jwt-token",
-            userId = null,
-            username = "johndoe",
-            displayName = "John Doe"
-        )
+        val response =
+            AuthResponse(
+                token = "jwt-token",
+                userId = null,
+                username = "johndoe",
+                displayName = "John Doe",
+            )
 
         val result = response.toAuthUser()
 
@@ -89,12 +92,13 @@ class AuthMapperTest {
 
     @Test
     fun `toAuthUser returns ParseError when username is null`() {
-        val response = AuthResponse(
-            token = "jwt-token",
-            userId = 42,
-            username = null,
-            displayName = "John Doe"
-        )
+        val response =
+            AuthResponse(
+                token = "jwt-token",
+                userId = 42,
+                username = null,
+                displayName = "John Doe",
+            )
 
         val result = response.toAuthUser()
 
@@ -106,12 +110,13 @@ class AuthMapperTest {
 
     @Test
     fun `toAuthUser returns ParseError when displayName is null`() {
-        val response = AuthResponse(
-            token = "jwt-token",
-            userId = 42,
-            username = "johndoe",
-            displayName = null
-        )
+        val response =
+            AuthResponse(
+                token = "jwt-token",
+                userId = 42,
+                username = "johndoe",
+                displayName = null,
+            )
 
         val result = response.toAuthUser()
 
@@ -123,13 +128,14 @@ class AuthMapperTest {
 
     @Test
     fun `toAuthUser uses empty string for email when email is null`() {
-        val response = AuthResponse(
-            token = "jwt-token",
-            userId = 42,
-            username = "johndoe",
-            email = null,
-            displayName = "John Doe"
-        )
+        val response =
+            AuthResponse(
+                token = "jwt-token",
+                userId = 42,
+                username = "johndoe",
+                email = null,
+                displayName = "John Doe",
+            )
 
         val result = response.toAuthUser()
 
@@ -141,16 +147,17 @@ class AuthMapperTest {
     fun `toAuthUser round-trip — valid DTO always produces Right`() {
         // Property: for any AuthResponse with non-null non-blank required fields,
         // toAuthUser() must return Right
-        val validResponses = listOf(
-            AuthResponse("token1", 1, "user1", "a@b.com", "User One"),
-            AuthResponse("token2", 2, "user2", null, "User Two"),
-            AuthResponse("long-jwt-token-value", 999, "username_with_underscore", "x@y.z", "Display Name")
-        )
+        val validResponses =
+            listOf(
+                AuthResponse("token1", 1, "user1", "a@b.com", "User One"),
+                AuthResponse("token2", 2, "user2", null, "User Two"),
+                AuthResponse("long-jwt-token-value", 999, "username_with_underscore", "x@y.z", "Display Name"),
+            )
 
         validResponses.forEach { response ->
             assertTrue(
                 response.toAuthUser().isRight,
-                "Expected Right for response: $response"
+                "Expected Right for response: $response",
             )
         }
     }
@@ -161,12 +168,13 @@ class AuthMapperTest {
 
     @Test
     fun `MeResponse toAuthUser uses supplied token`() {
-        val response = MeResponse(
-            userId = 7,
-            username = "janedoe",
-            email = "jane@example.com",
-            displayName = "Jane Doe"
-        )
+        val response =
+            MeResponse(
+                userId = 7,
+                username = "janedoe",
+                email = "jane@example.com",
+                displayName = "Jane Doe",
+            )
 
         val result = response.toAuthUser("stored-token")
 

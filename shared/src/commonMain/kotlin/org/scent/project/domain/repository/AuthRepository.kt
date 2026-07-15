@@ -6,7 +6,6 @@ import org.scent.project.domain.model.AuthUser
 import org.scent.project.domain.util.Result
 
 interface AuthRepository {
-
     // Phase 1 — Email / Password auth
 
     /** Emits the current [AuthState] and any subsequent changes. Not suspend — returns a cold Flow. */
@@ -16,10 +15,13 @@ interface AuthRepository {
         email: String,
         password: String,
         username: String,
-        displayName: String
+        displayName: String,
     ): Result<AuthUser>
 
-    suspend fun login(email: String, password: String): Result<AuthUser>
+    suspend fun login(
+        email: String,
+        password: String,
+    ): Result<AuthUser>
 
     suspend fun getCurrentUser(): Result<AuthUser>
 

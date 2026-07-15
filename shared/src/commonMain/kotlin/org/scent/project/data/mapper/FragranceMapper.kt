@@ -8,7 +8,6 @@ import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 
 object FragranceMapper {
-
     /**
      * Maps a [FragranceResponse] DTO to a [Result<Fragrance>] domain model.
      *
@@ -23,14 +22,17 @@ object FragranceMapper {
      * - [FragranceResponse.reviewCount] → 0
      */
     fun FragranceResponse.toFragrance(): Result<Fragrance> {
-        val id = id
-            ?: return AppError.NetworkError.ParseError(fieldName = "id").asLeft()
+        val id =
+            id
+                ?: return AppError.NetworkError.ParseError(fieldName = "id").asLeft()
 
-        val name = name?.takeIf { it.isNotBlank() }
-            ?: return AppError.NetworkError.ParseError(fieldName = "name").asLeft()
+        val name =
+            name?.takeIf { it.isNotBlank() }
+                ?: return AppError.NetworkError.ParseError(fieldName = "name").asLeft()
 
-        val brand = brand?.takeIf { it.isNotBlank() }
-            ?: return AppError.NetworkError.ParseError(fieldName = "brand").asLeft()
+        val brand =
+            brand?.takeIf { it.isNotBlank() }
+                ?: return AppError.NetworkError.ParseError(fieldName = "brand").asLeft()
 
         return Fragrance(
             id = id,
@@ -39,7 +41,7 @@ object FragranceMapper {
             description = description.orEmpty(),
             imageUrl = imageUrl.orEmpty(),
             rating = rating ?: 0f,
-            reviewCount = reviewCount ?: 0
+            reviewCount = reviewCount ?: 0,
         ).asRight()
     }
 }
