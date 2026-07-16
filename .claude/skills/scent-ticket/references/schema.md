@@ -1,7 +1,7 @@
 # Tasks Tracker — full schema reference
 
-Database: https://app.notion.com/p/30e11d6b186b801788d1eebab41e2194
-Data source URL: `collection://30e11d6b-186b-80be-876e-000bf0145284`
+Database: `https://app.notion.com/p/<YOUR_DATABASE_PAGE_ID>`
+Data source URL: `collection://<YOUR_COLLECTION_ID>`
 
 ## Properties (SQLite-style column view)
 
@@ -30,7 +30,7 @@ CREATE TABLE "collection://30e11d6b-186b-80be-876e-000bf0145284" (
 - `Task type` is multi-select — pass an array even for a single value, and the emoji must be included verbatim (e.g. `["🐞 Bug"]`), not just the word "Bug".
 - `Acceptance Criteria` and `Feature Branch` were added after the first batch of tickets — the original 19 tickets don't have them backfilled. Only new tickets are required to have both; don't retroactively edit old tickets unless asked.
 - `Past due` is a read-only formula property — never try to set it directly.
-- There's a default page template ("New task") at https://app.notion.com/p/30e11d6b186b80898a81d8f52b3f30d8 if you need to see the intended shape of a blank ticket.
+- There's a default page template ("New task") at `https://app.notion.com/p/<YOUR_TEMPLATE_PAGE_ID>` if you need to see the intended shape of a blank ticket.
 
 ## Existing views
 
