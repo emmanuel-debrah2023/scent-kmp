@@ -48,6 +48,10 @@ kotlin {
             implementation(libs.ktor.client.darwin)
         }
 
+        jvmMain.dependencies {
+            implementation(libs.ktor.client.cio)
+        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.core)
