@@ -18,11 +18,6 @@ application {
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-configurations.all {
-    // kotlinx-datetime 0.7.x removed Clock.System; force 0.6.1 which the server code targets
-    resolutionStrategy.force("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
-    resolutionStrategy.force("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.6.1")
-}
 
 dependencies {
     implementation(projects.shared)
