@@ -51,10 +51,27 @@ Follow the android/skills testing-setup philosophy: write or update unit tests f
 - Match the project's existing test conventions (Arrange-Act-Assert structure, existing Flow-testing library, existing mocking library) rather than introducing new ones.
 - Run the test task for every module you touched or whose behavior could be affected. A green run on the module you edited doesn't mean a downstream module still compiles/passes.
 
+## Gate 5 — Pre-push local verification
+
+Before committing or pushing any change, run the full local quality gate in one shot:
+
+```
+./gradlew ktlintCheck detekt allTests
+```
+
+All three must be green. If any fails:
+- Fix the failure
+- Restart from Gate 1 (a fix can reintroduce a compile error)
+- Re-run the full Gate 5 command before attempting to push again
+
+**Do not push until this command exits with BUILD SUCCESSFUL.** This is the same bar CI enforces — running it locally avoids wasted CI minutes and keeps the PR green on the first push.
+
+If `allTests` is slow and you're iterating on a specific module, use `./gradlew :shared:jvmTest :composeApp:testDebugUnitTest` for speed during the loop, but always run the full `allTests` as the final gate before push.
+
 ## Stopping conditions
 
-Keep looping until all four gates are clean. If you hit the same failure twice in a row without a clear fix, or you're past a reasonable number of iterations (a good rule of thumb: 5), stop and surface to the user exactly what's still failing and what you tried — don't keep silently retrying the same fix, and don't quietly ship a partial pass (e.g. "tests pass but detekt still has 3 violations") without flagging it explicitly.
+Keep looping until all five gates are clean. If you hit the same failure twice in a row without a clear fix, or you're past a reasonable number of iterations (a good rule of thumb: 5), stop and surface to the user exactly what's still failing and what you tried — don't keep silently retrying the same fix, and don't quietly ship a partial pass (e.g. "tests pass but detekt still has 3 violations") without flagging it explicitly.
 
 ## Reporting back
 
-When the loop finishes, tell the user what changed at each gate that mattered — not a blow-by-blow of every iteration, just: what was implemented, what the architecture/design-system check caught (if anything), what lint/detekt caught (if anything), and what tests were added/updated. If Step 0 required bootstrapping ktlint/detekt because they didn't exist, call that out explicitly since it's a repo-wide change, not just something scoped to this one ticket.
+When the loop finishes, tell the user what changed at each gate that mattered — not a blow-by-blow of every iteration, just: what was implemented, what the architecture/design-system check caught (if anything), what lint/detekt caught (if anything), what tests were added/updated, and the result of the Gate 5 pre-push run. If Step 0 required bootstrapping ktlint/detekt because they didn't exist, call that out explicitly since it's a repo-wide change, not just something scoped to this one ticket.

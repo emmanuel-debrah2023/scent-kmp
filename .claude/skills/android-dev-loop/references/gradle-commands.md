@@ -74,6 +74,18 @@ KMP test tasks run per-target too. For logic in `commonMain`/`commonTest`
 `allTests` is the correct one to run before calling a change done — a test that
 only runs against `jvmTest` can hide a target-specific `expect`/`actual` bug.
 
+## Gate 5 — Pre-push verification (run before every commit/push)
+
+Run this exact command and wait for BUILD SUCCESSFUL before pushing:
+
+```
+./gradlew ktlintCheck detekt allTests
+```
+
+Do not substitute a subset. `allTests` catches target-specific `expect`/`actual`
+bugs (e.g. a missing JVM actual) that Android-only test runs miss. ktlintCheck
+and detekt match exactly what CI runs in the `lint` job.
+
 ## Useful one-liners while iterating
 
 ```
@@ -83,3 +95,9 @@ only runs against `jvmTest` can hide a target-specific `expect`/`actual` bug.
 `--continue` surfaces every failing task in one run instead of stopping at the
 first, which is usually what you want mid-loop (fix everything you can see, then
 re-run) rather than end-to-end (where you want a real fail-fast signal).
+
+For a faster inner loop during active development (not a substitute for Gate 5):
+
+```
+./gradlew :shared:jvmTest :composeApp:testDebugUnitTest
+```
