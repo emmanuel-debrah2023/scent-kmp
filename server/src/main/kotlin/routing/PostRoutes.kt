@@ -40,6 +40,7 @@ import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
+@OptIn(kotlin.time.ExperimentalTime::class)
 fun Route.postRoutes() {
     route("/api/v1/posts") {
         authenticate("auth-jwt") {

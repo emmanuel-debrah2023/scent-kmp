@@ -3,8 +3,8 @@ package org.scent.project.domain.usecase
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.util.Result
 
-class LogoutUseCase(
+open class LogoutUseCase(
     private val repository: AuthRepository,
 ) {
-    suspend operator fun invoke(): Result<Unit> = repository.logout()
+    open suspend operator fun invoke(): Result<Unit> = repository.logout()
 }

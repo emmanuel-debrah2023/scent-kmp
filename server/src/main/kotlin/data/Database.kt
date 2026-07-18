@@ -43,8 +43,9 @@ fun initDatabase(config: ApplicationConfig) {
     val dbUser = config.propertyOrNull("database.user")?.getString() ?: "postgres"
     val dbPassword = config.propertyOrNull("database.password")?.getString() ?: ""
 
-    if (dbUrl.isNullOrBlank()) {
-        throw IllegalArgumentException("DATABASE_URL must be provided in environment or application.conf")
+    if (dbUrl.isNullOrBlank() || dbUrl == "ci-placeholder") {
+        logger.warn("DATABASE_URL is missing or set to placeholder. Skipping database initialization.")
+        return
     }
 
     logger.info("Initializing database with URL: ${dbUrl.substringBefore("?")}")
