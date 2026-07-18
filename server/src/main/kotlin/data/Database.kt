@@ -10,6 +10,12 @@ import data.schema.FragrancesTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
 import data.schema.OrdersTable
+import data.schema.PostFragrancesTable
+import data.schema.PostHashtagsTable
+import data.schema.PostLikesTable
+import data.schema.PostListingsTable
+import data.schema.PostMediaTable
+import data.schema.PostsTable
 import data.schema.ReviewsTable
 import data.schema.UserFragranceCollectionTable
 import data.schema.UsersTable
@@ -84,6 +90,12 @@ fun initDatabase(config: ApplicationConfig) {
             FollowsTable,
             MediaLikesTable,
             FragranceMediaTable,
+            PostsTable,
+            PostMediaTable,
+            PostFragrancesTable,
+            PostHashtagsTable,
+            PostLikesTable,
+            PostListingsTable,
         )
     }
 }

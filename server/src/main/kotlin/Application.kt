@@ -12,6 +12,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import plugins.configureSecurity
 import routing.authRoutes
+import routing.postRoutes
 
 fun main(args: Array<String>) {
     val dotEnv =
@@ -56,5 +57,6 @@ fun Application.module() {
             call.respondText("Scent API is running")
         }
         authRoutes()
+        postRoutes()
     }
 }

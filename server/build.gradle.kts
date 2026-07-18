@@ -18,7 +18,6 @@ application {
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-
 dependencies {
     implementation(projects.shared)
     implementation(libs.logback)
