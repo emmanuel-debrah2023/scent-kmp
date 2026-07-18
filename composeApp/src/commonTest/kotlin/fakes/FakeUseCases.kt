@@ -17,7 +17,10 @@ class FakeLoginUseCase : LoginUseCase(FakeAuthRepository()) {
     var lastPassword: String? = null
     var onInvoke: (() -> Unit)? = null
 
-    override suspend fun invoke(email: String, password: String): Result<AuthUser> {
+    override suspend fun invoke(
+        email: String,
+        password: String,
+    ): Result<AuthUser> {
         lastEmail = email
         lastPassword = password
         onInvoke?.invoke()
@@ -33,7 +36,7 @@ class FakeRegisterUseCase : RegisterUseCase(FakeAuthRepository()) {
         email: String,
         password: String,
         username: String,
-        displayName: String
+        displayName: String,
     ): Result<AuthUser> {
         onInvoke?.invoke()
         return result ?: error("FakeRegisterUseCase.result not set")
@@ -43,9 +46,7 @@ class FakeRegisterUseCase : RegisterUseCase(FakeAuthRepository()) {
 class FakeGetCurrentUserUseCase : GetCurrentUserUseCase(FakeAuthRepository()) {
     var result: Result<AuthUser>? = null
 
-    override suspend fun invoke(): Result<AuthUser> {
-        return result ?: error("FakeGetCurrentUserUseCase.result not set")
-    }
+    override suspend fun invoke(): Result<AuthUser> = result ?: error("FakeGetCurrentUserUseCase.result not set")
 }
 
 class FakeObserveAuthStateUseCase : ObserveAuthStateUseCase(FakeAuthRepository()) {
