@@ -26,23 +26,25 @@ class AuthApiImpl(
     private val httpClient: HttpClient,
     private val baseUrl: String,
 ) : AuthApi {
+    private val authUrl = "$baseUrl/api/v1/auth"
+
     override suspend fun register(request: RegisterRequest): AuthResponse =
         httpClient
-            .post("$baseUrl/register") {
+            .post("$authUrl/register") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }.body()
 
     override suspend fun login(request: LoginRequest): AuthResponse =
         httpClient
-            .post("$baseUrl/login") {
+            .post("$authUrl/login") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }.body()
 
     override suspend fun getCurrentUser(token: String): MeResponse =
         httpClient
-            .get("$baseUrl/me") {
+            .get("$authUrl/me") {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }.body()
 }

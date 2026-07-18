@@ -12,7 +12,7 @@ class ScentApplication : Application() {
         super.onCreate()
 
         initKoin(
-            baseUrl = "http://10.0.2.2:8080/api/v1/auth", // Localhost for Android emulator
+            baseUrl = "http://10.0.2.2:8080", // Localhost for Android emulator
             tokenStorageFactory = TokenStorageFactory(this),
         ) {
             androidContext(this@ScentApplication)

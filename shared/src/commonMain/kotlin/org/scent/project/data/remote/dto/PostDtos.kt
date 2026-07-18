@@ -55,3 +55,20 @@ data class CreatePostRequest(
     @SerialName("listing_data")
     val listingData: List<PostListingDto> = emptyList(),
 )
+
+@Serializable
+data class FeedResponseDto(
+    val posts: List<PostDto>? = null,
+    val nextCursor: String? = null,
+)
+
+@Serializable
+data class LikeResponseDto(
+    val isLiked: Boolean? = null,
+    val likeCount: Int? = null,
+)
+
+@Serializable
+data class CreatePostResponseDto(
+    val id: String? = null,
+)

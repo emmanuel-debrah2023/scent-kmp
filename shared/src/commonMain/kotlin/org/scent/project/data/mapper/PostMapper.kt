@@ -1,9 +1,13 @@
 package org.scent.project.data.mapper
 
+import org.scent.project.data.remote.dto.FeedResponseDto
+import org.scent.project.data.remote.dto.LikeResponseDto
 import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.ContentFormat
+import org.scent.project.domain.model.FeedPage
+import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.PostListing
 import org.scent.project.domain.util.Result
@@ -71,4 +75,25 @@ object PostMapper {
     }
 
     fun List<PostDto>.toDomainList(): List<Post> = mapNotNull { it.toDomain().getOrNull() }
+
+    fun FeedResponseDto.toFeedPage(): Result<FeedPage> {
+        val posts = posts?.toDomainList() ?: emptyList()
+        return FeedPage(posts = posts, nextCursor = nextCursor).asRight()
+    }
+
+    fun LikeResponseDto.toLikeResult(): Result<LikeResult> {
+        val isLiked =
+            isLiked
+                ?: return AppError.NetworkError
+                    .ParseError(fieldName = "isLiked")
+                    .asLeft()
+
+        val likeCount =
+            likeCount
+                ?: return AppError.NetworkError
+                    .ParseError(fieldName = "likeCount")
+                    .asLeft()
+
+        return LikeResult(isLiked = isLiked, likeCount = likeCount).asRight()
+    }
 }

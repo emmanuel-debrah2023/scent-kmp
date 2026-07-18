@@ -4,14 +4,36 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.remote.api.AuthApi
+import org.scent.project.data.remote.api.FragranceApi
+import org.scent.project.data.remote.api.ListingApi
+import org.scent.project.data.remote.api.PostApi
 import org.scent.project.data.remote.dto.AuthResponse
+import org.scent.project.data.remote.dto.CreateListingRequest
+import org.scent.project.data.remote.dto.CreatePostRequest
+import org.scent.project.data.remote.dto.CreatePostResponseDto
+import org.scent.project.data.remote.dto.FeedResponseDto
+import org.scent.project.data.remote.dto.FragranceListResponseDto
+import org.scent.project.data.remote.dto.FragranceResponse
+import org.scent.project.data.remote.dto.LikeResponseDto
+import org.scent.project.data.remote.dto.ListingListResponseDto
+import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthState
 import org.scent.project.domain.model.AuthUser
+import org.scent.project.domain.model.CreateListingParams
+import org.scent.project.domain.model.CreatePostParams
+import org.scent.project.domain.model.FeedPage
+import org.scent.project.domain.model.Fragrance
+import org.scent.project.domain.model.LikeResult
+import org.scent.project.domain.model.Listing
+import org.scent.project.domain.model.Post
 import org.scent.project.domain.repository.AuthRepository
+import org.scent.project.domain.repository.FragranceRepository
+import org.scent.project.domain.repository.ListingRepository
+import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
@@ -145,4 +167,189 @@ class FakeValidator(
     override fun validateUsername(username: String): Result<String> = usernameResult ?: username.asRight()
 
     override fun validateDisplayName(displayName: String): Result<String> = displayNameResult ?: displayName.asRight()
+}
+
+// -------------------------------------------------------------------------
+// FakePostRepository
+// -------------------------------------------------------------------------
+
+class FakePostRepository : PostRepository {
+    var getFeedResult: Result<FeedPage> = AppError.Unknown().asLeft()
+    var likePostResult: Result<LikeResult> = AppError.Unknown().asLeft()
+    var createPostResult: Result<Post> = AppError.Unknown().asLeft()
+
+    var lastFeedCursor: String? = null
+    var lastFeedLimit: Int? = null
+    var lastLikePostId: String? = null
+    var lastCreatePostParams: CreatePostParams? = null
+
+    override suspend fun getFeed(
+        cursor: String?,
+        limit: Int,
+    ): Result<FeedPage> {
+        lastFeedCursor = cursor
+        lastFeedLimit = limit
+        return getFeedResult
+    }
+
+    override suspend fun likePost(postId: String): Result<LikeResult> {
+        lastLikePostId = postId
+        return likePostResult
+    }
+
+    override suspend fun createPost(params: CreatePostParams): Result<Post> {
+        lastCreatePostParams = params
+        return createPostResult
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeFragranceRepository
+// -------------------------------------------------------------------------
+
+class FakeFragranceRepository : FragranceRepository {
+    var searchResult: Result<List<Fragrance>> = AppError.Unknown().asLeft()
+    var getDetailResult: Result<Fragrance> = AppError.Unknown().asLeft()
+
+    var lastSearchQuery: String? = null
+    var lastSearchCursor: String? = null
+    var lastSearchLimit: Int? = null
+    var lastDetailId: Int? = null
+
+    override suspend fun searchFragrances(
+        query: String,
+        cursor: String?,
+        limit: Int,
+    ): Result<List<Fragrance>> {
+        lastSearchQuery = query
+        lastSearchCursor = cursor
+        lastSearchLimit = limit
+        return searchResult
+    }
+
+    override suspend fun getFragranceDetail(fragranceId: Int): Result<Fragrance> {
+        lastDetailId = fragranceId
+        return getDetailResult
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeListingRepository
+// -------------------------------------------------------------------------
+
+class FakeListingRepository : ListingRepository {
+    var getListingsResult: Result<List<Listing>> = AppError.Unknown().asLeft()
+    var createListingResult: Result<Listing> = AppError.Unknown().asLeft()
+
+    var lastListingsCursor: String? = null
+    var lastListingsLimit: Int? = null
+    var lastCreateParams: CreateListingParams? = null
+
+    override suspend fun getListings(
+        cursor: String?,
+        limit: Int,
+    ): Result<List<Listing>> {
+        lastListingsCursor = cursor
+        lastListingsLimit = limit
+        return getListingsResult
+    }
+
+    override suspend fun createListing(params: CreateListingParams): Result<Listing> {
+        lastCreateParams = params
+        return createListingResult
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakePostApi
+// -------------------------------------------------------------------------
+
+class FakePostApi : PostApi {
+    var feedResponse: FeedResponseDto? = null
+    var feedException: Exception? = null
+
+    var likeResponse: LikeResponseDto? = null
+    var likeException: Exception? = null
+
+    var createPostResponse: CreatePostResponseDto? = null
+    var createPostException: Exception? = null
+
+    override suspend fun getFeed(
+        cursor: String?,
+        limit: Int,
+        token: String?,
+    ): FeedResponseDto {
+        feedException?.let { throw it }
+        return feedResponse ?: error("FakePostApi.feedResponse not set")
+    }
+
+    override suspend fun likePost(
+        postId: String,
+        token: String,
+    ): LikeResponseDto {
+        likeException?.let { throw it }
+        return likeResponse ?: error("FakePostApi.likeResponse not set")
+    }
+
+    override suspend fun createPost(
+        request: CreatePostRequest,
+        token: String,
+    ): CreatePostResponseDto {
+        createPostException?.let { throw it }
+        return createPostResponse ?: error("FakePostApi.createPostResponse not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeFragranceApi
+// -------------------------------------------------------------------------
+
+class FakeFragranceApi : FragranceApi {
+    var searchResponse: FragranceListResponseDto? = null
+    var searchException: Exception? = null
+
+    var detailResponse: FragranceResponse? = null
+    var detailException: Exception? = null
+
+    override suspend fun searchFragrances(
+        query: String,
+        cursor: String?,
+        limit: Int,
+    ): FragranceListResponseDto {
+        searchException?.let { throw it }
+        return searchResponse ?: error("FakeFragranceApi.searchResponse not set")
+    }
+
+    override suspend fun getFragranceDetail(fragranceId: Int): FragranceResponse {
+        detailException?.let { throw it }
+        return detailResponse ?: error("FakeFragranceApi.detailResponse not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeListingApi
+// -------------------------------------------------------------------------
+
+class FakeListingApi : ListingApi {
+    var listingsResponse: ListingListResponseDto? = null
+    var listingsException: Exception? = null
+
+    var createResponse: ListingResponse? = null
+    var createException: Exception? = null
+
+    override suspend fun getListings(
+        cursor: String?,
+        limit: Int,
+    ): ListingListResponseDto {
+        listingsException?.let { throw it }
+        return listingsResponse ?: error("FakeListingApi.listingsResponse not set")
+    }
+
+    override suspend fun createListing(
+        request: CreateListingRequest,
+        token: String,
+    ): ListingResponse {
+        createException?.let { throw it }
+        return createResponse ?: error("FakeListingApi.createResponse not set")
+    }
 }

@@ -38,3 +38,17 @@ data class Post(
     val listingData: List<PostListing> = emptyList(),
     val isLiked: Boolean = false,
 )
+
+data class LikeResult(
+    val isLiked: Boolean,
+    val likeCount: Int,
+)
+
+data class CreatePostParams(
+    val contentFormat: String,
+    val textContent: String? = null,
+    val mediaUrls: List<String> = emptyList(),
+    val fragranceIds: List<String>,
+    val hashtags: List<String> = emptyList(),
+    val listingData: List<PostListing> = emptyList(),
+)
