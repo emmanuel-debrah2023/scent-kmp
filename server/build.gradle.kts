@@ -52,6 +52,7 @@ dependencies {
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.h2)
 }
 
 tasks.withType<Tar> {
