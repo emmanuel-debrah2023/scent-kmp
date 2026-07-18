@@ -36,6 +36,9 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.scent.project.data.remote.dto.CreatePostRequest
+import org.scent.project.data.remote.dto.CreatePostResponseDto
+import org.scent.project.data.remote.dto.FeedResponseDto
+import org.scent.project.data.remote.dto.LikeResponseDto
 import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
 
@@ -96,7 +99,7 @@ fun Route.postRoutes() {
                         }
                         id
                     }
-                this.call.respond(HttpStatusCode.Created, mapOf("id" to postId.toString()))
+                this.call.respond(HttpStatusCode.Created, CreatePostResponseDto(id = postId.toString()))
             }
 
             post("/{postId}/like") {
@@ -146,7 +149,7 @@ fun Route.postRoutes() {
                                 .singleOrNull() ?: 0
                         (!alreadyLiked) to count
                     }
-                this.call.respond(HttpStatusCode.OK, mapOf("isLiked" to isLiked, "likeCount" to newLikeCount))
+                this.call.respond(HttpStatusCode.OK, LikeResponseDto(isLiked = isLiked, likeCount = newLikeCount))
             }
         }
 
@@ -225,7 +228,7 @@ fun Route.postRoutes() {
                     }
                 }
             val nextCursor = posts.lastOrNull()?.id
-            this.call.respond(HttpStatusCode.OK, mapOf("posts" to posts, "nextCursor" to nextCursor))
+            this.call.respond(HttpStatusCode.OK, FeedResponseDto(posts = posts, nextCursor = nextCursor))
         }
     }
 }
