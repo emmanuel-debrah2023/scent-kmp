@@ -1,8 +1,8 @@
 package data.schema
 
-import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.kotlin.datetime.datetime
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.datetime.datetime
 
 // ─────────────────────────────────────────────
 // ENUMS
@@ -171,4 +171,47 @@ object MediaLikesTable : Table("media_likes") {
     val mediaItemId = reference("media_item_id", MediaItemsTable)
     val createdAt = datetime("created_at")
     override val primaryKey = PrimaryKey(userId, mediaItemId)
+}
+
+object PostsTable : IntIdTable("posts") {
+    val userId = reference("user_id", UsersTable)
+    val contentFormat = varchar("content_format", 20) // TEXT, PHOTO, VIDEO
+    val textContent = text("text_content").nullable()
+    val likeCount = integer("like_count").default(0)
+    val commentCount = integer("comment_count").default(0)
+    val shareCount = integer("share_count").default(0)
+    val createdAt = datetime("created_at")
+}
+
+object PostMediaTable : IntIdTable("post_media") {
+    val postId = reference("post_id", PostsTable)
+    val url = varchar("url", 500)
+    val index = integer("index").default(0)
+}
+
+object PostFragrancesTable : Table("post_fragrances") {
+    val postId = reference("post_id", PostsTable)
+    val fragranceId = reference("fragrance_id", FragrancesTable)
+    override val primaryKey = PrimaryKey(postId, fragranceId)
+}
+
+object PostHashtagsTable : Table("post_hashtags") {
+    val postId = reference("post_id", PostsTable)
+    val hashtag = varchar("hashtag", 50)
+    override val primaryKey = PrimaryKey(postId, hashtag)
+}
+
+object PostLikesTable : Table("post_likes") {
+    val userId = reference("user_id", UsersTable)
+    val postId = reference("post_id", PostsTable)
+    val createdAt = datetime("created_at")
+    override val primaryKey = PrimaryKey(userId, postId)
+}
+
+object PostListingsTable : IntIdTable("post_listings") {
+    val postId = reference("post_id", PostsTable)
+    val fragranceId = reference("fragrance_id", FragrancesTable)
+    val price = decimal("price", 10, 2)
+    val condition = varchar("condition", 50)
+    val isNegotiable = bool("is_negotiable").default(false)
 }

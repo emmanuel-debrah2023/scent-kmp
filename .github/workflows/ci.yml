@@ -36,6 +36,13 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: macos-latest
+    env:
+      DATABASE_URL: ci-placeholder
+      DATABASE_USER: ci-placeholder
+      DATABASE_PASSWORD: ci-placeholder
+      DB_URL: ci-placeholder
+      DB_USER: ci-placeholder
+      DB_PASSWORD: ci-placeholder
     steps:
       - name: Checkout
         uses: actions/checkout@v4

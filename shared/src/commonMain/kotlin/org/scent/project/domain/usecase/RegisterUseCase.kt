@@ -4,10 +4,10 @@ import org.scent.project.domain.model.AuthUser
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.util.Result
 
-class RegisterUseCase(
+open class RegisterUseCase(
     private val repository: AuthRepository,
 ) {
-    suspend operator fun invoke(
+    open suspend operator fun invoke(
         email: String,
         password: String,
         username: String,

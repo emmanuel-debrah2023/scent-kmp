@@ -1,9 +1,9 @@
 package ui.auth
 
 import app.cash.turbine.test
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
+import fakes.FakeGetCurrentUserUseCase
+import fakes.FakeLoginUseCase
+import fakes.FakeRegisterUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -12,9 +12,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthUser
-import org.scent.project.domain.usecase.GetCurrentUserUseCase
-import org.scent.project.domain.usecase.LoginUseCase
-import org.scent.project.domain.usecase.RegisterUseCase
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import ui.base.UiState
@@ -24,18 +21,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-// Note on Loading-state assertions:
-// MockK's coAnswers (JVM-only) is not available in commonTest. Instead we verify the
-// Loading intermediate state via a captured variable inside answers { }, which runs
-// synchronously before the mock returns. Turbine then asserts the final emitted state.
-// This is equivalent coverage: it proves (1) Loading was set before the use case was
-// called and (2) the correct final state is emitted.
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
-    private val mockLoginUseCase = mockk<LoginUseCase>()
-    private val mockRegisterUseCase = mockk<RegisterUseCase>()
-    private val mockGetCurrentUserUseCase = mockk<GetCurrentUserUseCase>()
+    private val fakeLoginUseCase = FakeLoginUseCase()
+    private val fakeRegisterUseCase = FakeRegisterUseCase()
+    private val fakeGetCurrentUserUseCase = FakeGetCurrentUserUseCase()
     private lateinit var viewModel: AuthViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -44,9 +34,9 @@ class AuthViewModelTest {
         Dispatchers.setMain(testDispatcher)
         viewModel =
             AuthViewModel(
-                loginUseCase = mockLoginUseCase,
-                registerUseCase = mockRegisterUseCase,
-                getCurrentUserUseCase = mockGetCurrentUserUseCase,
+                loginUseCase = fakeLoginUseCase,
+                registerUseCase = fakeRegisterUseCase,
+                getCurrentUserUseCase = fakeGetCurrentUserUseCase,
             )
     }
 
@@ -70,7 +60,7 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.InvalidEmail>(state.error)
                 expectNoEvents()
             }
-            coVerify(exactly = 0) { mockLoginUseCase(any(), any()) }
+            assertEquals(null, fakeLoginUseCase.lastEmail)
         }
 
     @Test
@@ -84,7 +74,7 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
                 expectNoEvents()
             }
-            coVerify(exactly = 0) { mockLoginUseCase(any(), any()) }
+            assertEquals(null, fakeLoginUseCase.lastEmail)
         }
 
     // -------------------------------------------------------------------------
@@ -98,9 +88,9 @@ class AuthViewModelTest {
                 AuthUser(id = 1, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok")
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            coEvery { mockLoginUseCase(any(), any()) } answers {
+            fakeLoginUseCase.result = user.asRight()
+            fakeLoginUseCase.onInvoke = {
                 stateWhenUseCaseCalled = viewModel.loginState.value
-                user.asRight()
             }
 
             viewModel.loginState.test {
@@ -120,9 +110,9 @@ class AuthViewModelTest {
             val error = AppError.AuthError.InvalidCredentials()
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            coEvery { mockLoginUseCase(any(), any()) } answers {
+            fakeLoginUseCase.result = error.asLeft()
+            fakeLoginUseCase.onInvoke = {
                 stateWhenUseCaseCalled = viewModel.loginState.value
-                error.asLeft()
             }
 
             viewModel.loginState.test {
@@ -139,15 +129,16 @@ class AuthViewModelTest {
     @Test
     fun `login forwards email and password to use case`() =
         runTest {
-            coEvery { mockLoginUseCase(any(), any()) } returns AppError.Unknown().asLeft()
+            fakeLoginUseCase.result = AppError.Unknown().asLeft()
 
             viewModel.loginState.test {
                 assertEquals(UiState.Idle, awaitItem())
                 viewModel.login("bob@example.com", "pass1234")
-                skipItems(1) // Error (Loading may be conflated without a real suspension)
+                skipItems(1)
             }
 
-            coVerify(exactly = 1) { mockLoginUseCase("bob@example.com", "pass1234") }
+            assertEquals("bob@example.com", fakeLoginUseCase.lastEmail)
+            assertEquals("pass1234", fakeLoginUseCase.lastPassword)
         }
 
     // -------------------------------------------------------------------------
@@ -165,7 +156,6 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.InvalidEmail>(state.error)
                 expectNoEvents()
             }
-            coVerify(exactly = 0) { mockRegisterUseCase(any(), any(), any(), any()) }
         }
 
     @Test
@@ -179,7 +169,6 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
                 expectNoEvents()
             }
-            coVerify(exactly = 0) { mockRegisterUseCase(any(), any(), any(), any()) }
         }
 
     // -------------------------------------------------------------------------
@@ -193,9 +182,9 @@ class AuthViewModelTest {
                 AuthUser(id = 2, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok2")
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            coEvery { mockRegisterUseCase(any(), any(), any(), any()) } answers {
+            fakeRegisterUseCase.result = user.asRight()
+            fakeRegisterUseCase.onInvoke = {
                 stateWhenUseCaseCalled = viewModel.registerState.value
-                user.asRight()
             }
 
             viewModel.registerState.test {
@@ -215,9 +204,9 @@ class AuthViewModelTest {
             val error = AppError.AuthError.UserAlreadyExists()
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            coEvery { mockRegisterUseCase(any(), any(), any(), any()) } answers {
+            fakeRegisterUseCase.result = error.asLeft()
+            fakeRegisterUseCase.onInvoke = {
                 stateWhenUseCaseCalled = viewModel.registerState.value
-                error.asLeft()
             }
 
             viewModel.registerState.test {

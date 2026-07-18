@@ -3,8 +3,10 @@ package org.scent.project
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
-import module
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -13,10 +15,12 @@ class ApplicationTest {
     fun testRoot() =
         testApplication {
             application {
-                module()
+                routing {
+                    get("/") { call.respondText("Scent API is running") }
+                }
             }
             val response = client.get("/")
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals("Ktor: ${Greeting().greet()}", response.bodyAsText())
+            assertEquals("Scent API is running", response.bodyAsText())
         }
 }

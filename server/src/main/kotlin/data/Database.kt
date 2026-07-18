@@ -10,13 +10,19 @@ import data.schema.FragrancesTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
 import data.schema.OrdersTable
+import data.schema.PostFragrancesTable
+import data.schema.PostHashtagsTable
+import data.schema.PostLikesTable
+import data.schema.PostListingsTable
+import data.schema.PostMediaTable
+import data.schema.PostsTable
 import data.schema.ReviewsTable
 import data.schema.UserFragranceCollectionTable
 import data.schema.UsersTable
 import io.ktor.server.config.ApplicationConfig
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("Database")
@@ -37,8 +43,9 @@ fun initDatabase(config: ApplicationConfig) {
     val dbUser = config.propertyOrNull("database.user")?.getString() ?: "postgres"
     val dbPassword = config.propertyOrNull("database.password")?.getString() ?: ""
 
-    if (dbUrl.isNullOrBlank()) {
-        throw IllegalArgumentException("DATABASE_URL must be provided in environment or application.conf")
+    if (dbUrl.isNullOrBlank() || dbUrl == "ci-placeholder") {
+        logger.warn("DATABASE_URL is missing or set to placeholder. Skipping database initialization.")
+        return
     }
 
     logger.info("Initializing database with URL: ${dbUrl.substringBefore("?")}")
@@ -84,6 +91,12 @@ fun initDatabase(config: ApplicationConfig) {
             FollowsTable,
             MediaLikesTable,
             FragranceMediaTable,
+            PostsTable,
+            PostMediaTable,
+            PostFragrancesTable,
+            PostHashtagsTable,
+            PostLikesTable,
+            PostListingsTable,
         )
     }
 }

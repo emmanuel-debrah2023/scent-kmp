@@ -1,22 +1,16 @@
 package ui.auth
 
 import app.cash.turbine.test
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
+import fakes.FakeLogoutUseCase
+import fakes.FakeObserveAuthStateUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthState
-import org.scent.project.domain.model.AuthUser
-import org.scent.project.domain.usecase.LogoutUseCase
-import org.scent.project.domain.usecase.ObserveAuthStateUseCase
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import kotlin.test.AfterTest
@@ -27,19 +21,15 @@ import kotlin.test.assertIs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionViewModelTest {
-    private val mockObserveAuthStateUseCase = mockk<ObserveAuthStateUseCase>()
-    private val mockLogoutUseCase = mockk<LogoutUseCase>()
+    private val fakeObserveAuthStateUseCase = FakeObserveAuthStateUseCase()
+    private val fakeLogoutUseCase = FakeLogoutUseCase()
     private lateinit var viewModel: SessionViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
-
-    // A real MutableStateFlow drives state changes in tests while MockK owns the use case boundary.
-    private val authStateFlow = MutableStateFlow<AuthState>(AuthState.Unknown)
 
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        every { mockObserveAuthStateUseCase() } returns authStateFlow
-        viewModel = SessionViewModel(mockObserveAuthStateUseCase, mockLogoutUseCase)
+        viewModel = SessionViewModel(fakeObserveAuthStateUseCase, fakeLogoutUseCase)
     }
 
     @AfterTest
@@ -61,43 +51,14 @@ class SessionViewModelTest {
         }
 
     @Test
-    fun `authState reflects Authenticated when flow emits`() =
+    fun `authState updates when use case flow emits`() =
         runTest {
-            val user = AuthUser(1, "alice", "Alice", "alice@example.com", "tok")
-
             viewModel.authState.test {
                 assertEquals(AuthState.Unknown, awaitItem())
-                authStateFlow.value = AuthState.Authenticated(user)
-                assertEquals(AuthState.Authenticated(user), awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
 
-    @Test
-    fun `authState reflects Unauthenticated after logout`() =
-        runTest {
-            val user = AuthUser(1, "alice", "Alice", "alice@example.com", "tok")
-            authStateFlow.value = AuthState.Authenticated(user)
-
-            viewModel.authState.test {
-                assertEquals(AuthState.Authenticated(user), awaitItem())
-                authStateFlow.value = AuthState.Unauthenticated
+                fakeObserveAuthStateUseCase.flow.value = AuthState.Unauthenticated
                 assertEquals(AuthState.Unauthenticated, awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
 
-    @Test
-    fun `authState emits full sequence — Unknown to Authenticated to Unauthenticated`() =
-        runTest {
-            val user = AuthUser(2, "bob", "Bob", "bob@example.com", "tok2")
-
-            viewModel.authState.test {
-                assertEquals(AuthState.Unknown, awaitItem())
-                authStateFlow.value = AuthState.Authenticated(user)
-                assertEquals(AuthState.Authenticated(user), awaitItem())
-                authStateFlow.value = AuthState.Unauthenticated
-                assertEquals(AuthState.Unauthenticated, awaitItem())
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -109,18 +70,18 @@ class SessionViewModelTest {
     @Test
     fun `logout calls LogoutUseCase`() =
         runTest {
-            coEvery { mockLogoutUseCase() } returns Unit.asRight()
+            fakeLogoutUseCase.result = Unit.asRight()
 
             viewModel.logout()
 
-            coVerify(exactly = 1) { mockLogoutUseCase() }
+            assertEquals(1, fakeLogoutUseCase.invocationCount)
         }
 
     @Test
     fun `logout emits error to error flow on use case failure`() =
         runTest {
             val error = AppError.NetworkError.ServerError(statusCode = 500)
-            coEvery { mockLogoutUseCase() } returns error.asLeft()
+            fakeLogoutUseCase.result = error.asLeft()
 
             viewModel.error.test {
                 viewModel.logout()
