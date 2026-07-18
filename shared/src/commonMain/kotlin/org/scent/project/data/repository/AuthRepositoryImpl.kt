@@ -1,12 +1,9 @@
 package org.scent.project.data.repository
 
-import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.ResponseException
-import io.ktor.utils.io.errors.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.onStart
-import kotlinx.serialization.SerializationException
 import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.mapper.AuthMapper.toAuthUser
 import org.scent.project.data.remote.api.AuthApi
@@ -209,36 +206,4 @@ class AuthRepositoryImpl(
         _authState.value = AuthState.Unauthenticated
         return Unit.asRight()
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Wraps an API call with consistent exception-to-[AppError] mapping.
-     *
-     * Transient errors (network, timeout, parse) do NOT change [_authState].
-     *
-     * @param onHttpError Called when a [ResponseException] is caught; receives the HTTP status
-     *   code and returns the appropriate [Result]. The caller is responsible for any state
-     *   mutations needed for specific HTTP errors (e.g. 401 on /me).
-     * @param block The suspend lambda that performs the actual API call and returns a [Result].
-     */
-    private suspend fun <T> safeApiCall(
-        onHttpError: suspend (statusCode: Int) -> Result<T>,
-        block: suspend () -> Result<T>,
-    ): Result<T> =
-        try {
-            block()
-        } catch (e: ResponseException) {
-            onHttpError(e.response.status.value)
-        } catch (e: HttpRequestTimeoutException) {
-            AppError.NetworkError.Timeout(cause = e).asLeft()
-        } catch (e: IOException) {
-            AppError.NetworkError.NoConnection(cause = e).asLeft()
-        } catch (e: SerializationException) {
-            AppError.NetworkError.ParseError(cause = e).asLeft()
-        } catch (e: Exception) {
-            AppError.Unknown(message = e.message ?: "An unexpected error occurred", cause = e).asLeft()
-        }
 }
