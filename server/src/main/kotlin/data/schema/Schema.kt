@@ -215,3 +215,14 @@ object PostListingsTable : IntIdTable("post_listings") {
     val condition = varchar("condition", 50)
     val isNegotiable = bool("is_negotiable").default(false)
 }
+
+object ListingsTable : IntIdTable("listings") {
+    val sellerId = reference("seller_id", UsersTable)
+    val fragranceId = reference("fragrance_id", FragrancesTable)
+    val price = decimal("price", 10, 2)
+    val condition = enumerationByName("condition", 20, FragranceCondition::class)
+    val isNegotiable = bool("is_negotiable").default(false)
+    val stockQuantity = integer("stock_quantity").default(1)
+    val isActive = bool("is_active").default(true)
+    val createdAt = datetime("created_at")
+}

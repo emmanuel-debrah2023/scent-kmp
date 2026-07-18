@@ -7,6 +7,7 @@ import data.schema.FollowsTable
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
 import data.schema.FragrancesTable
+import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
 import data.schema.OrdersTable
@@ -97,6 +98,7 @@ fun initDatabase(config: ApplicationConfig) {
             PostHashtagsTable,
             PostLikesTable,
             PostListingsTable,
+            ListingsTable,
         )
     }
 }
