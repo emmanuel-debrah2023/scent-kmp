@@ -12,6 +12,8 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import plugins.configureSecurity
 import routing.authRoutes
+import routing.fragranceRoutes
+import routing.listingRoutes
 import routing.postRoutes
 
 fun main(args: Array<String>) {
@@ -57,6 +59,8 @@ fun Application.module() {
             call.respondText("Scent API is running")
         }
         authRoutes()
+        fragranceRoutes()
+        listingRoutes()
         postRoutes()
     }
 }
