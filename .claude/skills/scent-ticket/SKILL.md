@@ -7,9 +7,11 @@ description: Create or triage tasks/tickets for the Scent app (the Kotlin Multip
 
 Creates rows in the Scent project's Notion **Tasks Tracker** database so engineering work (code review findings, ADR action items, feature ideas, bugs) doesn't stay stuck in a chat transcript.
 
-**Database:** `https://app.notion.com/p/<YOUR_DATABASE_PAGE_ID>`
-**Data source URL (use this in create/update/query tool calls):** `collection://<YOUR_COLLECTION_ID>`
-**Jira-style board view (grouped by Status):** `https://app.notion.com/p/<YOUR_BOARD_PAGE_ID>`
+**CRITICAL**: Every ticket created must include ADS-STE100 compliance as part of its acceptance criteria. ADS-STE100 (`docs/architecture-guidelines.md`) is the authoritative design doc for the Scent codebase — it covers null-safety strategy, error handling with `Either<AppError, T>`, Koin dependency injection, ViewModel/UiState patterns, test conventions, and navigation architecture. When creating acceptance criteria, always include a checkpoint that work passes ADS-STE100 review before it's marked done.
+
+**Database:** https://app.notion.com/p/30e11d6b186b801788d1eebab41e2194
+**Data source URL (use this in create/update/query tool calls):** `collection://30e11d6b-186b-80be-876e-000bf0145284`
+**Jira-style board view (grouped by Status):** https://app.notion.com/p/30e11d6b186b8056b2ea000ce7308558
 
 Full schema detail lives in `references/schema.md` — read it if you need exact property names or option values beyond what's summarized below.
 
@@ -32,25 +34,26 @@ Full schema detail lives in `references/schema.md` — read it if you need exact
 
 1. For each item to log, work out: a short **Task name**, a one-to-two sentence **Description** giving enough context that it's actionable without the original conversation, and best-guess **Priority** / **Task type** / **Effort level**. Don't leave these blank just because the user didn't specify — infer sensible defaults from context (e.g. a security/data-integrity fix from a code review is `High` priority; a "nice to have" is `Low`).
 2. `Task type` is a multi-select with a fixed vocabulary. Map freely:
-   - New capability the app doesn't have yet → `💬 Feature request`
-   - Something broken or incorrect → `🐞 Bug`
-   - Visual/UX refinement, small polish pass on existing UI → `💅 Polish`
-   - README, architecture docs, runbooks, comments-as-documentation, anything whose deliverable is written explanation rather than code → `📝 Docs`
-   - Infra/tooling/config/refactor work a developer would do but a user would never notice directly — linting, static analysis, test setup, CI, dependency upgrades, splitting a god-class, extracting a shared module → `🔧 Tech Task`
-   - When something could plausibly be either Polish or Tech Task, ask: would a non-engineer notice this shipped? If no, it's Tech Task.
-3. **Write Acceptance Criteria on every ticket, no exceptions.** This is what turns a one-line task name into something checkable later — write it as a short newline-separated checklist of concrete, testable conditions, not a restatement of the description. Aim for 2-5 bullets. Bad: "Works correctly." Good:
+    - New capability the app doesn't have yet → `💬 Feature request`
+    - Something broken or incorrect → `🐞 Bug`
+    - Visual/UX refinement, small polish pass on existing UI → `💅 Polish`
+    - README, architecture docs, runbooks, comments-as-documentation, anything whose deliverable is written explanation rather than code → `📝 Docs`
+    - Infra/tooling/config/refactor work a developer would do but a user would never notice directly — linting, static analysis, test setup, CI, dependency upgrades, splitting a god-class, extracting a shared module → `🔧 Tech Task`
+    - When something could plausibly be either Polish or Tech Task, ask: would a non-engineer notice this shipped? If no, it's Tech Task.
+3. **Write Acceptance Criteria on every ticket, no exceptions.** This is what turns a one-line task name into something checkable later — write it as a short newline-separated checklist of concrete, testable conditions, not a restatement of the description. Aim for 2-5 bullets. **Always include an ADS-STE100 compliance checkpoint** (references Scent's authoritative architecture guideline, `docs/architecture-guidelines.md`). Bad: "Works correctly." Good:
    ```
    - Video screen renders without crashing on both Android and iOS targets
    - Playback controls (play/pause/seek) respond within one frame
    - Unit tests cover the ViewModel's loading/error/success states
+   - Complies with ADS-STE100 (null-safety boundary, Either error handling, Koin DI, UiState pattern)
    - ktlint and detekt pass with no new violations
    ```
-   If the ticket came from an ADR action item or code-review finding, the "problem" described there usually implies the AC directly (e.g. "resolve the duplicate AuthModels.kt" → AC is "only one AuthModels.kt exists" + "server module still compiles"). Don't skip this step because the ticket seems obvious — the point is to remove ambiguity about what "done" means before anyone starts, including future-you.
+   If the ticket came from an ADR action item or code-review finding, the "problem" described there usually implies the AC directly (e.g. "resolve the duplicate AuthModels.kt" → AC is "only one AuthModels.kt exists" + "server module still compiles" + "passes ADS-STE100 review"). Don't skip ADS-STE100 compliance even for small tickets — it's the contract for the codebase.
 4. **Set Feature Branch on every ticket.** Even before a branch exists, propose one following the repo's existing convention (`<type>/<kebab-case-description>`, e.g. `feature/video-screen`, `fix/auth-token-refresh`, `chore/introduce-ktlint-detekt`), derived from the Task type:
-   - `💬 Feature request` → `feature/...`
-   - `🐞 Bug` → `fix/...`
-   - `💅 Polish`, `📝 Docs`, `🔧 Tech Task` → `chore/...`
-   Once real work starts and an actual branch (or PR) exists, update this field to the real branch name or PR URL rather than leaving the proposed one stale — treat the proposed name as a placeholder the assignee should use, not a permanent record of what was actually pushed.
+    - `💬 Feature request` → `feature/...`
+    - `🐞 Bug` → `fix/...`
+    - `💅 Polish`, `📝 Docs`, `🔧 Tech Task` → `chore/...`
+      Once real work starts and an actual branch (or PR) exists, update this field to the real branch name or PR URL rather than leaving the proposed one stale — treat the proposed name as a placeholder the assignee should use, not a permanent record of what was actually pushed.
 5. Create pages via the Notion connector's page-creation tool, targeting the data source URL above. Set `Status` to `Not started` unless told otherwise. Leave `Assignee` and `Due date` unset unless the user specifies them — don't guess a person or date.
 6. When creating several tickets at once (e.g. from a list of action items), create them one at a time but batch the work — don't stop to ask about each one individually unless something is genuinely ambiguous (e.g. you can't tell if two bullet points are one ticket or two).
 7. After creating, report back a short list of what was created (task name + inferred type/priority + proposed branch) and link to the board view so the user can see them land in the right column.
