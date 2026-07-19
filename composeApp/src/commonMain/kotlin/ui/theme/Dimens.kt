@@ -14,11 +14,11 @@ data class ScentSpacing(
     val lg: Dp = 24.dp,
     val xl: Dp = 32.dp,
     val xxl: Dp = 48.dp,
-    // Semantic spacing
-    val sectionGap: Dp = 32.dp,
-    val elementGap: Dp = 16.dp,
+    // Semantic spacing — sourced from design.md
+    val sectionGap: Dp = 64.dp, // Between major sections
+    val elementGap: Dp = 32.dp, // Within a section, between related elements
     val cardPadding: Dp = 16.dp,
-    val screenPadding: Dp = 20.dp,
+    val screenPadding: Dp = 16.dp, // container-padding
     // Component dimensions
     val buttonHeight: Dp = 52.dp,
     val iconSizeSmall: Dp = 16.dp,
@@ -29,3 +29,17 @@ data class ScentSpacing(
 )
 
 val LocalScentSpacing = staticCompositionLocalOf { ScentSpacing() }
+
+// ─────────────────────────────────────────────
+// Elevation
+// Cards are the only surface that uses Z-axis shadow.
+// All other depth is expressed through tonal layering (surface containers)
+// or 1px outline-variant borders. Buttons are always flat (none).
+// ─────────────────────────────────────────────
+@Immutable
+data class ScentElevation(
+    val none: Dp = 0.dp,
+    val card: Dp = 4.dp,
+)
+
+val LocalScentElevation = staticCompositionLocalOf { ScentElevation() }

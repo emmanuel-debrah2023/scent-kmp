@@ -37,16 +37,16 @@ fun ScentTypography(): Typography {
                 fontFamily = playfair,
                 fontWeight = FontWeight.Bold,
                 fontSize = 64.sp,
-                lineHeight = 72.sp,
-                letterSpacing = (-0.5).sp,
+                lineHeight = 64.sp, // lineHeight: 1 per design.md
+                letterSpacing = (-3.2).sp, // -0.05em × 64sp
             ),
         displayMedium =
             TextStyle(
                 fontFamily = playfair,
                 fontWeight = FontWeight.Bold,
                 fontSize = 48.sp,
-                lineHeight = 56.sp,
-                letterSpacing = (-0.25).sp,
+                lineHeight = 48.sp, // lineHeight: 1 per design.md (display-brand-mobile)
+                letterSpacing = (-2.4).sp, // -0.05em × 48sp
             ),
         displaySmall =
             TextStyle(
@@ -74,9 +74,9 @@ fun ScentTypography(): Typography {
         headlineSmall =
             TextStyle(
                 fontFamily = playfair,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Normal, // 400 per design.md headline-sm
                 fontSize = 24.sp,
-                lineHeight = 32.sp,
+                lineHeight = 28.8.sp, // lineHeight: 1.2 × 24sp
             ),
         // Title
         titleLarge =
@@ -127,14 +127,14 @@ fun ScentTypography(): Typography {
                 lineHeight = 16.sp,
                 letterSpacing = 0.4.sp,
             ),
-        // Label – uppercase tracking for small labels
+        // Label – uppercase tracking. Also used for button text (button-text spec).
         labelLarge =
             TextStyle(
                 fontFamily = dmSans,
                 fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                letterSpacing = 0.1.sp,
+                fontSize = 16.sp, // 16px per design.md button-text / label-uppercase
+                lineHeight = 16.sp, // lineHeight: 1
+                letterSpacing = 2.4.sp, // 0.15em × 16sp (button-text tracking)
             ),
         labelMedium =
             TextStyle(
