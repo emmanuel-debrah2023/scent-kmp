@@ -4,46 +4,51 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 
-sealed class Screen {
-    data object Login : Screen()
-
-    data object Register : Screen()
-
-    data object Home : Screen()
-}
-
-class NavigationState(
-    initialScreen: Screen = Screen.Login,
+/**
+ * Per-tab back stack. One instance is held per [Tab] in [AppNavState].
+ *
+ * Backed by [mutableStateListOf] — the same type Nav3's NavBackStack wraps —
+ * so composables that read [current] recompose reactively on every push/pop.
+ * Migration to Nav3: swap [mutableStateListOf] → rememberNavBackStack and
+ * the when(current) block → NavDisplay { entry -> }.
+ */
+class NavigationState<T>(
+    initialRoute: T,
 ) {
-    private val _currentScreen = mutableStateOf<Screen>(initialScreen)
-    val currentScreen: State<Screen> = _currentScreen
+    @Suppress("ktlint:standard:backing-property-naming") // no public backStack needed; stack is internal
+    private val _backStack = mutableStateListOf(initialRoute)
 
-    @Suppress("ktlint:standard:backing-property-naming") // exposed as canGoBack boolean, not a backStack property
-    private val _backStack = mutableStateListOf<Screen>()
-    val canGoBack: Boolean get() = _backStack.isNotEmpty()
+    private val _current = mutableStateOf(initialRoute)
+    val current: State<T> = _current
 
-    fun navigateTo(screen: Screen) {
-        if (_currentScreen.value != screen) {
-            _backStack.add(_currentScreen.value)
-            _currentScreen.value = screen
+    val canGoBack: Boolean get() = _backStack.size > 1
+
+    fun navigateTo(route: T) {
+        if (_current.value != route) {
+            _backStack.add(route)
+            _current.value = route
         }
     }
 
     fun goBack(): Boolean =
-        if (_backStack.isNotEmpty()) {
-            _currentScreen.value = _backStack.removeAt(_backStack.size - 1)
+        if (_backStack.size > 1) {
+            _backStack.removeAt(_backStack.size - 1)
+            _current.value = _backStack.last()
             true
         } else {
             false
         }
 
-    fun popToRoot(rootScreen: Screen) {
+    fun popToRoot() {
+        val root = _backStack.first()
         _backStack.clear()
-        _currentScreen.value = rootScreen
+        _backStack.add(root)
+        _current.value = root
     }
 
-    fun reset(screen: Screen) {
+    fun reset(route: T) {
         _backStack.clear()
-        _currentScreen.value = screen
+        _backStack.add(route)
+        _current.value = route
     }
 }

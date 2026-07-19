@@ -7,7 +7,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun BottomNavigation(
@@ -27,7 +27,7 @@ fun BottomNavigation(
                 onClick = { onTabSelected(index) },
                 icon = {
                     Icon(
-                        painter = item.icon,
+                        imageVector = item.icon,
                         contentDescription = item.title,
                         tint =
                             if (selectedTab == index) {
@@ -56,5 +56,5 @@ fun BottomNavigation(
 
 data class BottomNavItem(
     val title: String,
-    val icon: Painter,
+    val icon: ImageVector,
 )
