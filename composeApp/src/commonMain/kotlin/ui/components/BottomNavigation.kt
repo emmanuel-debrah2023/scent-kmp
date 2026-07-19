@@ -1,16 +1,13 @@
 package ui.components
 
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.unit.sp
-import ui.theme.BackgroundLight
-import ui.theme.DeepForestGreen
-import ui.theme.LightGray
 
 @Composable
 fun BottomNavigation(
@@ -21,8 +18,8 @@ fun BottomNavigation(
 ) {
     NavigationBar(
         modifier = modifier,
-        containerColor = BackgroundLight,
-        contentColor = LightGray,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         tabs.forEachIndexed { index, item ->
             NavigationBarItem(
@@ -32,14 +29,24 @@ fun BottomNavigation(
                     Icon(
                         painter = item.icon,
                         contentDescription = item.title,
-                        tint = if (selectedTab == index) DeepForestGreen else LightGray,
+                        tint =
+                            if (selectedTab == index) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 },
                 label = {
                     Text(
                         text = item.title,
-                        fontSize = 12.sp,
-                        color = if (selectedTab == index) DeepForestGreen else LightGray,
+                        style = MaterialTheme.typography.labelSmall,
+                        color =
+                            if (selectedTab == index) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 },
             )
