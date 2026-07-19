@@ -22,8 +22,8 @@ import ui.components.FragranceCard
 import ui.components.TopAppBar
 import ui.components.TopTabs
 import ui.navigation.getBottomNavTabs
-import ui.theme.Cream
-import ui.theme.OrangeGradient
+import ui.theme.ScentPrimary
+import ui.theme.ScentSurface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +33,7 @@ fun HomeScreen() {
 
     val fragrances =
         listOf(
-            FragranceData("Velvet Orchid", "Tom Ford", 4.5f, 215, OrangeGradient),
+            FragranceData("Velvet Orchid", "Tom Ford", 4.5f, 215, ScentPrimary),
             FragranceData("Santal 33", "Le Labo", 4.3f, 189, Color(0xFFE8D5B7)),
         )
 
@@ -56,7 +56,7 @@ fun HomeScreen() {
                 modifier = Modifier,
             )
         },
-        containerColor = Cream,
+        containerColor = ScentSurface,
     ) { paddingValues ->
         LazyColumn(
             modifier =

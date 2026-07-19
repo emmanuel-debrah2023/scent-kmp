@@ -12,21 +12,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ui.theme.Cream
-import ui.theme.DeepForestGreen
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(modifier: Modifier = Modifier) {
     Row(
@@ -39,9 +34,8 @@ fun TopAppBar(modifier: Modifier = Modifier) {
     ) {
         Text(
             text = "scent",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = DeepForestGreen,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
         )
 
         Row(
@@ -52,7 +46,7 @@ fun TopAppBar(modifier: Modifier = Modifier) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = DeepForestGreen,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -60,7 +54,7 @@ fun TopAppBar(modifier: Modifier = Modifier) {
                 Icon(
                     imageVector = Icons.Default.Notifications,
                     contentDescription = "Notifications",
-                    tint = DeepForestGreen,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -69,13 +63,13 @@ fun TopAppBar(modifier: Modifier = Modifier) {
                     Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(Cream),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = "Profile",
-                    tint = DeepForestGreen,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
             }

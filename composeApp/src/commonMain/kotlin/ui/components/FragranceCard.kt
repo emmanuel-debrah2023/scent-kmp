@@ -8,16 +8,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,30 +28,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ui.theme.LightGray
-import ui.theme.OrangeGradient
-import ui.theme.StarYellow
-import ui.theme.TextLight
+import ui.theme.ScentStarYellow
+import ui.theme.ScentThemeExtras
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FragranceCard(
     name: String,
     brand: String,
     rating: Float,
     reviewCount: Int,
-    imageColor: Color = OrangeGradient,
+    imageColor: Color = MaterialTheme.colorScheme.primaryContainer,
     modifier: Modifier = Modifier,
 ) {
     var isFavorite by remember { mutableStateOf(false) }
+    val spacing = ScentThemeExtras.spacing
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = MaterialTheme.shapes.large,
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column {
@@ -60,8 +58,8 @@ fun FragranceCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .height(spacing.cardImageHeight)
+                        .clip(MaterialTheme.shapes.large)
                         .background(
                             Brush.radialGradient(
                                 colors = listOf(imageColor, imageColor.copy(alpha = 0.7f)),
@@ -73,46 +71,62 @@ fun FragranceCard(
                     modifier = Modifier.align(Alignment.TopEnd),
                 ) {
                     Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        imageVector =
+                            if (isFavorite) {
+                                Icons.Default.Favorite
+                            } else {
+                                Icons.Default.FavoriteBorder
+                            },
                         contentDescription = "Favorite",
-                        tint = if (isFavorite) Color.Red else LightGray,
+                        tint =
+                            if (isFavorite) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant
+                            },
                     )
                 }
             }
 
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(spacing.cardPadding),
             ) {
                 Text(
                     text = name,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextLight,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = brand,
-                    fontSize = 14.sp,
-                    color = LightGray,
-                    modifier = Modifier.padding(top = 4.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = spacing.xxs),
                 )
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = spacing.xs),
                 ) {
                     repeat(5) { index ->
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
-                            tint = if (index < rating.toInt()) StarYellow else LightGray,
-                            modifier = Modifier.size(16.dp),
+                            tint =
+                                if (index <
+                                    rating.toInt()
+                                ) {
+                                    ScentStarYellow
+                                } else {
+                                    MaterialTheme.colorScheme.outlineVariant
+                                },
+                            modifier = Modifier.size(spacing.iconSizeSmall),
                         )
                     }
                     Text(
                         text = "$rating ($reviewCount reviews)",
-                        fontSize = 12.sp,
-                        color = LightGray,
-                        modifier = Modifier.padding(start = 8.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = spacing.xs),
                     )
                 }
             }
