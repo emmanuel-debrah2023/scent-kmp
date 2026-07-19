@@ -21,7 +21,7 @@ import ui.components.BottomNavigation
 import ui.components.FragranceCard
 import ui.components.TopAppBar
 import ui.components.TopTabs
-import ui.navigation.getBottomNavTabs
+import ui.navigation.mainNavTabs
 import ui.theme.ScentPrimary
 import ui.theme.ScentSurface
 
@@ -52,7 +52,7 @@ fun HomeScreen() {
             BottomNavigation(
                 selectedTab = selectedBottomTab,
                 onTabSelected = { selectedBottomTab = it },
-                tabs = getBottomNavTabs(),
+                tabs = mainNavTabs(),
                 modifier = Modifier,
             )
         },
