@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+  <!-- Blue arc (right + top-right of G) -->
+  <path
+      android:fillColor="#4285F4"
+      android:pathData="M46.145,24.5c0,-1.54 -0.14,-3.02 -0.4,-4.45L24,20.05L24,28.44L36.295,28.44c-0.55,2.95 -2.2,5.45 -4.7,7.12L37.7,40.42c3.88,-3.58 6.445,-8.86 6.445,-15.92Z"/>
+  <!-- Green arc (bottom-left) -->
+  <path
+      android:fillColor="#34A853"
+      android:pathData="M24,47c6.1,0 11.225,-2.02 14.96,-5.48L32.595,35.56c-2.01,1.35 -4.59,2.15 -8.595,2.15c-6.615,0 -12.215,-4.47 -14.225,-10.47L3.545,32.04C7.26,43.1 14.835,47 24,47Z"/>
+  <!-- Yellow arc (bottom) -->
+  <path
+      android:fillColor="#FBBC05"
+      android:pathData="M9.775,27.24c-0.505,-1.5 -0.79,-3.1 -0.79,-4.74s0.285,-3.24 0.79,-4.74L3.545,12.96C1.965,16.14 1,19.96 1,24s0.965,7.86 2.545,11.04L9.775,29.24Z"/>
+  <!-- Red arc (top-left) and G body -->
+  <path
+      android:fillColor="#EA4335"
+      android:pathData="M24,9.5c3.72,0 7.055,1.28 9.685,3.8L38.86,7.6C35.215,4.24 30.09,2 24,2 14.835,2 7.26,6.9 3.545,17.96L9.775,22.76C11.785,16.76 17.385,9.5 24,9.5Z"/>
+  <!-- White fill center to form the G cutout -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M24,20.05L46.145,20.05C46.405,21.48 46.545,22.96 46.545,24.5c0,0 0,0 0,0L24,24.5L24,20.05Z"/>
+</vector>
