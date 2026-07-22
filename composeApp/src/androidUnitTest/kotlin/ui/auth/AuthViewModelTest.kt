@@ -1,9 +1,10 @@
 package ui.auth
 
 import app.cash.turbine.test
-import fakes.FakeGetCurrentUserUseCase
-import fakes.FakeLoginUseCase
-import fakes.FakeRegisterUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -12,6 +13,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthUser
+import org.scent.project.domain.usecase.GetCurrentUserUseCase
+import org.scent.project.domain.usecase.LoginUseCase
+import org.scent.project.domain.usecase.RegisterUseCase
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import ui.base.UiState
@@ -23,31 +27,27 @@ import kotlin.test.assertIs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
-    private val fakeLoginUseCase = FakeLoginUseCase()
-    private val fakeRegisterUseCase = FakeRegisterUseCase()
-    private val fakeGetCurrentUserUseCase = FakeGetCurrentUserUseCase()
+    private val loginUseCase = mockk<LoginUseCase>()
+    private val registerUseCase = mockk<RegisterUseCase>()
+    private val getCurrentUserUseCase = mockk<GetCurrentUserUseCase>(relaxed = true)
     private lateinit var viewModel: AuthViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel =
-            AuthViewModel(
-                loginUseCase = fakeLoginUseCase,
-                registerUseCase = fakeRegisterUseCase,
-                getCurrentUserUseCase = fakeGetCurrentUserUseCase,
-            )
+        viewModel = AuthViewModel(loginUseCase, registerUseCase, getCurrentUserUseCase)
     }
 
     @AfterTest
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkAll()
     }
 
-    // -------------------------------------------------------------------------
-    // login — validation (Validator runs before use case; use case never called)
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
+    // login — validation (Validator runs before use case)
+    // ─────────────────────────────────────────────
 
     @Test
     fun `login with invalid email emits Error and never calls use case`() =
@@ -60,7 +60,7 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.InvalidEmail>(state.error)
                 expectNoEvents()
             }
-            assertEquals(null, fakeLoginUseCase.lastEmail)
+            coVerify(exactly = 0) { loginUseCase(any(), any()) }
         }
 
     @Test
@@ -74,12 +74,12 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
                 expectNoEvents()
             }
-            assertEquals(null, fakeLoginUseCase.lastEmail)
+            coVerify(exactly = 0) { loginUseCase(any(), any()) }
         }
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
     // login — use case delegation
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
 
     @Test
     fun `login with valid input sets Loading before use case and emits Success`() =
@@ -88,9 +88,9 @@ class AuthViewModelTest {
                 AuthUser(id = 1, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok")
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            fakeLoginUseCase.result = user.asRight()
-            fakeLoginUseCase.onInvoke = {
+            coEvery { loginUseCase(any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.loginState.value
+                user.asRight()
             }
 
             viewModel.loginState.test {
@@ -110,9 +110,9 @@ class AuthViewModelTest {
             val error = AppError.AuthError.InvalidCredentials()
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            fakeLoginUseCase.result = error.asLeft()
-            fakeLoginUseCase.onInvoke = {
+            coEvery { loginUseCase(any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.loginState.value
+                error.asLeft()
             }
 
             viewModel.loginState.test {
@@ -129,7 +129,7 @@ class AuthViewModelTest {
     @Test
     fun `login forwards email and password to use case`() =
         runTest {
-            fakeLoginUseCase.result = AppError.Unknown().asLeft()
+            coEvery { loginUseCase(any(), any()) } returns AppError.Unknown().asLeft()
 
             viewModel.loginState.test {
                 assertEquals(UiState.Idle, awaitItem())
@@ -137,13 +137,12 @@ class AuthViewModelTest {
                 skipItems(1)
             }
 
-            assertEquals("bob@example.com", fakeLoginUseCase.lastEmail)
-            assertEquals("pass1234", fakeLoginUseCase.lastPassword)
+            coVerify { loginUseCase("bob@example.com", "pass1234") }
         }
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
     // register — validation
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
 
     @Test
     fun `register with invalid email emits Error and never calls use case`() =
@@ -156,6 +155,7 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.InvalidEmail>(state.error)
                 expectNoEvents()
             }
+            coVerify(exactly = 0) { registerUseCase(any(), any(), any(), any()) }
         }
 
     @Test
@@ -169,11 +169,12 @@ class AuthViewModelTest {
                 assertIs<AppError.ValidationError.PasswordTooShort>(state.error)
                 expectNoEvents()
             }
+            coVerify(exactly = 0) { registerUseCase(any(), any(), any(), any()) }
         }
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
     // register — use case delegation
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
 
     @Test
     fun `register with valid input sets Loading before use case and emits Success`() =
@@ -182,9 +183,9 @@ class AuthViewModelTest {
                 AuthUser(id = 2, username = "alice", displayName = "Alice", email = "alice@example.com", token = "tok2")
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            fakeRegisterUseCase.result = user.asRight()
-            fakeRegisterUseCase.onInvoke = {
+            coEvery { registerUseCase(any(), any(), any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.registerState.value
+                user.asRight()
             }
 
             viewModel.registerState.test {
@@ -204,9 +205,9 @@ class AuthViewModelTest {
             val error = AppError.AuthError.UserAlreadyExists()
             var stateWhenUseCaseCalled: UiState<AuthUser>? = null
 
-            fakeRegisterUseCase.result = error.asLeft()
-            fakeRegisterUseCase.onInvoke = {
+            coEvery { registerUseCase(any(), any(), any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.registerState.value
+                error.asLeft()
             }
 
             viewModel.registerState.test {
@@ -220,14 +221,14 @@ class AuthViewModelTest {
             assertEquals(UiState.Loading, stateWhenUseCaseCalled)
         }
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
     // resetState
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
 
     @Test
     fun `resetState resets both loginState and registerState to Idle`() =
         runTest {
-            // Drive loginState to Error via validation (no mock needed)
+            // Drive loginState to Error via validation (no stub needed)
             viewModel.login("not-an-email", "password123")
 
             viewModel.loginState.test {

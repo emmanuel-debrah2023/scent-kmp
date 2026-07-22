@@ -1,16 +1,22 @@
 package ui.auth
 
 import app.cash.turbine.test
-import fakes.FakeLogoutUseCase
-import fakes.FakeObserveAuthStateUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthState
+import org.scent.project.domain.usecase.LogoutUseCase
+import org.scent.project.domain.usecase.ObserveAuthStateUseCase
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import kotlin.test.AfterTest
@@ -21,25 +27,28 @@ import kotlin.test.assertIs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionViewModelTest {
-    private val fakeObserveAuthStateUseCase = FakeObserveAuthStateUseCase()
-    private val fakeLogoutUseCase = FakeLogoutUseCase()
+    private val authStateFlow = MutableStateFlow<AuthState>(AuthState.Unknown)
+    private val observeAuthStateUseCase = mockk<ObserveAuthStateUseCase>()
+    private val logoutUseCase = mockk<LogoutUseCase>()
     private lateinit var viewModel: SessionViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = SessionViewModel(fakeObserveAuthStateUseCase, fakeLogoutUseCase)
+        every { observeAuthStateUseCase() } returns authStateFlow
+        viewModel = SessionViewModel(observeAuthStateUseCase, logoutUseCase)
     }
 
     @AfterTest
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkAll()
     }
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
     // authState — Flow emissions via Turbine
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
 
     @Test
     fun `initial authState is Unknown`() =
@@ -56,32 +65,32 @@ class SessionViewModelTest {
             viewModel.authState.test {
                 assertEquals(AuthState.Unknown, awaitItem())
 
-                fakeObserveAuthStateUseCase.flow.value = AuthState.Unauthenticated
+                authStateFlow.value = AuthState.Unauthenticated
                 assertEquals(AuthState.Unauthenticated, awaitItem())
 
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
     // logout
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────
 
     @Test
     fun `logout calls LogoutUseCase`() =
         runTest {
-            fakeLogoutUseCase.result = Unit.asRight()
+            coEvery { logoutUseCase() } returns Unit.asRight()
 
             viewModel.logout()
 
-            assertEquals(1, fakeLogoutUseCase.invocationCount)
+            coVerify(exactly = 1) { logoutUseCase() }
         }
 
     @Test
     fun `logout emits error to error flow on use case failure`() =
         runTest {
             val error = AppError.NetworkError.ServerError(statusCode = 500)
-            fakeLogoutUseCase.result = error.asLeft()
+            coEvery { logoutUseCase() } returns error.asLeft()
 
             viewModel.error.test {
                 viewModel.logout()
