@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.scent.project.domain.model.AuthUser
 import ui.components.AppScaffold
+import ui.feed.FeedScreen
 
 @Composable
 fun MainGraph(
@@ -48,7 +49,7 @@ fun MainGraph(
 private fun HomeNavHost(nav: NavigationState<HomeRoute>) {
     val current by nav.current
     when (current) {
-        is HomeRoute.Feed -> HomeScreenStub()
+        is HomeRoute.Feed -> HomeNavScreen()
         is HomeRoute.PostDetail -> PlaceholderScreen("Post Detail")
         is HomeRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
         is HomeRoute.UserProfile -> PlaceholderScreen("User Profile")
@@ -93,8 +94,8 @@ private fun MarketplaceNavHost(nav: NavigationState<MarketplaceRoute>) {
 // ─────────────────────────────────────────────
 
 @Composable
-private fun HomeScreenStub() {
-    PlaceholderScreen("Feed")
+private fun HomeNavScreen() {
+    FeedScreen()
 }
 
 @Composable
