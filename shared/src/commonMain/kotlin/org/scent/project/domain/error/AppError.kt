@@ -77,6 +77,18 @@ sealed class AppError {
         ) : ValidationError()
     }
 
+    sealed class ContentError : AppError() {
+        data class UploadFailed(
+            override val message: String = "Media upload failed. Please try again.",
+            override val cause: Throwable? = null,
+        ) : ContentError()
+
+        data class UploadUrlFetchFailed(
+            override val message: String = "Could not get upload URL. Please try again.",
+            override val cause: Throwable? = null,
+        ) : ContentError()
+    }
+
     sealed class StorageError : AppError() {
         data class ReadFailed(
             override val message: String = "Failed to read data from storage",

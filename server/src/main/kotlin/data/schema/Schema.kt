@@ -122,6 +122,8 @@ object MediaItemsTable : IntIdTable("media_items") {
     val commentCount = integer("comment_count").default(0)
     val isReview = bool("is_review").default(false)
     val createdAt = datetime("created_at")
+    val cloudflareUid = varchar("cloudflare_uid", 64).nullable()
+    val cfUploadStatus = varchar("cf_upload_status", 10).default("PENDING")
 }
 
 object FragranceMediaTable : Table("fragrance_media") {

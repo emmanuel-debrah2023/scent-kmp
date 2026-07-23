@@ -14,6 +14,7 @@ import plugins.configureSecurity
 import routing.authRoutes
 import routing.fragranceRoutes
 import routing.listingRoutes
+import routing.mediaRoutes
 import routing.postRoutes
 
 fun main(args: Array<String>) {
@@ -61,6 +62,7 @@ fun Application.module() {
         authRoutes()
         fragranceRoutes()
         listingRoutes()
+        mediaRoutes()
         postRoutes()
     }
 }
