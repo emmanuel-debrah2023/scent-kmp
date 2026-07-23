@@ -99,6 +99,7 @@ kotlin {
         val androidUnitTest by getting {
             dependencies {
                 implementation(libs.kotlin.testJunit)
+                implementation(libs.mockk)
             }
         }
     }

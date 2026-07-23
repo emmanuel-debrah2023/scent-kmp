@@ -1,8 +1,10 @@
 package ui.feed
 
 import app.cash.turbine.test
-import fakes.FakeGetFeedUseCase
-import fakes.FakeLikePostUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -14,6 +16,8 @@ import org.scent.project.domain.model.ContentFormat
 import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Post
+import org.scent.project.domain.usecase.GetFeedUseCase
+import org.scent.project.domain.usecase.LikePostUseCase
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import ui.base.UiState
@@ -25,24 +29,25 @@ import kotlin.test.assertIs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FeedViewModelTest {
-    private val fakeGetFeedUseCase = FakeGetFeedUseCase()
-    private val fakeLikePostUseCase = FakeLikePostUseCase()
+    private val getFeedUseCase = mockk<GetFeedUseCase>()
+    private val likePostUseCase = mockk<LikePostUseCase>()
     private lateinit var viewModel: FeedViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = FeedViewModel(fakeGetFeedUseCase, fakeLikePostUseCase)
+        viewModel = FeedViewModel(getFeedUseCase, likePostUseCase)
     }
 
     @AfterTest
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkAll()
     }
 
     // ─────────────────────────────────────────────
-    // loadFeed — success
+    // loadFeed — success / error
     // ─────────────────────────────────────────────
 
     @Test
@@ -51,9 +56,9 @@ class FeedViewModelTest {
             val page = FeedPage(posts = listOf(makePost("p1"), makePost("p2")), nextCursor = "cursor1")
             var stateWhenUseCaseCalled: UiState<FeedState>? = null
 
-            fakeGetFeedUseCase.result = page.asRight()
-            fakeGetFeedUseCase.onInvoke = {
+            coEvery { getFeedUseCase(any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.uiState.value
+                page.asRight()
             }
 
             viewModel.uiState.test {
@@ -74,9 +79,9 @@ class FeedViewModelTest {
             val error = AppError.NetworkError.NoConnection()
             var stateWhenUseCaseCalled: UiState<FeedState>? = null
 
-            fakeGetFeedUseCase.result = error.asLeft()
-            fakeGetFeedUseCase.onInvoke = {
+            coEvery { getFeedUseCase(any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.uiState.value
+                error.asLeft()
             }
 
             viewModel.uiState.test {
@@ -93,12 +98,11 @@ class FeedViewModelTest {
     @Test
     fun `loadFeed with refresh=false skips reload when already Success`() =
         runTest {
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p1"))).asRight()
+            coEvery { getFeedUseCase(any(), any()) } returns FeedPage(posts = listOf(makePost("p1"))).asRight()
             viewModel.loadFeed()
 
-            // Second call should not re-trigger the use case
-            val callsBefore = fakeGetFeedUseCase.lastCursor
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p2"))).asRight()
+            // Swap result — second loadFeed(false) should not invoke use case again
+            coEvery { getFeedUseCase(any(), any()) } returns FeedPage(posts = listOf(makePost("p2"))).asRight()
             viewModel.loadFeed(refresh = false)
 
             val state = viewModel.uiState.value as UiState.Success
@@ -109,19 +113,22 @@ class FeedViewModelTest {
                     .first()
                     .id,
             )
+            coVerify(exactly = 1) { getFeedUseCase(any(), any()) }
         }
 
     @Test
     fun `loadFeed with refresh=true reloads even when already Success`() =
         runTest {
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p1"))).asRight()
+            coEvery { getFeedUseCase(any(), any()) } returns FeedPage(posts = listOf(makePost("p1"))).asRight()
             viewModel.loadFeed()
 
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p2"), makePost("p3"))).asRight()
+            coEvery { getFeedUseCase(any(), any()) } returns
+                FeedPage(posts = listOf(makePost("p2"), makePost("p3"))).asRight()
             viewModel.loadFeed(refresh = true)
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(2, state.data.posts.size)
+            coVerify(exactly = 2) { getFeedUseCase(any(), any()) }
         }
 
     // ─────────────────────────────────────────────
@@ -131,38 +138,42 @@ class FeedViewModelTest {
     @Test
     fun `loadNextPage appends posts and updates nextCursor`() =
         runTest {
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p1")), nextCursor = "c1").asRight()
+            coEvery { getFeedUseCase(null, any()) } returns
+                FeedPage(posts = listOf(makePost("p1")), nextCursor = "c1").asRight()
             viewModel.loadFeed()
 
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p2")), nextCursor = "c2").asRight()
+            coEvery { getFeedUseCase("c1", any()) } returns
+                FeedPage(posts = listOf(makePost("p2")), nextCursor = "c2").asRight()
             viewModel.loadNextPage()
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(listOf("p1", "p2"), state.data.posts.map { it.id })
             assertEquals("c2", state.data.nextCursor)
-            assertEquals("c1", fakeGetFeedUseCase.lastCursor)
+            coVerify { getFeedUseCase("c1", any()) }
         }
 
     @Test
     fun `loadNextPage does nothing when nextCursor is null`() =
         runTest {
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p1")), nextCursor = null).asRight()
+            coEvery { getFeedUseCase(any(), any()) } returns
+                FeedPage(posts = listOf(makePost("p1")), nextCursor = null).asRight()
             viewModel.loadFeed()
 
-            fakeGetFeedUseCase.result = null
             viewModel.loadNextPage()
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(1, state.data.posts.size)
+            coVerify(exactly = 1) { getFeedUseCase(any(), any()) }
         }
 
     @Test
     fun `loadNextPage reverts to previous state on error`() =
         runTest {
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("p1")), nextCursor = "c1").asRight()
+            coEvery { getFeedUseCase(null, any()) } returns
+                FeedPage(posts = listOf(makePost("p1")), nextCursor = "c1").asRight()
             viewModel.loadFeed()
 
-            fakeGetFeedUseCase.result = AppError.NetworkError.NoConnection().asLeft()
+            coEvery { getFeedUseCase("c1", any()) } returns AppError.NetworkError.NoConnection().asLeft()
             viewModel.loadNextPage()
 
             val state = viewModel.uiState.value as UiState.Success
@@ -183,17 +194,16 @@ class FeedViewModelTest {
     fun `likePost optimistically increments likeCount and sets isLiked`() =
         runTest {
             val post = makePost("p1", isLiked = false, likeCount = 5)
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(post)).asRight()
+            coEvery { getFeedUseCase(any(), any()) } returns FeedPage(posts = listOf(post)).asRight()
             viewModel.loadFeed()
 
-            // Server returns authoritative count (7) that may differ from optimistic (6),
-            // ensuring the reconciliation emission is distinct from the optimistic one.
-            fakeLikePostUseCase.result = LikeResult(isLiked = true, likeCount = 7).asRight()
+            // Server returns authoritative count (7) — distinct from optimistic (6)
+            coEvery { likePostUseCase("p1") } returns LikeResult(isLiked = true, likeCount = 7).asRight()
 
             viewModel.uiState.test {
                 skipItems(1) // current Success state
                 viewModel.likePost("p1")
-                // Optimistic update emitted first: likeCount = 5 + 1 = 6
+                // Optimistic: 5 + 1 = 6
                 val optimistic = awaitItem() as UiState.Success
                 assertEquals(
                     true,
@@ -207,7 +217,7 @@ class FeedViewModelTest {
                         .first()
                         .likeCount,
                 )
-                // Server reconciliation overrides with authoritative count = 7
+                // Server reconciliation: 7
                 val reconciled = awaitItem() as UiState.Success
                 assertEquals(
                     true,
@@ -228,10 +238,10 @@ class FeedViewModelTest {
     fun `likePost reverts optimistic update on server error`() =
         runTest {
             val post = makePost("p1", isLiked = false, likeCount = 5)
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(post)).asRight()
+            coEvery { getFeedUseCase(any(), any()) } returns FeedPage(posts = listOf(post)).asRight()
             viewModel.loadFeed()
 
-            fakeLikePostUseCase.result = AppError.NetworkError.NoConnection().asLeft()
+            coEvery { likePostUseCase("p1") } returns AppError.NetworkError.NoConnection().asLeft()
 
             viewModel.uiState.test {
                 skipItems(1)
@@ -270,13 +280,13 @@ class FeedViewModelTest {
     @Test
     fun `likePost passes correct postId to use case`() =
         runTest {
-            fakeGetFeedUseCase.result = FeedPage(posts = listOf(makePost("post-42"))).asRight()
+            coEvery { getFeedUseCase(any(), any()) } returns FeedPage(posts = listOf(makePost("post-42"))).asRight()
             viewModel.loadFeed()
 
-            fakeLikePostUseCase.result = LikeResult(isLiked = true, likeCount = 1).asRight()
+            coEvery { likePostUseCase("post-42") } returns LikeResult(isLiked = true, likeCount = 1).asRight()
             viewModel.likePost("post-42")
 
-            assertEquals("post-42", fakeLikePostUseCase.lastPostId)
+            coVerify { likePostUseCase("post-42") }
         }
 
     // ─────────────────────────────────────────────
