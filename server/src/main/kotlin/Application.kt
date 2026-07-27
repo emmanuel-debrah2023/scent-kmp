@@ -11,9 +11,12 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import plugins.configureSecurity
+import providers.CloudflareStreamProvider
+import providers.FakeStreamProvider
 import routing.authRoutes
 import routing.fragranceRoutes
 import routing.listingRoutes
+import routing.mediaRoutes
 import routing.postRoutes
 
 fun main(args: Array<String>) {
@@ -54,6 +57,18 @@ fun Application.module() {
     }
     configureSecurity()
 
+    val fakeMode = System.getProperty("STREAM_PROVIDER") == "fake"
+    val streamProvider =
+        if (fakeMode) {
+            FakeStreamProvider()
+        } else {
+            CloudflareStreamProvider(
+                accountId = System.getProperty("CLOUDFLARE_ACCOUNT_ID") ?: "",
+                apiToken = System.getProperty("CLOUDFLARE_API_TOKEN") ?: "",
+                webhookSecret = System.getProperty("CLOUDFLARE_WEBHOOK_SECRET") ?: "",
+            )
+        }
+
     routing {
         get("/") {
             call.respondText("Scent API is running")
@@ -61,6 +76,7 @@ fun Application.module() {
         authRoutes()
         fragranceRoutes()
         listingRoutes()
+        mediaRoutes(streamProvider, fakeMode)
         postRoutes()
     }
 }

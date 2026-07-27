@@ -9,6 +9,8 @@ import org.scent.project.data.remote.api.FragranceApi
 import org.scent.project.data.remote.api.FragranceApiImpl
 import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.api.ListingApiImpl
+import org.scent.project.data.remote.api.MediaApi
+import org.scent.project.data.remote.api.MediaApiImpl
 import org.scent.project.data.remote.api.PostApi
 import org.scent.project.data.remote.api.PostApiImpl
 import org.scent.project.data.remote.createHttpClient
@@ -56,6 +58,8 @@ fun sharedModule(
     single { FragranceApiImpl(httpClient = get(), baseUrl = baseUrl) } bind FragranceApi::class
 
     single { ListingApiImpl(httpClient = get(), baseUrl = baseUrl) } bind ListingApi::class
+
+    single { MediaApiImpl(httpClient = get(), baseUrl = baseUrl) } bind MediaApi::class
 
     // Repositories
     single { AuthRepositoryImpl(api = get(), tokenStorage = get(), validator = get()) } bind AuthRepository::class
