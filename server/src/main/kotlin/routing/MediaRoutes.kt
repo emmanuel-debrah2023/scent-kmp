@@ -14,8 +14,6 @@ import io.ktor.server.routing.route
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import models.ErrorResponse
 import models.UploadUrlResponse
@@ -24,57 +22,10 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import java.io.OutputStreamWriter
-import java.net.URL
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
-
-// Shape of Cloudflare's direct_upload response
-@Serializable
-private data class CfDirectUploadResult(
-    @SerialName("uploadURL") val uploadUrl: String,
-    val uid: String,
-)
-
-@Serializable
-private data class CfDirectUploadResponse(
-    val success: Boolean,
-    val result: CfDirectUploadResult? = null,
-)
+import providers.StreamProvider
 
 private val lenientJson = Json { ignoreUnknownKeys = true }
 
-/** Returns the Cloudflare direct-upload URL for a new video or throws on failure. */
-private fun fetchCfDirectUploadResult(
-    accountId: String,
-    apiToken: String,
-): CfDirectUploadResult {
-    val cfUrl = URL("https://api.cloudflare.com/client/v4/accounts/$accountId/stream/direct_upload")
-    val connection = cfUrl.openConnection() as java.net.HttpURLConnection
-    connection.requestMethod = "POST"
-    connection.doOutput = true
-    connection.setRequestProperty("Content-Type", "application/json")
-    connection.setRequestProperty("Authorization", "Bearer $apiToken")
-    val requestBody = """{"maxDurationSeconds":120,"requireSignedURLs":false}"""
-    OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { it.write(requestBody) }
-    val responseText = connection.inputStream.bufferedReader(Charsets.UTF_8).readText()
-    val response = lenientJson.decodeFromString<CfDirectUploadResponse>(responseText)
-    return requireNotNull(response.result) { "Cloudflare response was unsuccessful" }
-}
-
-/** Verifies the HMAC-SHA256 signature from a Cloudflare webhook header. */
-private fun verifyWebhookSignature(
-    secret: String,
-    body: String,
-    signature: String,
-): Boolean {
-    val mac = Mac.getInstance("HmacSHA256")
-    mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
-    val computed = mac.doFinal(body.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-    return computed.equals(signature, ignoreCase = true)
-}
-
-/** Persists a new pending media row and returns the inserted row id. */
 private fun insertPendingMediaRow(
     userId: Int,
     uid: String,
@@ -91,8 +42,7 @@ private fun insertPendingMediaRow(
             }.value
     }
 
-/** Updates an existing media row when Cloudflare reports it as ready. */
-private fun applyWebhookUpdate(payload: WebhookPayload) {
+internal fun applyWebhookUpdate(payload: WebhookPayload) {
     val newStatus = if (payload.readyToStream) "READY" else payload.status.uppercase().take(10)
     transaction {
         MediaItemsTable.update({ MediaItemsTable.cloudflareUid eq payload.uid }) {
@@ -107,63 +57,93 @@ private fun applyWebhookUpdate(payload: WebhookPayload) {
     }
 }
 
-fun Route.mediaRoutes() {
+/**
+ * @param streamProvider App-owned provider abstraction; real vs fake selected externally.
+ * @param fakeMode When true, registers a dev-only POST /fake-upload route that simulates
+ *   the provider completing an upload. Guarded so it is never registered in production.
+ */
+fun Route.mediaRoutes(
+    streamProvider: StreamProvider,
+    fakeMode: Boolean = false,
+) {
     route("/api/v1/media") {
-        authenticate("auth-jwt") {
-            post("/upload-url") {
-                val principal = call.principal<JWTPrincipal>()
-                val userId =
-                    principal?.payload?.getClaim("userId")?.asInt()
-                        ?: run {
-                            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token"))
-                            return@post
-                        }
+        authenticate("auth-jwt") { uploadUrlRoute(streamProvider) }
+        webhookRoute(streamProvider)
+        if (fakeMode) fakeUploadRoute()
+    }
+}
 
-                val accountId = System.getProperty("CLOUDFLARE_ACCOUNT_ID") ?: ""
-                val apiToken = System.getProperty("CLOUDFLARE_API_TOKEN") ?: ""
-
-                if (accountId.isBlank() || apiToken.isBlank()) {
-                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Media upload not configured"))
+private fun Route.uploadUrlRoute(streamProvider: StreamProvider) {
+    post("/upload-url") {
+        val principal = call.principal<JWTPrincipal>()
+        val userId =
+            principal?.payload?.getClaim("userId")?.asInt()
+                ?: run {
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token"))
                     return@post
                 }
 
-                val cfResult =
-                    runCatching { fetchCfDirectUploadResult(accountId, apiToken) }
-                        .getOrElse { cause ->
-                            call.respond(
-                                HttpStatusCode.BadGateway,
-                                ErrorResponse("Failed to reach Cloudflare: ${cause.message}"),
-                            )
-                            return@post
-                        }
+        streamProvider.createDirectUpload().fold(
+            onSuccess = { upload ->
+                insertPendingMediaRow(userId, upload.uid)
+                call.respond(
+                    HttpStatusCode.OK,
+                    UploadUrlResponse(uploadUrl = upload.uploadUrl, uid = upload.uid),
+                )
+            },
+            onFailure = { cause ->
+                call.respond(
+                    HttpStatusCode.BadGateway,
+                    ErrorResponse("Failed to create upload: ${cause.message}"),
+                )
+            },
+        )
+    }
+}
 
-                insertPendingMediaRow(userId, cfResult.uid)
-                call.respond(HttpStatusCode.OK, UploadUrlResponse(uploadUrl = cfResult.uploadUrl, uid = cfResult.uid))
-            }
+private fun Route.webhookRoute(streamProvider: StreamProvider) {
+    post("/webhook") {
+        val signatureHeader = call.request.headers["Cf-Webhook-Signature"] ?: ""
+        val body = call.receiveText()
+
+        if (!streamProvider.verifyWebhookSignature(body, signatureHeader)) {
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid webhook signature"))
+            return@post
         }
 
-        post("/webhook") {
-            val webhookSecret = System.getProperty("CLOUDFLARE_WEBHOOK_SECRET") ?: ""
-            val signature = call.request.headers["Cf-Webhook-Signature"] ?: ""
-            val body = call.receiveText()
+        val payload =
+            runCatching { lenientJson.decodeFromString<WebhookPayload>(body) }
+                .getOrElse { cause ->
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid webhook payload: ${cause.message}"),
+                    )
+                    return@post
+                }
 
-            if (webhookSecret.isNotBlank() && !verifyWebhookSignature(webhookSecret, body, signature)) {
-                call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid webhook signature"))
-                return@post
-            }
+        applyWebhookUpdate(payload)
+        call.respond(HttpStatusCode.OK)
+    }
+}
 
-            val payload =
-                runCatching { lenientJson.decodeFromString<WebhookPayload>(body) }
-                    .getOrElse { cause ->
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Invalid webhook payload: ${cause.message}"),
-                        )
-                        return@post
-                    }
-
-            applyWebhookUpdate(payload)
-            call.respond(HttpStatusCode.OK)
-        }
+// Dev-only: simulates the provider completing an upload (PENDING → READY).
+// Only registered when STREAM_PROVIDER=fake — never reachable in production.
+private fun Route.fakeUploadRoute() {
+    post("/fake-upload") {
+        val uid =
+            call.request.queryParameters["uid"]
+                ?: run {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("uid query parameter required"))
+                    return@post
+                }
+        applyWebhookUpdate(
+            WebhookPayload(
+                uid = uid,
+                status = "ready",
+                readyToStream = true,
+                thumbnail = "https://fake.thumbnail/$uid.jpg",
+            ),
+        )
+        call.respond(HttpStatusCode.OK)
     }
 }
