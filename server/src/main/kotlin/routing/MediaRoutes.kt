@@ -26,7 +26,6 @@ import providers.StreamProvider
 
 private val lenientJson = Json { ignoreUnknownKeys = true }
 
-
 private fun insertPendingMediaRow(
     userId: Int,
     uid: String,
