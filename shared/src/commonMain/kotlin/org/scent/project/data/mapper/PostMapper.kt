@@ -30,13 +30,6 @@ object PostMapper {
                 ).asLeft()
         }
 
-        if (fragranceIds.isNullOrEmpty()) {
-            return AppError.NetworkError
-                .ParseError(
-                    message = "Post must have at least one fragrance linked",
-                ).asLeft()
-        }
-
         if (createdAt == null) {
             return AppError.NetworkError
                 .ParseError(
@@ -50,7 +43,7 @@ object PostMapper {
             contentFormat = ContentFormat.fromString(contentFormat),
             textContent = textContent ?: "",
             mediaUrls = mediaUrls?.filterNotNull() ?: emptyList(),
-            fragranceIds = fragranceIds.filterNotNull(),
+            fragranceIds = fragranceIds?.filterNotNull() ?: emptyList(),
             hashtags = hashtags?.filterNotNull() ?: emptyList(),
             likeCount = likeCount ?: 0,
             commentCount = commentCount ?: 0,

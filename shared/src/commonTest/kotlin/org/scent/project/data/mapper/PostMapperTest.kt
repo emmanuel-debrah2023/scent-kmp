@@ -78,10 +78,19 @@ class PostMapperTest {
     }
 
     @Test
-    fun `toDomain returns Left when fragranceIds is empty`() {
+    fun `toDomain succeeds when fragranceIds is empty`() {
         val dto = PostDto(id = "post_1", userId = "user_1", fragranceIds = emptyList(), createdAt = 1L)
         val result = dto.toDomain()
-        assertTrue(result.isLeft)
+        assertTrue(result.isRight)
+        assertEquals(emptyList(), result.getOrNull()!!.fragranceIds)
+    }
+
+    @Test
+    fun `toDomain succeeds when fragranceIds is null`() {
+        val dto = PostDto(id = "post_1", userId = "user_1", fragranceIds = null, createdAt = 1L)
+        val result = dto.toDomain()
+        assertTrue(result.isRight)
+        assertEquals(emptyList(), result.getOrNull()!!.fragranceIds)
     }
 
     // -------------------------------------------------------------------------
