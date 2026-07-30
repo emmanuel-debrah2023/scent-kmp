@@ -29,6 +29,10 @@ sealed interface HomeRoute {
     data class UserProfile(
         val userId: String,
     ) : HomeRoute
+
+    data class VideoDetail(
+        val url: String,
+    ) : HomeRoute
 }
 
 // Search — cross-content search (fragrances, listings, posts, users)

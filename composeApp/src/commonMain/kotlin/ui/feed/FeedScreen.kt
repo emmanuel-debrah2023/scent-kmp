@@ -25,7 +25,10 @@ import ui.theme.ScentThemeExtras
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
-fun FeedScreen(modifier: Modifier = Modifier) {
+fun FeedScreen(
+    onVideoClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val viewModel: FeedViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
@@ -38,6 +41,7 @@ fun FeedScreen(modifier: Modifier = Modifier) {
         onLikeClick = viewModel::likePost,
         onLoadNextPage = viewModel::loadNextPage,
         onRetry = { viewModel.loadFeed(refresh = true) },
+        onVideoClick = onVideoClick,
         modifier = modifier,
     )
 }
@@ -48,6 +52,7 @@ private fun FeedContent(
     onLikeClick: (String) -> Unit,
     onLoadNextPage: () -> Unit,
     onRetry: () -> Unit,
+    onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = ScentThemeExtras.spacing
@@ -107,6 +112,7 @@ private fun FeedContent(
                     PostCard(
                         post = post,
                         onLikeClick = onLikeClick,
+                        onVideoClick = onVideoClick,
                         modifier =
                             Modifier
                                 .fillMaxWidth()

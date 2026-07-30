@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.scent.project.domain.model.AuthUser
 import ui.components.AppScaffold
-import ui.feed.FeedScreen
+import ui.home.ScentHomeHost
 
 @Composable
 fun MainGraph(
@@ -24,18 +24,25 @@ fun MainGraph(
     nav: MainNavState,
     onLogout: () -> Unit,
 ) {
-    AppScaffold(
-        selectedTab = nav.selectedTab.ordinal,
-        onTabSelected = { nav.selectedTab = Tab.entries[it] },
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            when (nav.selectedTab) {
-                Tab.HOME -> HomeNavHost(nav.homeNav)
-                Tab.SEARCH -> SearchNavHost(nav.searchNav)
-                Tab.PROFILE -> ProfileNavHost(nav.profileNav, user, onLogout)
-                Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav)
+    when (nav.selectedTab) {
+        Tab.HOME ->
+            ScentHomeHost(
+                onNavTabSelected = { nav.selectedTab = Tab.entries[it] },
+            )
+        else ->
+            AppScaffold(
+                selectedTab = nav.selectedTab.ordinal,
+                onTabSelected = { nav.selectedTab = Tab.entries[it] },
+            ) { innerPadding ->
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    when (nav.selectedTab) {
+                        Tab.HOME -> Unit
+                        Tab.SEARCH -> SearchNavHost(nav.searchNav)
+                        Tab.PROFILE -> ProfileNavHost(nav.profileNav, user, onLogout)
+                        Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav)
+                    }
+                }
             }
-        }
     }
 }
 
@@ -44,17 +51,6 @@ fun MainGraph(
 // Each reads current route via derivedStateOf for scoped recomposition.
 // Replace the when block with NavDisplay when adopting Nav3.
 // ─────────────────────────────────────────────
-
-@Composable
-private fun HomeNavHost(nav: NavigationState<HomeRoute>) {
-    val current by nav.current
-    when (current) {
-        is HomeRoute.Feed -> HomeNavScreen()
-        is HomeRoute.PostDetail -> PlaceholderScreen("Post Detail")
-        is HomeRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
-        is HomeRoute.UserProfile -> PlaceholderScreen("User Profile")
-    }
-}
 
 @Composable
 private fun SearchNavHost(nav: NavigationState<SearchRoute>) {
@@ -92,11 +88,6 @@ private fun MarketplaceNavHost(nav: NavigationState<MarketplaceRoute>) {
 // ─────────────────────────────────────────────
 // Stubs — replaced by real screens in feature tickets
 // ─────────────────────────────────────────────
-
-@Composable
-private fun HomeNavScreen() {
-    FeedScreen()
-}
 
 @Composable
 private fun ProfileScreenStub(
