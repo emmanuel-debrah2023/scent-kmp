@@ -74,6 +74,7 @@ fun HomeFullBleedScreen(
     onOpenVideo: () -> Unit,
     modifier: Modifier = Modifier,
     initialTab: Int = 0,
+    onNavTabSelected: (Int) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -196,7 +197,10 @@ fun HomeFullBleedScreen(
 
         BlendedBottomNav(
             navTab = navTab,
-            onNavSelected = { navTab = it },
+            onNavSelected = {
+                navTab = it
+                if (it != 0) onNavTabSelected(it)
+            },
             modifier = Modifier.align(Alignment.BottomStart),
         )
     }
