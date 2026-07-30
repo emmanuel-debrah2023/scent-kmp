@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -62,6 +63,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.scent.project.domain.model.ContentFormat
 import org.scent.project.domain.model.Post
 import ui.base.UiState
+import ui.components.VideoPlayer
 import ui.feed.FeedViewModel
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
@@ -747,6 +749,7 @@ private fun CommunityPostCard(
         hashtags = post.hashtags.joinToString(" ") { "#$it" },
         likeCount = post.likeCount.toString(),
         commentCount = post.commentCount.toString(),
+        videoUrl = post.mediaUrls.firstOrNull() ?: "",
         placeholderColor = Color(0xFFB08052),
         onOpenVideo = onOpenVideo,
     )
@@ -761,6 +764,7 @@ private fun CommunityPostCard(
     likeCount: String,
     commentCount: String,
     placeholderColor: Color,
+    videoUrl: String = "",
     onOpenVideo: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -778,34 +782,54 @@ private fun CommunityPostCard(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
     ) {
         Column {
-            // Video thumbnail area
+            // Video area — inline player when URL available, gradient otherwise
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(spacing.cardImageHeight)
-                        .background(
-                            Brush.radialGradient(listOf(placeholderColor, placeholderColor.copy(alpha = 0.6f))),
-                        ),
+                        .height(spacing.cardImageHeight),
                 contentAlignment = Alignment.Center,
             ) {
-                IconButton(
-                    onClick = onOpenVideo,
-                    modifier = Modifier.size(spacing.xxl),
-                ) {
+                if (videoUrl.isNotBlank()) {
+                    VideoPlayer(
+                        url = videoUrl,
+                        thumbnailUrl = null,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
                     Box(
                         modifier =
                             Modifier
-                                .size(48.dp)
-                                .background(colorScheme.surface.copy(alpha = 0.85f), CircleShape),
-                        contentAlignment = Alignment.Center,
+                                .fillMaxSize()
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(placeholderColor, placeholderColor.copy(alpha = 0.6f)),
+                                    ),
+                                ),
+                    )
+                }
+                // Full-screen expand button always on top
+                Box(
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                ) {
+                    IconButton(
+                        onClick = onOpenVideo,
+                        modifier = Modifier.size(spacing.xxl),
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play",
-                            tint = colorScheme.primary,
-                            modifier = Modifier.size(spacing.iconSizeMedium),
-                        )
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(36.dp)
+                                    .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Fullscreen,
+                                contentDescription = "Full screen",
+                                tint = Color.White,
+                                modifier = Modifier.size(spacing.iconSizeSmall),
+                            )
+                        }
                     }
                 }
             }
