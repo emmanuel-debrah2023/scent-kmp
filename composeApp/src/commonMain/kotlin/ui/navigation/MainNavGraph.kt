@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import org.scent.project.domain.model.AuthUser
 import ui.components.AppScaffold
 import ui.feed.FeedScreen
+import ui.video.VideoScreen
 
 @Composable
 fun MainGraph(
@@ -48,11 +49,19 @@ fun MainGraph(
 @Composable
 private fun HomeNavHost(nav: NavigationState<HomeRoute>) {
     val current by nav.current
-    when (current) {
-        is HomeRoute.Feed -> HomeNavScreen()
+    when (val route = current) {
+        is HomeRoute.Feed ->
+            HomeNavScreen(
+                onVideoClick = { url -> nav.navigateTo(HomeRoute.VideoDetail(url)) },
+            )
         is HomeRoute.PostDetail -> PlaceholderScreen("Post Detail")
         is HomeRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
         is HomeRoute.UserProfile -> PlaceholderScreen("User Profile")
+        is HomeRoute.VideoDetail ->
+            VideoScreen(
+                url = route.url,
+                onBackClick = { nav.goBack() },
+            )
     }
 }
 
@@ -94,8 +103,8 @@ private fun MarketplaceNavHost(nav: NavigationState<MarketplaceRoute>) {
 // ─────────────────────────────────────────────
 
 @Composable
-private fun HomeNavScreen() {
-    FeedScreen()
+private fun HomeNavScreen(onVideoClick: (String) -> Unit) {
+    FeedScreen(onVideoClick = onVideoClick)
 }
 
 @Composable
