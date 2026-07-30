@@ -23,7 +23,6 @@ sealed interface ScentScreen {
 fun ScentHomeHost(
     start: ScentScreen = ScentScreen.HomeFeed,
     modifier: Modifier = Modifier,
-    onNavTabSelected: (Int) -> Unit = {},
 ) {
     var screen by remember { mutableStateOf(start) }
     when (screen) {
@@ -31,7 +30,6 @@ fun ScentHomeHost(
             HomeFullBleedScreen(
                 onOpenVideo = { screen = ScentScreen.VideoPost },
                 modifier = modifier,
-                onNavTabSelected = onNavTabSelected,
             )
         ScentScreen.VideoPost ->
             VideoPostScreen(
