@@ -36,6 +36,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,15 +56,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
+import ui.theme.ScentThemeExtras
 
 // ─────────────────────────────────────────────
 // Local design tokens
 // ─────────────────────────────────────────────
 private val Ink = Color(0xFF140E07)
-private val VideoForest = Color(0xFF1B4332)
-private val VideoGold = Color(0xFFD4AF37)
-private val VideoCream = Color(0xFFF9ECDC)
-private val VideoOnSurfaceVariant = Color(0xFF504536)
 private val VideoPlaceholderAmberStart = Color(0xFFE67E22)
 private val VideoPlaceholderAmberEnd = Color(0xFF9C5F17)
 private val VideoLikeRed = Color(0xFFE4362E)
@@ -77,6 +75,9 @@ fun VideoPostScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val spacing = ScentThemeExtras.spacing
+
     var liked by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize().background(Ink)) {
@@ -94,7 +95,7 @@ fun VideoPostScreen(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(spacing.xs),
             ) {
                 Icon(
                     imageVector = Icons.Default.Movie,
@@ -151,7 +152,7 @@ fun VideoPostScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+            IconButton(onClick = onBack, modifier = Modifier.size(spacing.xxl)) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -166,7 +167,7 @@ fun VideoPostScreen(
                 color = Color.White,
                 fontFamily = PlayfairDisplayFamily,
             )
-            IconButton(onClick = {}, modifier = Modifier.size(48.dp)) {
+            IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
                     contentDescription = "More options",
@@ -181,7 +182,7 @@ fun VideoPostScreen(
                 Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(spacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             ActionRailItem(
@@ -223,20 +224,20 @@ fun VideoPostScreen(
             Row(
                 modifier = Modifier.widthIn(max = 270.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
             ) {
                 // Avatar
                 Box(
                     modifier =
                         Modifier
                             .size(36.dp)
-                            .background(VideoCream.copy(alpha = 0.9f), CircleShape),
+                            .background(colorScheme.background.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = VideoForest,
+                        tint = colorScheme.primary,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -244,7 +245,7 @@ fun VideoPostScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
                     ) {
                         Text(
                             text = "maya.decants",
@@ -255,7 +256,7 @@ fun VideoPostScreen(
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = "Verified",
-                            tint = VideoGold,
+                            tint = ScentThemeExtras.accent,
                             modifier = Modifier.size(15.dp),
                         )
                     }
@@ -295,7 +296,7 @@ fun VideoPostScreen(
             Text(
                 text = "#tomford #vanilla #decant",
                 fontSize = 13.sp,
-                color = VideoGold,
+                color = ScentThemeExtras.accent,
             )
 
             // Listing row
@@ -303,9 +304,9 @@ fun VideoPostScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(VideoCream.copy(alpha = 0.95f), RoundedCornerShape(16.dp))
+                        .background(colorScheme.background.copy(alpha = 0.95f), RoundedCornerShape(16.dp))
                         .padding(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Thumbnail
@@ -326,14 +327,14 @@ fun VideoPostScreen(
                         text = "Velvet Orchid · 50ml",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = VideoForest,
+                        color = colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = "Like new · 80% full · \$124",
+                        text = "Like new · 80% full · $124",
                         fontSize = 13.sp,
-                        color = VideoOnSurfaceVariant,
+                        color = colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -341,7 +342,7 @@ fun VideoPostScreen(
                     onClick = {},
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = VideoForest,
+                            containerColor = colorScheme.primary,
                             contentColor = Color.White,
                         ),
                     shape = RoundedCornerShape(12.dp),
@@ -373,10 +374,10 @@ fun VideoPostScreen(
                             Modifier
                                 .fillMaxWidth(0.38f)
                                 .fillMaxHeight()
-                                .background(VideoGold, RoundedCornerShape(2.dp)),
+                                .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
                     )
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(spacing.xxs))
                 Text(
                     text = "0:14 / 0:37",
                     fontSize = 11.sp,
@@ -398,11 +399,13 @@ private fun ActionRailItem(
     label: String,
     onClick: () -> Unit,
 ) {
+    val spacing = ScentThemeExtras.spacing
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onClick, modifier = Modifier.size(spacing.xxl)) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
