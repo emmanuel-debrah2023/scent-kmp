@@ -26,15 +26,20 @@ fun ScentHomeHost(
     onNavTabSelected: (Int) -> Unit = {},
 ) {
     var screen by remember { mutableStateOf(start) }
+    var selectedVideoUrl by remember { mutableStateOf("") }
     when (screen) {
         ScentScreen.HomeFeed ->
             HomeFullBleedScreen(
-                onOpenVideo = { screen = ScentScreen.VideoPost },
+                onOpenVideo = { url ->
+                    selectedVideoUrl = url
+                    screen = ScentScreen.VideoPost
+                },
                 modifier = modifier,
                 onNavTabSelected = onNavTabSelected,
             )
         ScentScreen.VideoPost ->
             VideoPostScreen(
+                url = selectedVideoUrl,
                 onBack = { screen = ScentScreen.HomeFeed },
                 modifier = modifier,
             )

@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ui.components.VideoPlayer
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
@@ -72,6 +73,7 @@ private val VideoLikeRed = Color(0xFFE4362E)
 
 @Composable
 fun VideoPostScreen(
+    url: String = "",
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,35 +83,43 @@ fun VideoPostScreen(
     var liked by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize().background(Ink)) {
-        // 1 — Clip placeholder
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF2A1F12), Color(0xFF55391C), Color(0xFF7E5700)),
+        // 1 — Video player (falls back to amber gradient when url is blank)
+        if (url.isNotBlank()) {
+            VideoPlayer(
+                url = url,
+                thumbnailUrl = null,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF2A1F12), Color(0xFF55391C), Color(0xFF7E5700)),
+                            ),
                         ),
-                    ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(spacing.xs),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Default.Movie,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.62f),
-                    modifier = Modifier.size(56.dp),
-                )
-                Text(
-                    text = "VIDEO PLACEHOLDER",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.3.sp,
-                    color = Color.White.copy(alpha = 0.62f),
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Movie,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.62f),
+                        modifier = Modifier.size(56.dp),
+                    )
+                    Text(
+                        text = "VIDEO PLACEHOLDER",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.3.sp,
+                        color = Color.White.copy(alpha = 0.62f),
+                    )
+                }
             }
         }
 

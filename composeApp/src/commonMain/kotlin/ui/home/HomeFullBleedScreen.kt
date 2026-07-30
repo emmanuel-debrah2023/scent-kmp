@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +42,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,6 +58,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.koin.compose.viewmodel.koinViewModel
+import org.scent.project.domain.model.ContentFormat
+import org.scent.project.domain.model.Post
+import ui.base.UiState
+import ui.feed.FeedViewModel
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
@@ -72,12 +80,17 @@ private val LikeRed = Color(0xFFE4362E)
 
 @Composable
 fun HomeFullBleedScreen(
-    onOpenVideo: () -> Unit,
+    onOpenVideo: (url: String) -> Unit,
     modifier: Modifier = Modifier,
     initialTab: Int = 0,
     onNavTabSelected: (Int) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
+
+    val feedViewModel: FeedViewModel = koinViewModel()
+    val feedUiState by feedViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) { feedViewModel.loadFeed() }
 
     var topTab by remember { mutableIntStateOf(initialTab) }
     var navTab by remember { mutableIntStateOf(0) }
@@ -90,7 +103,7 @@ fun HomeFullBleedScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             if (topTab == 0) {
-                item { HeroItem(onOpenVideo = onOpenVideo) }
+                item { HeroItem(onOpenVideo = { onOpenVideo("") }) }
 
                 item {
                     Row(
@@ -145,44 +158,47 @@ fun HomeFullBleedScreen(
                     )
                 }
             } else {
-                item {
-                    CommunityFeedHeader()
-                }
-                item {
-                    CommunityPostCard(
-                        username = "maya.decants",
-                        timeAgo = "2h ago",
-                        caption = "Nothing compares to the silage on this one 🌹",
-                        hashtags = "#tomford #vanilla #decant",
-                        likeCount = "1,208",
-                        commentCount = "86",
-                        placeholderColor = Color(0xFFB08052),
-                        onOpenVideo = onOpenVideo,
-                    )
-                }
-                item {
-                    CommunityPostCard(
-                        username = "scentnerdd",
-                        timeAgo = "5h ago",
-                        caption = "Tested 12 ouds this weekend so you don't have to 🪵",
-                        hashtags = "#oud #niche #weekendfinds",
-                        likeCount = "934",
-                        commentCount = "41",
-                        placeholderColor = Color(0xFF7E5700),
-                        onOpenVideo = onOpenVideo,
-                    )
-                }
-                item {
-                    CommunityPostCard(
-                        username = "the.decant.bar",
-                        timeAgo = "1d ago",
-                        caption = "Creed Aventus batch variation is REAL and I have receipts 📋",
-                        hashtags = "#creed #aventus #batchvariation",
-                        likeCount = "2,341",
-                        commentCount = "178",
-                        placeholderColor = Color(0xFFE8D5B7),
-                        onOpenVideo = onOpenVideo,
-                    )
+                item { CommunityFeedHeader() }
+
+                val videoPosts =
+                    (feedUiState as? UiState.Success)
+                        ?.data
+                        ?.posts
+                        ?.filter { it.contentFormat == ContentFormat.VIDEO && it.mediaUrls.isNotEmpty() }
+                        ?: emptyList()
+
+                if (videoPosts.isEmpty()) {
+                    item {
+                        val cardColors =
+                            listOf(Color(0xFFB08052), Color(0xFF7E5700), Color(0xFFE8D5B7))
+                        listOf(
+                            Triple(
+                                "maya.decants",
+                                "Nothing compares to the silage on this one 🌹",
+                                "#tomford #vanilla",
+                            ),
+                            Triple("scentnerdd", "Tested 12 ouds this weekend so you don't have to 🪵", "#oud #niche"),
+                            Triple("the.decant.bar", "Creed Aventus batch variation is REAL 📋", "#creed #aventus"),
+                        ).forEachIndexed { i, (user, caption, tags) ->
+                            CommunityPostCard(
+                                username = user,
+                                timeAgo = "${i * 3 + 2}h ago",
+                                caption = caption,
+                                hashtags = tags,
+                                likeCount = "${(i + 1) * 400}",
+                                commentCount = "${(i + 1) * 30}",
+                                placeholderColor = cardColors[i % cardColors.size],
+                                onOpenVideo = { onOpenVideo("") },
+                            )
+                        }
+                    }
+                } else {
+                    items(videoPosts) { post ->
+                        CommunityPostCard(
+                            post = post,
+                            onOpenVideo = { onOpenVideo(post.mediaUrls.first()) },
+                        )
+                    }
                 }
             }
 
@@ -717,6 +733,23 @@ private fun CommunityFeedHeader() {
             color = ScentThemeExtras.interactive,
         )
     }
+}
+
+@Composable
+private fun CommunityPostCard(
+    post: Post,
+    onOpenVideo: () -> Unit,
+) {
+    CommunityPostCard(
+        username = post.userId,
+        timeAgo = "",
+        caption = post.textContent,
+        hashtags = post.hashtags.joinToString(" ") { "#$it" },
+        likeCount = post.likeCount.toString(),
+        commentCount = post.commentCount.toString(),
+        placeholderColor = Color(0xFFB08052),
+        onOpenVideo = onOpenVideo,
+    )
 }
 
 @Composable
