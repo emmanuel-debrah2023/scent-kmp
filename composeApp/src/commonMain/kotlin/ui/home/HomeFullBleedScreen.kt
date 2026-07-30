@@ -60,11 +60,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
-import org.scent.project.domain.model.ContentFormat
-import org.scent.project.domain.model.Post
 import ui.base.UiState
 import ui.components.VideoPlayer
+import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
+import ui.theme.DmSansFamily
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
@@ -85,6 +85,7 @@ fun HomeFullBleedScreen(
     onOpenVideo: (url: String) -> Unit,
     modifier: Modifier = Modifier,
     initialTab: Int = 0,
+    onTopTabSelected: (Int) -> Unit = {},
     onNavTabSelected: (Int) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -122,7 +123,7 @@ fun HomeFullBleedScreen(
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
-                            fontFamily = PlayfairDisplayFamily,
+                            fontFamily = DmSansFamily,
                         )
                         Text(
                             text = "See all",
@@ -162,44 +163,21 @@ fun HomeFullBleedScreen(
             } else {
                 item { CommunityFeedHeader() }
 
-                val videoPosts =
+                val communityItems =
                     (feedUiState as? UiState.Success)
                         ?.data
-                        ?.posts
-                        ?.filter { it.contentFormat == ContentFormat.VIDEO && it.mediaUrls.isNotEmpty() }
+                        ?.communityItems
                         ?: emptyList()
 
-                if (videoPosts.isEmpty()) {
-                    item {
-                        val cardColors =
-                            listOf(Color(0xFFB08052), Color(0xFF7E5700), Color(0xFFE8D5B7))
-                        listOf(
-                            Triple(
-                                "maya.decants",
-                                "Nothing compares to the silage on this one 🌹",
-                                "#tomford #vanilla",
-                            ),
-                            Triple("scentnerdd", "Tested 12 ouds this weekend so you don't have to 🪵", "#oud #niche"),
-                            Triple("the.decant.bar", "Creed Aventus batch variation is REAL 📋", "#creed #aventus"),
-                        ).forEachIndexed { i, (user, caption, tags) ->
+                items(communityItems, key = { it.id }) { item ->
+                    when (item) {
+                        is CommunityFeedItem.Text -> TextPostCard(item)
+                        is CommunityFeedItem.Photo -> PhotoPostCard(item)
+                        is CommunityFeedItem.Video ->
                             CommunityPostCard(
-                                username = user,
-                                timeAgo = "${i * 3 + 2}h ago",
-                                caption = caption,
-                                hashtags = tags,
-                                likeCount = "${(i + 1) * 400}",
-                                commentCount = "${(i + 1) * 30}",
-                                placeholderColor = cardColors[i % cardColors.size],
-                                onOpenVideo = { onOpenVideo("") },
+                                item = item,
+                                onOpenVideo = { onOpenVideo(item.videoUrl) },
                             )
-                        }
-                    }
-                } else {
-                    items(videoPosts) { post ->
-                        CommunityPostCard(
-                            post = post,
-                            onOpenVideo = { onOpenVideo(post.mediaUrls.first()) },
-                        )
                     }
                 }
             }
@@ -210,7 +188,10 @@ fun HomeFullBleedScreen(
         BlendedHeader(
             listState = listState,
             topTab = topTab,
-            onTabSelected = { topTab = it },
+            onTabSelected = {
+                topTab = it
+                onTopTabSelected(it)
+            },
             modifier = Modifier.align(Alignment.TopStart),
         )
 
@@ -302,6 +283,7 @@ private fun HeroItem(onOpenVideo: () -> Unit) {
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.7.sp,
                 color = colorScheme.onSurfaceVariant,
+                fontFamily = DmSansFamily,
             )
 
             // TODO: Playfair Display
@@ -464,6 +446,7 @@ private fun FragranceCardItem(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = colorScheme.primary,
+                    fontFamily = DmSansFamily,
                 )
                 Text(text = brand, fontSize = 14.sp, color = colorScheme.onSurfaceVariant)
                 Row(
@@ -576,6 +559,7 @@ private fun BlendedHeader(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-1).sp,
                     color = colorScheme.primary,
+                    fontFamily = PlayfairDisplayFamily,
                 )
                 Row {
                     IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
@@ -727,7 +711,7 @@ private fun CommunityFeedHeader() {
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = colorScheme.primary,
-            fontFamily = PlayfairDisplayFamily,
+            fontFamily = DmSansFamily,
         )
         Text(
             text = "Following",
@@ -737,36 +721,247 @@ private fun CommunityFeedHeader() {
     }
 }
 
+private val PostPlaceholderColors = listOf(Color(0xFFB08052), Color(0xFF7E5700), Color(0xFFE8D5B7))
+
 @Composable
-private fun CommunityPostCard(
-    post: Post,
-    onOpenVideo: () -> Unit,
-) {
-    CommunityPostCard(
-        username = post.userId,
-        timeAgo = "",
-        caption = post.textContent,
-        hashtags = post.hashtags.joinToString(" ") { "#$it" },
-        likeCount = post.likeCount.toString(),
-        commentCount = post.commentCount.toString(),
-        videoUrl = post.mediaUrls.firstOrNull() ?: "",
-        placeholderColor = Color(0xFFB08052),
-        onOpenVideo = onOpenVideo,
-    )
+private fun TextPostCard(item: CommunityFeedItem.Text) {
+    val username = item.username
+    val timeAgo = item.timeAgo
+    val caption = item.caption
+    val hashtags = item.hashtags
+    val likeCount = item.likeCount
+    val commentCount = item.commentCount
+    val colorScheme = MaterialTheme.colorScheme
+    val spacing = ScentThemeExtras.spacing
+    val elevation = ScentThemeExtras.elevation
+    var liked by remember { mutableStateOf(false) }
+
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = spacing.xs),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation.card),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+    ) {
+        Column(modifier = Modifier.padding(spacing.cardPadding)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(32.dp)
+                            .background(colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(spacing.iconSizeSmall),
+                    )
+                }
+                Text(
+                    text = username,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurface,
+                )
+                Box(modifier = Modifier.size(3.dp).background(colorScheme.outline, CircleShape))
+                Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
+            }
+            Text(
+                text = caption,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = colorScheme.onSurface,
+                modifier = Modifier.padding(top = spacing.xs),
+            )
+            Text(
+                text = hashtags,
+                fontSize = 13.sp,
+                color = ScentThemeExtras.accent,
+                modifier = Modifier.padding(top = spacing.xxs),
+            )
+            Row(
+                modifier = Modifier.padding(top = spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                ) {
+                    IconButton(
+                        onClick = { liked = !liked },
+                        modifier = Modifier.size(spacing.iconSizeMedium),
+                    ) {
+                        Icon(
+                            imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Like",
+                            tint = if (liked) LikeRed else colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(spacing.iconSizeSmall),
+                        )
+                    }
+                    Text(
+                        text = if (liked) "$likeCount+" else likeCount,
+                        fontSize = 13.sp,
+                        color = colorScheme.onSurfaceVariant,
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ModeComment,
+                        contentDescription = "Comments",
+                        tint = colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(spacing.iconSizeSmall),
+                    )
+                    Text(text = commentCount, fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoPostCard(item: CommunityFeedItem.Photo) {
+    val username = item.username
+    val timeAgo = item.timeAgo
+    val caption = item.caption
+    val hashtags = item.hashtags
+    val likeCount = item.likeCount
+    val commentCount = item.commentCount
+    val placeholderColor = PostPlaceholderColors[item.colorIndex]
+    val colorScheme = MaterialTheme.colorScheme
+    val spacing = ScentThemeExtras.spacing
+    val elevation = ScentThemeExtras.elevation
+    var liked by remember { mutableStateOf(false) }
+
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = spacing.xs),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation.card),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+    ) {
+        Column {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(spacing.cardImageHeight)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(placeholderColor, placeholderColor.copy(alpha = 0.6f)),
+                            ),
+                        ),
+            )
+            Column(modifier = Modifier.padding(spacing.cardPadding)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                ) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(32.dp)
+                                .background(colorScheme.primaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(spacing.iconSizeSmall),
+                        )
+                    }
+                    Text(
+                        text = username,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface,
+                    )
+                    Box(modifier = Modifier.size(3.dp).background(colorScheme.outline, CircleShape))
+                    Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
+                }
+                Text(
+                    text = caption,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = colorScheme.onSurface,
+                    modifier = Modifier.padding(top = spacing.xs),
+                )
+                Text(
+                    text = hashtags,
+                    fontSize = 13.sp,
+                    color = ScentThemeExtras.accent,
+                    modifier = Modifier.padding(top = spacing.xxs),
+                )
+                Row(
+                    modifier = Modifier.padding(top = spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                    ) {
+                        IconButton(
+                            onClick = { liked = !liked },
+                            modifier = Modifier.size(spacing.iconSizeMedium),
+                        ) {
+                            Icon(
+                                imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Like",
+                                tint = if (liked) LikeRed else colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(spacing.iconSizeSmall),
+                            )
+                        }
+                        Text(
+                            text = if (liked) "$likeCount+" else likeCount,
+                            fontSize = 13.sp,
+                            color = colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ModeComment,
+                            contentDescription = "Comments",
+                            tint = colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(spacing.iconSizeSmall),
+                        )
+                        Text(text = commentCount, fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun CommunityPostCard(
-    username: String,
-    timeAgo: String,
-    caption: String,
-    hashtags: String,
-    likeCount: String,
-    commentCount: String,
-    placeholderColor: Color,
-    videoUrl: String = "",
+    item: CommunityFeedItem.Video,
     onOpenVideo: () -> Unit,
 ) {
+    val username = item.username
+    val timeAgo = item.timeAgo
+    val caption = item.caption
+    val hashtags = item.hashtags
+    val likeCount = item.likeCount
+    val commentCount = item.commentCount
+    val videoUrl = item.videoUrl
+    val placeholderColor = PostPlaceholderColors[item.colorIndex]
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
     val elevation = ScentThemeExtras.elevation
