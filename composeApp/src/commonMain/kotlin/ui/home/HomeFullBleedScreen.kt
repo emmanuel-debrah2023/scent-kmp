@@ -1,6 +1,7 @@
 package ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -584,6 +585,7 @@ private fun BlendedHeader(
                 listOf("Fragrances", "Community").forEachIndexed { index, label ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { onTabSelected(index) },
                     ) {
                         Text(
                             text = label,
