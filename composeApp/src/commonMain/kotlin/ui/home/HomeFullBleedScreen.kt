@@ -71,6 +71,8 @@ import ui.theme.ScentThemeExtras
 
 // ─────────────────────────────────────────────
 // Local design tokens
+// TODO: Promote PlaceholderAmberStart, PlaceholderAmberEnd, and LikeRed to
+//  ScentThemeExtras tokens in Color.kt (tracked in chore/colour-tokens PR)
 // ─────────────────────────────────────────────
 private val PlaceholderAmberStart = Color(0xFFE67E22)
 private val PlaceholderAmberEnd = Color(0xFF9C5F17)
@@ -286,7 +288,6 @@ private fun HeroItem(onOpenVideo: () -> Unit) {
                 fontFamily = DmSansFamily,
             )
 
-            // TODO: Playfair Display
             Text(
                 text = "Velvet Orchid",
                 fontSize = 40.sp,
