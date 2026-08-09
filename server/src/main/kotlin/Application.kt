@@ -14,6 +14,7 @@ import plugins.configureSecurity
 import providers.CloudflareStreamProvider
 import providers.FakeStreamProvider
 import routing.authRoutes
+import routing.devRoutes
 import routing.fragranceRoutes
 import routing.listingRoutes
 import routing.mediaRoutes
@@ -78,5 +79,6 @@ fun Application.module() {
         listingRoutes()
         mediaRoutes(streamProvider, fakeMode)
         postRoutes()
+        if (fakeMode) devRoutes()
     }
 }
