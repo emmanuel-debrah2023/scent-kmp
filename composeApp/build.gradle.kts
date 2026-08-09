@@ -171,4 +171,5 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
+    detektPlugins(libs.detekt.compose)
 }

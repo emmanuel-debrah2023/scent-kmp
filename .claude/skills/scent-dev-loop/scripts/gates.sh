@@ -80,7 +80,7 @@ echo "=== Scent gates — iteration $ITER ==="
 fail() { set_field "$1" '"fail"'; set_field last_failure "\"$2\""; echo "FAIL: $2"; exit 1; }
 
 echo "--- Gate 1: compile"
-if ! ./gradlew --quiet :shared:compileKotlinJvm :composeApp:compileDebugKotlin; then
+if ! ./gradlew --quiet :shared:compileKotlinJvm :composeApp:compileDebugKotlinAndroid; then
   fail gate1 "compile"
 fi
 set_field gate1 '"pass"'
