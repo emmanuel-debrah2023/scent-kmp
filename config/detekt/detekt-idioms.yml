@@ -1,0 +1,146 @@
+# Scent — Kotlin idiom rules for detekt
+#
+# Most of these ship with `active: false` in detekt's default config, which is
+# why almost none of this has been caught so far. Listing them explicitly makes
+# the intent legible and is safe regardless of what a given detekt version
+# defaults to.
+#
+# Merge into your existing detekt.yml, or add as a second config file:
+#
+#   detekt {
+#       config.setFrom(files("config/detekt/detekt.yml",
+#                            "config/detekt/detekt-idioms.yml"))
+#       buildUponDefaultConfig = true
+#   }
+#
+# ⚠️ Two things to verify against YOUR detekt version before trusting this:
+#   1. Rule IDs move between majors. Run `./gradlew detekt` once — detekt fails
+#      loudly on an unknown rule ID, so a clean run means the IDs resolved.
+#   2. Rules marked [TR] below need **type resolution**. They only fire on the
+#      typed tasks (`detektMain` / `detektMetadataCommonMain`), not the plain
+#      `detekt` task. If you're running bare `detekt`, they silently do nothing.
+
+style:
+  active: true
+
+  # --- Java habits that have a better Kotlin form ---
+  UseDataClass:
+    active: true
+    allowVars: false
+  PreferToOverPairSyntax:          # mapOf(a to b), not Pair(a, b)
+    active: true
+  ObjectLiteralToLambda:           # SAM object literal -> lambda
+    active: true
+  UseRequire:                      # if (!x) throw IllegalArgumentException -> require
+    active: true
+  UseRequireNotNull:
+    active: true
+  UseCheckOrError:
+    active: true
+  UseCheckNotNull:
+    active: true
+  UseIfInsteadOfWhen:
+    active: true
+  ExplicitCollectionElementAccessMethod:   # map.get(k) -> map[k]
+    active: true
+  UnnecessaryInnerClass:
+    active: true
+
+  # --- Collection idiom ---
+  UseIsNullOrEmpty:
+    active: true
+  UseOrEmpty:
+    active: true
+  UseEmptyCounterpart:             # listOf() -> emptyList()
+    active: true
+  UseIfEmptyOrIfBlank:
+    active: true
+  UseAnyOrNoneInsteadOfFind:
+    active: true
+  UseSumOfInsteadOfFlatMapSize:
+    active: true
+  UnnecessaryFilter:               # filter{}.first() -> first{}
+    active: true
+
+  # --- Noise removal ---
+  UnnecessaryLet:
+    active: true
+  UnnecessaryBackticks:
+    active: true
+  UnnecessaryParentheses:
+    active: true
+  RedundantExplicitType:
+    active: true
+  RedundantVisibilityModifierRule:
+    active: true
+  MultilineLambdaItParameter:      # name the parameter in multi-line lambdas
+    active: true
+  MaxChainedCallsOnSameLine:
+    active: true
+    maxChainedCalls: 4
+
+  # [TR] needs type resolution
+  CanBeNonNullable:
+    active: true
+  VarCouldBeVal:
+    active: true
+
+  # commonMain purity — secondary net behind block-jvm-in-commonmain.sh.
+  # NOTE: this applies to every source set detekt runs over, so it only works
+  # cleanly if you run detekt per source set (detektMetadataCommonMain et al).
+  # If you run one detekt task across everything, leave this off — it will fire
+  # on androidMain and the server module, where java.* is correct.
+  ForbiddenImport:
+    active: false
+    imports:
+      - value: 'java.time.*'
+        reason: 'commonMain must compile for iOS — use kotlinx-datetime'
+      - value: 'java.util.UUID'
+        reason: 'commonMain must compile for iOS — use kotlin.uuid.Uuid'
+      - value: 'java.text.SimpleDateFormat'
+        reason: 'commonMain must compile for iOS — use kotlinx-datetime formatting'
+      - value: 'kotlin.Result'
+        reason: 'Result<T> in this codebase is Either<AppError, T> — see ads-either-error-handling.md'
+
+potential-bugs:
+  active: true
+  UnnecessaryNotNullCheck:
+    active: true
+  CastToNullableType:
+    active: true
+  DontDowncastCollectionTypes:
+    active: true
+  ImplicitUnitReturnType:
+    active: true
+  ExitOutsideMain:
+    active: true
+
+exceptions:
+  active: true
+  # ADS-STE100: expected failures are Either.Left, never a throw. These back
+  # that up mechanically.
+  TooGenericExceptionCaught:
+    active: true
+  SwallowedException:
+    active: true
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true
+  InstanceOfCheckForException:
+    active: true
+  ReturnFromFinally:
+    active: true
+  ObjectExtendsThrowable:
+    active: true
+
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
+    active: true
+  SuspendFunWithFlowReturnType:
+    active: true
+  InjectDispatcher:
+    active: true

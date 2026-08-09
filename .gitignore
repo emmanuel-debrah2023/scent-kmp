@@ -30,3 +30,11 @@ node_modules/
 secrets.properties
 api_keys.properties
 .env
+
+# Claude Code dev-loop gate state (transient; not .approved-deps which IS committed)
+.claude/.scent-gates.json
+.claude/.scent-gates.pre-compact.json
+# Notion workspace identifiers (share via secure channel, not git)
+.claude/.scent-notion.env
+# Skill backups created during bundle installs
+.claude/.backup/
