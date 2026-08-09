@@ -113,4 +113,7 @@ object ScentThemeExtras {
     val onAccent: Color get() = ScentOnAccent
     val interactive: Color get() = ScentInteractive
     val onInteractive: Color get() = ScentOnInteractive
+
+    // Neutral grey for inactive labels and faint metadata.
+    val gray400: Color get() = ScentGray400
 }

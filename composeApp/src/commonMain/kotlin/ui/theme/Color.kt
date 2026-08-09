@@ -105,6 +105,10 @@ val ScentOnAccent = Color(0xFF201B11) // Text on gold fills
 val ScentInteractive = Color(0xFF7E5700)
 val ScentOnInteractive = Color(0xFFFFFFFF)
 
+// Neutral grey — inactive tab labels, faint metadata.
+// Accessed via ScentThemeExtras.gray400.
+val ScentGray400 = Color(0xFF9E9E9E)
+
 // Aliases kept for components that reference these by semantic name
 val ScentStarYellow = ScentAccent
 val ScentTextMuted = ScentOnSurfaceVariant
