@@ -1,12 +1,15 @@
 package org.scent.project.data.mapper
 
+import kotlinx.serialization.json.Json
 import org.scent.project.data.mapper.AuthMapper.toAuthUser
+import org.scent.project.data.remote.JsonConfig
 import org.scent.project.data.remote.dto.AuthResponse
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.domain.error.AppError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class AuthMapperTest {
@@ -160,6 +163,61 @@ class AuthMapperTest {
                 "Expected Right for response: $response",
             )
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // JSON → AuthResponse → AuthUser round-trip (guards against field-name / config regressions)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Deserialises a JSON payload shaped exactly like the server's POST /login response
+     * (camelCase, no snake_case aliases) and verifies the full pipeline to AuthUser.
+     *
+     * This test would have caught any regression where a naming-strategy change, a
+     * missing/wrong @SerialName, or a JsonConfig change silently nullified "token" between
+     * the wire bytes and the mapper — the class of bug that can't be caught by tests that
+     * hand a pre-built Kotlin object to toAuthUser().
+     */
+    @Test
+    fun `toAuthUser round-trip — server-shaped JSON deserialises to Right AuthUser`() {
+        val json =
+            """{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test","userId":15,"username":"edebz10","email":"emandebz1001@icloud.com","displayName":"emanscent"}"""
+
+        val dto = JsonConfig.json.decodeFromString(AuthResponse.serializer(), json)
+
+        assertNotNull(dto.token, "token should not be null after JSON deserialization")
+        assertTrue(dto.token!!.isNotBlank(), "token should not be blank")
+        assertEquals(15, dto.userId)
+        assertEquals("edebz10", dto.username)
+        assertEquals("emanscent", dto.displayName)
+
+        val result = dto.toAuthUser()
+
+        assertTrue(result.isRight, "toAuthUser() should return Right for a well-formed server response")
+        val user = result.getOrNull()!!
+        assertEquals("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test", user.token)
+        assertEquals(15, user.id)
+        assertEquals("edebz10", user.username)
+        assertEquals("emanscent", user.displayName)
+        assertEquals("emandebz1001@icloud.com", user.email)
+    }
+
+    @Test
+    fun `MeResponse round-trip — server-shaped JSON deserialises correctly`() {
+        val json =
+            """{"userId":15,"username":"edebz10","email":"emandebz1001@icloud.com","displayName":"emanscent"}"""
+
+        val dto = JsonConfig.json.decodeFromString(MeResponse.serializer(), json)
+
+        assertNotNull(dto.userId, "userId should not be null after JSON deserialization")
+        assertEquals(15, dto.userId)
+
+        val result = dto.toAuthUser("stored-token")
+
+        assertTrue(result.isRight)
+        val user = result.getOrNull()!!
+        assertEquals("stored-token", user.token)
+        assertEquals(15, user.id)
     }
 
     // -------------------------------------------------------------------------
