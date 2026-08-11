@@ -173,3 +173,12 @@ dependencies {
     debugImplementation(compose.uiTooling)
     detektPlugins(libs.detekt.compose)
 }
+
+// composeApp is the only module with the compose-rules plugin — extend its
+// detekt tasks to also load the Compose-specific config file.
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    config.from(rootProject.files("config/detekt/detekt-compose.yml"))
+}
+tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
+    config.from(rootProject.files("config/detekt/detekt-compose.yml"))
+}
