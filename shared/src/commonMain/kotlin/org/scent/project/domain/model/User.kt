@@ -7,4 +7,9 @@ data class User(
     val email: String = "",
     val avatarUrl: String = "",
     val bio: String = "",
+    val isSeller: Boolean = false,
+    val followerCount: Int = 0,
+    val followingCount: Int = 0,
+    val postCount: Int = 0,
+    val createdAt: Long = 0L,
 )

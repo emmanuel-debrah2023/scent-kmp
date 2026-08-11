@@ -33,6 +33,7 @@ import org.scent.project.domain.usecase.LogoutUseCase
 import org.scent.project.domain.usecase.ObserveAuthStateUseCase
 import org.scent.project.domain.usecase.RegisterUseCase
 import org.scent.project.domain.usecase.SearchFragrancesUseCase
+import org.scent.project.domain.usecase.ToggleFollowUseCase
 import org.scent.project.domain.validation.Validator
 import org.scent.project.domain.validation.ValidatorContract
 
@@ -99,4 +100,6 @@ fun sharedModule(
     factory { GetListingsUseCase(repository = get()) }
 
     factory { CreateListingUseCase(repository = get()) }
+
+    factory { ToggleFollowUseCase() }
 }
