@@ -14,13 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ui.theme.DmSansFamily
-import ui.theme.PlayfairDisplayFamily
+import ui.theme.ScentTheme
 
 @Composable
 fun EmptyState(
@@ -30,9 +27,6 @@ fun EmptyState(
     onAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val playfair = PlayfairDisplayFamily
-    val dmSans = DmSansFamily
-
     Column(
         modifier =
             modifier
@@ -43,24 +37,13 @@ fun EmptyState(
     ) {
         Text(
             text = title,
-            style =
-                TextStyle(
-                    fontFamily = playfair,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 20.sp,
-                ),
+            style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center,
         )
         Text(
             text = message,
-            style =
-                TextStyle(
-                    fontFamily = dmSans,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp,
-                    lineHeight = 21.sp,
-                ),
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
@@ -77,15 +60,33 @@ fun EmptyState(
             ) {
                 Text(
                     text = actionLabel,
-                    style =
-                        TextStyle(
-                            fontFamily = dmSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp,
-                            letterSpacing = 0.15.sp,
-                        ),
+                    style = MaterialTheme.typography.titleSmall,
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EmptyStateWithActionPreview() {
+    ScentTheme {
+        EmptyState(
+            title = "No posts yet",
+            message = "Share a bottle, a note, or a shelf shot to start your feed.",
+            actionLabel = "CREATE POST",
+            onAction = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EmptyStateNoActionPreview() {
+    ScentTheme {
+        EmptyState(
+            title = "Nothing liked yet",
+            message = "Posts you like are collected here.",
+        )
     }
 }

@@ -5,6 +5,7 @@ import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.Review
 import org.scent.project.domain.model.User
+import ui.base.UiState
 
 enum class ProfileTab(
     val label: String,
@@ -17,18 +18,21 @@ enum class ProfileTab(
     Likes("Likes"),
 }
 
-data class ProfileUiState(
-    val isLoading: Boolean = true,
-    val user: User? = null,
-    val isOwnProfile: Boolean = false,
-    val isFollowing: Boolean = false,
-    val selectedTab: ProfileTab = ProfileTab.Posts,
+data class ProfileData(
+    val user: User,
+    val isOwnProfile: Boolean,
     val posts: List<Post> = emptyList(),
     val likes: List<Post> = emptyList(),
     val collection: List<CollectionEntry> = emptyList(),
     val wishlist: List<CollectionEntry> = emptyList(),
     val listings: List<Listing> = emptyList(),
     val reviews: List<Review> = emptyList(),
+)
+
+data class ProfileUiState(
+    val profile: UiState<ProfileData> = UiState.Loading,
+    val isFollowing: Boolean = false,
+    val selectedTab: ProfileTab = ProfileTab.Posts,
 )
 
 sealed interface ProfileEvent {

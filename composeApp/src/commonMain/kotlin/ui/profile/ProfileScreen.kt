@@ -41,12 +41,12 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -56,7 +56,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import org.scent.project.domain.model.AuthUser
 import org.scent.project.domain.model.CollectionEntry
 import org.scent.project.domain.model.CollectionStatus
@@ -74,9 +74,8 @@ import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.Review
 import org.scent.project.domain.model.User
+import ui.base.UiState
 import ui.components.EmptyState
-import ui.theme.DmSansFamily
-import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 import kotlin.math.roundToInt
@@ -91,12 +90,8 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: ProfileViewModel = koinViewModel()
+    val viewModel: ProfileViewModel = koinViewModel(parameters = { parametersOf(authUser) })
     val state by viewModel.uiState.collectAsState()
-
-    LaunchedEffect(authUser.id) {
-        viewModel.load(authUser, isOwnProfile = true)
-    }
 
     ProfileContent(
         state = state,
@@ -126,6 +121,57 @@ fun ProfileContent(
     onNavigateToFragrance: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    when (val profileState = state.profile) {
+        is UiState.Loading, is UiState.Idle -> {
+            Box(
+                modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        is UiState.Error -> {
+            Box(
+                modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                EmptyState(
+                    title = "Something went wrong",
+                    message = profileState.error.message ?: "Could not load profile.",
+                    actionLabel = "RETRY",
+                    onAction = { onEvent(ProfileEvent.Retry) },
+                )
+            }
+        }
+
+        is UiState.Success -> {
+            val data = profileState.data
+            ProfileLoaded(
+                data = data,
+                isFollowing = state.isFollowing,
+                selectedTab = state.selectedTab,
+                onEvent = onEvent,
+                onNavigateToFollowers = onNavigateToFollowers,
+                onNavigateToFollowing = onNavigateToFollowing,
+                onNavigateToFragrance = onNavigateToFragrance,
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileLoaded(
+    data: ProfileData,
+    isFollowing: Boolean,
+    selectedTab: ProfileTab,
+    onEvent: (ProfileEvent) -> Unit,
+    onNavigateToFollowers: () -> Unit,
+    onNavigateToFollowing: () -> Unit,
+    onNavigateToFragrance: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val listState = rememberLazyListState()
     val showCollapsingBar by remember {
         derivedStateOf {
@@ -133,12 +179,12 @@ fun ProfileContent(
         }
     }
     val tabs =
-        remember(state.user?.isSeller) {
+        remember(data.user.isSeller) {
             buildList {
                 add(ProfileTab.Posts)
                 add(ProfileTab.Collection)
                 add(ProfileTab.Wishlist)
-                if (state.user?.isSeller == true) add(ProfileTab.Listings)
+                if (data.user.isSeller) add(ProfileTab.Listings)
                 add(ProfileTab.Reviews)
                 add(ProfileTab.Likes)
             }
@@ -156,7 +202,8 @@ fun ProfileContent(
         ) {
             item {
                 ProfileHeader(
-                    state = state,
+                    data = data,
+                    isFollowing = isFollowing,
                     onEvent = onEvent,
                     onNavigateToFollowers = onNavigateToFollowers,
                     onNavigateToFollowing = onNavigateToFollowing,
@@ -165,12 +212,13 @@ fun ProfileContent(
             stickyHeader {
                 ProfileTabRow(
                     tabs = tabs,
-                    selected = state.selectedTab,
+                    selected = selectedTab,
                     onTabSelected = { onEvent(ProfileEvent.SelectTab(it)) },
                 )
             }
             profileTabContent(
-                state = state,
+                data = data,
+                selectedTab = selectedTab,
                 onEvent = onEvent,
                 onNavigateToFragrance = onNavigateToFragrance,
             )
@@ -182,7 +230,7 @@ fun ProfileContent(
             exit = fadeOut(tween(durationMillis = 300)),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
-            CollapsingTopBar(state = state, onEvent = onEvent)
+            CollapsingTopBar(data = data, isFollowing = isFollowing, onEvent = onEvent)
         }
     }
 }
@@ -193,13 +241,11 @@ fun ProfileContent(
 
 @Composable
 private fun CollapsingTopBar(
-    state: ProfileUiState,
+    data: ProfileData,
+    isFollowing: Boolean,
     onEvent: (ProfileEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val user = state.user ?: return
-    val dmSans = DmSansFamily
-
     Column(
         modifier =
             modifier
@@ -217,26 +263,21 @@ private fun CollapsingTopBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ProfileAvatar(
-                displayName = user.displayName,
-                avatarUrl = user.avatarUrl,
+                displayName = data.user.displayName,
+                avatarUrl = data.user.avatarUrl,
                 size = 30.dp,
             )
             Text(
-                text = user.displayName,
-                style =
-                    TextStyle(
-                        fontFamily = dmSans,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                    ),
+                text = data.user.displayName,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (!state.isOwnProfile) {
+            if (!data.isOwnProfile) {
                 FollowPillButton(
-                    isFollowing = state.isFollowing,
+                    isFollowing = isFollowing,
                     onClick = { onEvent(ProfileEvent.ToggleFollow) },
                 )
             }
@@ -254,10 +295,9 @@ private fun FollowPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dmSans = DmSansFamily
     Button(
         onClick = onClick,
-        modifier = modifier.height(28.dp),
+        modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(50),
         contentPadding =
             androidx.compose.foundation.layout
@@ -277,13 +317,7 @@ private fun FollowPillButton(
     ) {
         Text(
             text = if (isFollowing) "FOLLOWING" else "FOLLOW",
-            style =
-                TextStyle(
-                    fontFamily = dmSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp,
-                    letterSpacing = 1.1.sp,
-                ),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.1.sp),
         )
     }
 }
@@ -294,15 +328,13 @@ private fun FollowPillButton(
 
 @Composable
 private fun ProfileHeader(
-    state: ProfileUiState,
+    data: ProfileData,
+    isFollowing: Boolean,
     onEvent: (ProfileEvent) -> Unit,
     onNavigateToFollowers: () -> Unit,
     onNavigateToFollowing: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val user = state.user ?: return
-    val playfair = PlayfairDisplayFamily
-    val dmSans = DmSansFamily
     val accent = ScentThemeExtras.accent
     val gray400 = ScentThemeExtras.gray400
 
@@ -320,32 +352,30 @@ private fun ProfileHeader(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "@${user.username}".uppercase(),
+                    text = "@${data.user.username}".uppercase(),
                     style =
-                        TextStyle(
-                            fontFamily = dmSans,
-                            fontWeight = FontWeight.SemiBold,
+                        MaterialTheme.typography.labelSmall.copy(
                             fontSize = 10.sp,
                             letterSpacing = 1.6.sp,
+                            fontWeight = FontWeight.SemiBold,
                         ),
                     color = gray400,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = user.displayName,
+                    text = data.user.displayName,
                     style =
-                        TextStyle(
-                            fontFamily = playfair,
-                            fontWeight = FontWeight.Normal,
+                        MaterialTheme.typography.displaySmall.copy(
                             fontSize = 34.sp,
                             lineHeight = 38.sp,
+                            fontWeight = FontWeight.Normal,
                         ),
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
             ProfileAvatar(
-                displayName = user.displayName,
-                avatarUrl = user.avatarUrl,
+                displayName = data.user.displayName,
+                avatarUrl = data.user.avatarUrl,
                 size = 84.dp,
             )
         }
@@ -353,16 +383,10 @@ private fun ProfileHeader(
         Spacer(Modifier.height(14.dp))
 
         // Bio
-        if (user.bio.isNotBlank()) {
+        if (data.user.bio.isNotBlank()) {
             Text(
-                text = user.bio,
-                style =
-                    TextStyle(
-                        fontFamily = dmSans,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 14.sp,
-                        lineHeight = 21.sp,
-                    ),
+                text = data.user.bio,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
@@ -383,24 +407,24 @@ private fun ProfileHeader(
         Spacer(Modifier.height(14.dp))
 
         // Stats
-        val ownsCount = state.collection.count { it.status == CollectionStatus.OWNS }
+        val ownsCount = data.collection.count { it.status == CollectionStatus.OWNS }
         Row(
             horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            ProfileStat(count = user.postCount, label = "Posts", onClick = null)
-            ProfileStat(count = user.followerCount, label = "Followers", onClick = onNavigateToFollowers)
-            ProfileStat(count = user.followingCount, label = "Following", onClick = onNavigateToFollowing)
+            ProfileStat(count = data.user.postCount, label = "Posts", onClick = null)
+            ProfileStat(count = data.user.followerCount, label = "Followers", onClick = onNavigateToFollowers)
+            ProfileStat(count = data.user.followingCount, label = "Following", onClick = onNavigateToFollowing)
             ProfileStat(count = ownsCount, label = "Owns", onClick = null)
         }
 
         Spacer(Modifier.height(20.dp))
 
         // Action buttons
-        if (state.isOwnProfile) {
+        if (data.isOwnProfile) {
             OwnProfileActions(onEditProfile = { /* TODO */ }, onSettings = { /* TODO */ })
         } else {
             OtherProfileActions(
-                isFollowing = state.isFollowing,
+                isFollowing = isFollowing,
                 onFollowToggle = { onEvent(ProfileEvent.ToggleFollow) },
                 onMore = { /* TODO */ },
             )
@@ -415,8 +439,6 @@ private fun ProfileStat(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    val playfair = PlayfairDisplayFamily
-    val dmSans = DmSansFamily
     val gray400 = ScentThemeExtras.gray400
 
     val baseModifier =
@@ -437,22 +459,16 @@ private fun ProfileStat(
     ) {
         Text(
             text = count.toString(),
-            style =
-                TextStyle(
-                    fontFamily = playfair,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 17.sp,
-                ),
+            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = label.uppercase(),
             style =
-                TextStyle(
-                    fontFamily = dmSans,
-                    fontWeight = FontWeight.SemiBold,
+                MaterialTheme.typography.labelSmall.copy(
                     fontSize = 10.sp,
                     letterSpacing = 1.2.sp,
+                    fontWeight = FontWeight.SemiBold,
                 ),
             color = gray400,
             modifier = Modifier.padding(bottom = 2.dp),
@@ -466,8 +482,6 @@ private fun OwnProfileActions(
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dmSans = DmSansFamily
-
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -478,7 +492,7 @@ private fun OwnProfileActions(
             modifier =
                 Modifier
                     .weight(1f)
-                    .height(44.dp),
+                    .height(52.dp),
             shape = MaterialTheme.shapes.medium,
             elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp),
             colors =
@@ -489,19 +503,13 @@ private fun OwnProfileActions(
         ) {
             Text(
                 text = "EDIT PROFILE",
-                style =
-                    TextStyle(
-                        fontFamily = dmSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
-                        letterSpacing = 0.15.sp,
-                    ),
+                style = MaterialTheme.typography.titleSmall,
             )
         }
         Box(
             modifier =
                 Modifier
-                    .size(width = 52.dp, height = 44.dp)
+                    .size(width = 52.dp, height = 52.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
                     .clickable(onClick = onSettings),
@@ -524,8 +532,6 @@ private fun OtherProfileActions(
     onMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dmSans = DmSansFamily
-
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -536,7 +542,7 @@ private fun OtherProfileActions(
             modifier =
                 Modifier
                     .weight(1f)
-                    .height(44.dp),
+                    .height(52.dp),
             shape = MaterialTheme.shapes.medium,
             elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp),
             colors =
@@ -557,19 +563,13 @@ private fun OtherProfileActions(
         ) {
             Text(
                 text = if (isFollowing) "FOLLOWING" else "FOLLOW",
-                style =
-                    TextStyle(
-                        fontFamily = dmSans,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
-                        letterSpacing = 0.15.sp,
-                    ),
+                style = MaterialTheme.typography.titleSmall,
             )
         }
         Box(
             modifier =
                 Modifier
-                    .size(width = 52.dp, height = 44.dp)
+                    .size(width = 52.dp, height = 52.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
                     .clickable(onClick = onMore),
@@ -596,7 +596,6 @@ private fun ProfileAvatar(
     size: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val playfair = PlayfairDisplayFamily
     val initials = remember(displayName) { deriveInitials(displayName) }
     val fontSize = (size.value * 0.35f).sp
 
@@ -619,12 +618,7 @@ private fun ProfileAvatar(
         } else if (initials.isNotEmpty()) {
             Text(
                 text = initials,
-                style =
-                    TextStyle(
-                        fontFamily = playfair,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = fontSize,
-                    ),
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = fontSize),
                 color = MaterialTheme.colorScheme.primary,
             )
         } else {
@@ -658,7 +652,6 @@ private fun ProfileTabRow(
     onTabSelected: (ProfileTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dmSans = DmSansFamily
     val accent = ScentThemeExtras.accent
     val gray400 = ScentThemeExtras.gray400
 
@@ -689,10 +682,8 @@ private fun ProfileTabRow(
                     Text(
                         text = tab.label.uppercase(),
                         style =
-                            TextStyle(
-                                fontFamily = dmSans,
+                            MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
                                 letterSpacing = 1.1.sp,
                             ),
                         color = if (isSelected) MaterialTheme.colorScheme.primary else gray400,
@@ -722,17 +713,18 @@ private fun ProfileTabRow(
 // ─────────────────────────────────────────────────────────────────────────────
 
 private fun LazyListScope.profileTabContent(
-    state: ProfileUiState,
+    data: ProfileData,
+    selectedTab: ProfileTab,
     onEvent: (ProfileEvent) -> Unit,
     onNavigateToFragrance: (Int) -> Unit,
 ) {
-    when (state.selectedTab) {
-        ProfileTab.Posts -> postsTabContent(state.posts, state.isOwnProfile)
-        ProfileTab.Collection -> collectionTabContent(state.collection, state.isOwnProfile, onNavigateToFragrance)
-        ProfileTab.Wishlist -> wishlistTabContent(state.wishlist, state.isOwnProfile, onNavigateToFragrance)
-        ProfileTab.Listings -> listingsTabContent(state.listings, state.isOwnProfile)
-        ProfileTab.Reviews -> reviewsTabContent(state.reviews, state.isOwnProfile)
-        ProfileTab.Likes -> likesTabContent(state.likes)
+    when (selectedTab) {
+        ProfileTab.Posts -> postsTabContent(data.posts, data.isOwnProfile)
+        ProfileTab.Collection -> collectionTabContent(data.collection, data.isOwnProfile, onNavigateToFragrance)
+        ProfileTab.Wishlist -> wishlistTabContent(data.wishlist, data.isOwnProfile, onNavigateToFragrance)
+        ProfileTab.Listings -> listingsTabContent(data.listings, data.isOwnProfile)
+        ProfileTab.Reviews -> reviewsTabContent(data.reviews, data.isOwnProfile)
+        ProfileTab.Likes -> likesTabContent(data.likes)
     }
 }
 
@@ -807,7 +799,7 @@ private fun PostTile(
             Icon(
                 imageVector = Icons.Default.PlayArrow,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
@@ -827,13 +819,13 @@ private fun PostTile(
                 Icon(
                     imageVector = Icons.Default.Favorite,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(10.dp),
                 )
                 Text(
                     text = post.likeCount.toString(),
-                    style = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 10.sp),
-                    color = Color.White,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 10.sp),
+                    color = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }
@@ -918,7 +910,6 @@ private fun CollectionSection(
     onNavigateToFragrance: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dmSans = DmSansFamily
     val gray400 = ScentThemeExtras.gray400
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -933,17 +924,16 @@ private fun CollectionSection(
             Text(
                 text = label,
                 style =
-                    TextStyle(
-                        fontFamily = dmSans,
-                        fontWeight = FontWeight.SemiBold,
+                    MaterialTheme.typography.labelSmall.copy(
                         fontSize = 10.sp,
                         letterSpacing = 1.4.sp,
+                        fontWeight = FontWeight.SemiBold,
                     ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = entries.size.toString(),
-                style = TextStyle(fontFamily = dmSans, fontWeight = FontWeight.Normal, fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall,
                 color = gray400,
             )
         }
@@ -974,7 +964,6 @@ private fun BottleItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dmSans = DmSansFamily
     val gray400 = ScentThemeExtras.gray400
 
     Column(
@@ -1025,12 +1014,7 @@ private fun BottleItem(
         Spacer(Modifier.height(6.dp))
         Text(
             text = entry.fragrance.name,
-            style =
-                TextStyle(
-                    fontFamily = dmSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp,
-                ),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1041,7 +1025,7 @@ private fun BottleItem(
         if (sizeMeta.isNotBlank()) {
             Text(
                 text = sizeMeta,
-                style = TextStyle(fontFamily = dmSans, fontWeight = FontWeight.Normal, fontSize = 10.sp),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                 color = gray400,
                 maxLines = 1,
                 textAlign = TextAlign.Center,
@@ -1087,8 +1071,6 @@ private fun ListingCard(
     listing: Listing,
     modifier: Modifier = Modifier,
 ) {
-    val playfair = PlayfairDisplayFamily
-    val dmSans = DmSansFamily
     val gray400 = ScentThemeExtras.gray400
 
     androidx.compose.material3.Card(
@@ -1131,34 +1113,33 @@ private fun ListingCard(
                 Text(
                     text = listing.fragrance.brand.uppercase(),
                     style =
-                        TextStyle(
-                            fontFamily = dmSans,
-                            fontWeight = FontWeight.SemiBold,
+                        MaterialTheme.typography.labelSmall.copy(
                             fontSize = 10.sp,
                             letterSpacing = 1.2.sp,
+                            fontWeight = FontWeight.SemiBold,
                         ),
                     color = gray400,
                 )
                 Text(
                     text = listing.fragrance.name,
-                    style = TextStyle(fontFamily = playfair, fontWeight = FontWeight.Normal, fontSize = 17.sp),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = listing.condition,
-                    style = TextStyle(fontFamily = dmSans, fontWeight = FontWeight.Normal, fontSize = 12.sp),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = "£${listing.price.roundToInt()}",
-                    style = TextStyle(fontFamily = playfair, fontWeight = FontWeight.Normal, fontSize = 19.sp),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 19.sp),
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = if (listing.isNegotiable) "negotiable" else "firm",
-                    style = TextStyle(fontFamily = dmSans, fontWeight = FontWeight.Normal, fontSize = 10.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                     color = gray400,
                 )
             }
@@ -1202,8 +1183,6 @@ private fun ReviewCard(
     review: Review,
     modifier: Modifier = Modifier,
 ) {
-    val playfair = PlayfairDisplayFamily
-    val dmSans = DmSansFamily
     val gray400 = ScentThemeExtras.gray400
     val accent = ScentThemeExtras.accent
 
@@ -1227,17 +1206,16 @@ private fun ReviewCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = review.fragrance.name,
-                        style = TextStyle(fontFamily = playfair, fontWeight = FontWeight.Normal, fontSize = 17.sp),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
                         text = review.fragrance.brand.uppercase(),
                         style =
-                            TextStyle(
-                                fontFamily = dmSans,
-                                fontWeight = FontWeight.SemiBold,
+                            MaterialTheme.typography.labelSmall.copy(
                                 fontSize = 10.sp,
                                 letterSpacing = 1.2.sp,
+                                fontWeight = FontWeight.SemiBold,
                             ),
                         color = gray400,
                     )
@@ -1254,7 +1232,7 @@ private fun ReviewCard(
                     )
                     Text(
                         text = review.rating.toString(),
-                        style = TextStyle(fontFamily = dmSans, fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -1263,13 +1241,7 @@ private fun ReviewCard(
                 Spacer(Modifier.height(9.dp))
                 Text(
                     text = review.content,
-                    style =
-                        TextStyle(
-                            fontFamily = dmSans,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 14.sp,
-                            lineHeight = 21.sp,
-                        ),
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -1306,18 +1278,22 @@ private fun OwnProfilePreview() {
         ProfileContent(
             state =
                 ProfileUiState(
-                    isLoading = false,
-                    isOwnProfile = true,
-                    user =
-                        User(
-                            id = 1,
-                            username = "edebrah",
-                            displayName = "Emmanuel Debrah",
-                            bio = "Fragrance collector. Niche over designer, always. London-based.",
-                            followerCount = 214,
-                            followingCount = 88,
-                            postCount = 12,
-                            isSeller = false,
+                    profile =
+                        UiState.Success(
+                            ProfileData(
+                                user =
+                                    User(
+                                        id = 1,
+                                        username = "edebrah",
+                                        displayName = "Emmanuel Debrah",
+                                        bio = "Fragrance collector. Niche over designer, always. London-based.",
+                                        followerCount = 214,
+                                        followingCount = 88,
+                                        postCount = 12,
+                                        isSeller = false,
+                                    ),
+                                isOwnProfile = true,
+                            ),
                         ),
                 ),
             onEvent = {},
@@ -1335,20 +1311,24 @@ private fun OtherProfilePreview() {
         ProfileContent(
             state =
                 ProfileUiState(
-                    isLoading = false,
-                    isOwnProfile = false,
+                    profile =
+                        UiState.Success(
+                            ProfileData(
+                                user =
+                                    User(
+                                        id = 2,
+                                        username = "scenthound",
+                                        displayName = "Jane Doe",
+                                        bio = "EDPs only. Orange blossom obsessive.",
+                                        followerCount = 542,
+                                        followingCount = 130,
+                                        postCount = 47,
+                                        isSeller = false,
+                                    ),
+                                isOwnProfile = false,
+                            ),
+                        ),
                     isFollowing = false,
-                    user =
-                        User(
-                            id = 2,
-                            username = "scenthound",
-                            displayName = "Jane Doe",
-                            bio = "EDPs only. Orange blossom obsessive.",
-                            followerCount = 542,
-                            followingCount = 130,
-                            postCount = 47,
-                            isSeller = false,
-                        ),
                 ),
             onEvent = {},
             onNavigateToFollowers = {},
@@ -1360,55 +1340,10 @@ private fun OtherProfilePreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun SellerProfilePreview() {
+private fun ProfileLoadingPreview() {
     ScentTheme {
         ProfileContent(
-            state =
-                ProfileUiState(
-                    isLoading = false,
-                    isOwnProfile = true,
-                    user =
-                        User(
-                            id = 3,
-                            username = "scentboutique",
-                            displayName = "The Scent Boutique",
-                            bio = "Curated niche decants. Shipped same day.",
-                            followerCount = 1200,
-                            followingCount = 60,
-                            postCount = 88,
-                            isSeller = true,
-                        ),
-                ),
-            onEvent = {},
-            onNavigateToFollowers = {},
-            onNavigateToFollowing = {},
-            onNavigateToFragrance = {},
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun EmptyProfilePreview() {
-    ScentTheme {
-        ProfileContent(
-            state =
-                ProfileUiState(
-                    isLoading = false,
-                    isOwnProfile = true,
-                    user =
-                        User(
-                            id = 4,
-                            username = "newuser",
-                            displayName = "New User",
-                            bio = "",
-                            followerCount = 0,
-                            followingCount = 0,
-                            postCount = 0,
-                            isSeller = false,
-                        ),
-                    selectedTab = ProfileTab.Posts,
-                ),
+            state = ProfileUiState(profile = UiState.Loading),
             onEvent = {},
             onNavigateToFollowers = {},
             onNavigateToFollowing = {},

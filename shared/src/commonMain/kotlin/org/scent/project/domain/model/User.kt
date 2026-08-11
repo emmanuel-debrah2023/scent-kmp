@@ -11,4 +11,5 @@ data class User(
     val followerCount: Int = 0,
     val followingCount: Int = 0,
     val postCount: Int = 0,
+    val createdAt: Long = 0L,
 )
