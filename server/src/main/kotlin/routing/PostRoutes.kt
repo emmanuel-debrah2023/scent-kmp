@@ -118,12 +118,12 @@ fun Route.postRoutes() {
                             PostLikesTable
                                 .selectAll()
                                 .where {
-                                    (PostLikesTable.userId eq userId) and (PostLikesTable.postId eq postId)
+                                    PostLikesTable.userId eq userId and (PostLikesTable.postId eq postId)
                                 }.count() > 0L
 
                         if (alreadyLiked) {
                             PostLikesTable.deleteWhere {
-                                (PostLikesTable.userId eq userId) and
+                                PostLikesTable.userId eq userId and
                                     (PostLikesTable.postId eq postId)
                             }
                             PostsTable.update({ PostsTable.id eq postId }) {
@@ -147,7 +147,7 @@ fun Route.postRoutes() {
                                 .where { PostsTable.id eq postId }
                                 .map { it[PostsTable.likeCount] }
                                 .singleOrNull() ?: 0
-                        (!alreadyLiked) to count
+                        !alreadyLiked to count
                     }
                 this.call.respond(HttpStatusCode.OK, LikeResponseDto(isLiked = isLiked, likeCount = newLikeCount))
             }
@@ -202,7 +202,7 @@ fun Route.postRoutes() {
                                 PostLikesTable
                                     .selectAll()
                                     .where {
-                                        (PostLikesTable.userId eq uid) and (PostLikesTable.postId eq id)
+                                        PostLikesTable.userId eq uid and (PostLikesTable.postId eq id)
                                     }.count() > 0L
                             } ?: false
 

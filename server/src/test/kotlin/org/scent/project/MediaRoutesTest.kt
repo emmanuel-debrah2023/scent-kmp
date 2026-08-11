@@ -212,7 +212,7 @@ class MediaRoutesTest {
             seedPendingMedia(seedUser(), uid)
 
             val body = """{"uid":"$uid","status":"ready","readyToStream":true}"""
-            val staleTimestamp = (System.currentTimeMillis() / 1000) - 600 // 10 min ago
+            val staleTimestamp = System.currentTimeMillis() / 1000 - 600 // 10 min ago
 
             val response =
                 client.post("/api/v1/media/webhook") {

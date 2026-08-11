@@ -1,0 +1,100 @@
+# Scent — Compose component API rules for detekt
+#
+# Mechanical enforcement of the AndroidX component API guidelines, via the
+# compose-rules ruleset (maintained fork of Twitter's; Apache-2.0).
+# Docs: https://mrmans0n.github.io/compose-rules/
+#
+# This is a dependency, so it goes through the normal gate:
+#
+#   bash .claude/hooks/approve-dep.sh io.nlopez.compose.rules:detekt
+#
+# Then in gradle/libs.versions.toml — CHECK THE CURRENT VERSION, don't copy one
+# from a blog post or from Claude's memory:
+#
+#   detekt-compose = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "detektCompose" }
+#
+# and in the composeApp build script:
+#
+#   detektPlugins(libs.detekt.compose)
+#
+# Merge this into your detekt config alongside detekt-idioms.yml.
+#
+# ⚠️ Rule IDs and available rules change between releases. Run `./gradlew detekt`
+# once after wiring it up — detekt fails loudly on unknown rule IDs, so a clean
+# run means everything below resolved against your version. Prune anything that
+# doesn't.
+
+Compose:
+
+  # --- modifier contract (guidelines: "modifier parameter") ---
+  ModifierMissing:                 # every UI-emitting composable takes one
+    active: true
+    checkModifiersForVisibility: 'only_public'
+  ModifierWithoutDefault:          # must default to Modifier
+    active: true
+  ModifierNotUsedAtRoot:           # applied to the root-most layout
+    active: true
+  ModifierClickableOrder:          # clickable before padding, or ripple is clipped
+    active: true
+  ModifierNaming:                  # the one modifier is named `modifier`
+    active: true
+  MultipleEmitters:                # a composable emits from one root
+    active: true
+
+  # --- parameter order and shape (guidelines: "Parameters order") ---
+  ComposableParamOrder:            # required, then modifier, then optional
+    active: true
+  MutableParams:                   # no MutableState<T> / MutableList as params
+    active: true
+  UnstableCollections:             # List not ArrayList, for skippability
+    active: true
+  DefaultsVisibility:              # FooDefaults must be as visible as Foo
+    active: true
+
+  # --- state hoisting (guidelines: "MutableState/State as a parameter") ---
+  ViewModelForwarding:             # don't pass a ViewModel down past the screen
+    active: true
+  ViewModelInjection:              # inject at screen level, not mid-tree
+    active: true
+  MutableStateParam:
+    active: true
+  ContentEmitterReturningValues:   # a composable emits OR returns, not both
+    active: true
+  ContentSlotReused:
+    active: true
+
+  # --- naming (guidelines: "Name of a Component") ---
+  ComposableNaming:                # PascalCase for Unit-returning composables
+    active: true
+  ComposableAnnotationNaming:
+    active: true
+  # Scent has no prefix convention — components live in their own package and
+  # use plain names. Nothing to configure; noted so nobody adds one later.
+
+  # --- correctness footguns ---
+  RememberMissing:
+    active: true
+  RememberContentMissing:
+    active: true
+  UnnecessaryEventHandlerParameter:
+    active: true
+  ComposeUnstableReceiver:
+    active: true
+  PreviewAnnotationNaming:
+    active: true
+  PreviewPublic:                   # previews stay private
+    active: true
+
+  # --- deliberately OFF ---
+  # CompositionLocalAllowlist: the design system reads MaterialTheme (itself a
+  # CompositionLocal) in default expressions, which is the sanctioned pattern.
+  # Turn this on only if you introduce your own CompositionLocals and want an
+  # explicit allowlist.
+  CompositionLocalAllowlist:
+    active: false
+  # CompositionLocalNaming: enable alongside the above if you add any.
+  CompositionLocalNaming:
+    active: false
+  # Material2 is not in use; nothing to ban.
+  Material2:
+    active: false

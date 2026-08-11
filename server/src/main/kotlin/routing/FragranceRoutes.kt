@@ -65,7 +65,7 @@ fun Route.fragranceRoutes() {
                             val activeFilter: Op<Boolean> = FragrancesTable.isActive eq true
                             val searchFilter: Op<Boolean> =
                                 if (query != null) {
-                                    (FragrancesTable.name.lowerCase() like "%$query%") or
+                                    FragrancesTable.name.lowerCase() like "%$query%" or
                                         (FragrancesTable.brand.lowerCase() like "%$query%")
                                 } else {
                                     Op.TRUE
