@@ -14,6 +14,6 @@ val viewModelModule =
         viewModel { AuthViewModel(get(), get(), get()) }
         viewModel { SessionViewModel(get(), get()) }
         viewModel { FeedViewModel(get(), get()) }
-        viewModel { (authUser: AuthUser) -> ProfileViewModel(authUser, get()) }
+        viewModel { (authUser: AuthUser) -> ProfileViewModel(authUser, get(), get(), get(), get(), get(), get()) }
         viewModel { (url: String) -> VideoViewModel(url) }
     }

@@ -19,6 +19,7 @@ import routing.fragranceRoutes
 import routing.listingRoutes
 import routing.mediaRoutes
 import routing.postRoutes
+import routing.userRoutes
 
 fun main(args: Array<String>) {
     val dotEnv =
@@ -79,6 +80,7 @@ fun Application.module() {
         listingRoutes()
         mediaRoutes(streamProvider, fakeMode)
         postRoutes()
+        userRoutes()
         if (fakeMode) devRoutes()
     }
 }

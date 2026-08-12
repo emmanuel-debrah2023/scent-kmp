@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ListingResponse(
-    val id: Int? = null,
+    val id: Int? = null, // TODO: server-guaranteed invariant — make non-nullable
     val fragrance: FragranceResponse? = null,
     @SerialName("seller_id") val sellerId: Int? = null,
     @SerialName("seller_username") val sellerUsername: String? = null,
@@ -14,7 +14,7 @@ data class ListingResponse(
     @SerialName("is_negotiable") val isNegotiable: Boolean? = null,
     @SerialName("stock_quantity") val stockQuantity: Int? = null,
     @SerialName("is_active") val isActive: Boolean? = null,
-    @SerialName("created_at") val createdAt: Long? = null,
+    @SerialName("created_at") val createdAt: Long? = null, // TODO: server-guaranteed invariant — make non-nullable
 )
 
 @Serializable

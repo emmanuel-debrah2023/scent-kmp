@@ -18,8 +18,8 @@ data class LoginRequest(
 
 @Serializable
 data class AuthResponse(
-    val token: String? = null,
-    val userId: Int? = null,
+    val token: String? = null, // TODO: server-guaranteed invariant — make non-nullable
+    val userId: Int? = null, // TODO: server-guaranteed invariant — make non-nullable
     val username: String? = null,
     val email: String? = null,
     val displayName: String? = null,
@@ -28,7 +28,7 @@ data class AuthResponse(
 // Used exclusively for GET /me — no token field
 @Serializable
 data class MeResponse(
-    val userId: Int? = null,
+    val userId: Int? = null, // TODO: server-guaranteed invariant — make non-nullable
     val username: String? = null,
     val email: String? = null,
     val displayName: String? = null,

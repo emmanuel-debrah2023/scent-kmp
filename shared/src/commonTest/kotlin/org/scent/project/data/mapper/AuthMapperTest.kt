@@ -1,6 +1,5 @@
 package org.scent.project.data.mapper
 
-import kotlinx.serialization.json.Json
 import org.scent.project.data.mapper.AuthMapper.toAuthUser
 import org.scent.project.data.remote.JsonConfig
 import org.scent.project.data.remote.dto.AuthResponse
