@@ -25,10 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ui.theme.PlayfairDisplayFamily
+import ui.theme.ScentThemeExtras
 
 @Composable
 fun TopAppBar(
@@ -48,11 +46,8 @@ fun TopAppBar(
     ) {
         Text(
             text = "scent",
-            fontSize = 27.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (-1).sp,
+            style = ScentThemeExtras.wordmark,
             color = MaterialTheme.colorScheme.primary,
-            fontFamily = PlayfairDisplayFamily,
         )
 
         Row(

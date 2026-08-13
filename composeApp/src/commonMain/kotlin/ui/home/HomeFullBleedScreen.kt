@@ -555,11 +555,8 @@ private fun BlendedHeader(
             ) {
                 Text(
                     text = "scent",
-                    fontSize = 27.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp,
+                    style = ScentThemeExtras.wordmark,
                     color = colorScheme.primary,
-                    fontFamily = PlayfairDisplayFamily,
                 )
                 IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
                     Icon(
@@ -665,7 +662,7 @@ private fun BlendedBottomNav(
                     }
                     Text(
                         text = item.title,
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
                     )
                     // Gold active-tab pip for visual consistency
