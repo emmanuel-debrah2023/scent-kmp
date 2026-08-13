@@ -146,7 +146,7 @@ data class Fragrance(
 
 enum class FragranceGender {
     MASCULINE, FEMININE, UNISEX;
-
+    
     companion object {
         fun fromString(value: String?): FragranceGender {
             return when (value?.lowercase()) {
@@ -189,7 +189,7 @@ data class Post(
 
 enum class ContentFormat {
     TEXT, PHOTO, VIDEO;
-
+    
     companion object {
         fun fromString(value: String?): ContentFormat {
             return when (value?.uppercase()) {
@@ -218,7 +218,7 @@ data class PostListing(
 // shared/src/commonMain/kotlin/data/mapper/FragranceMapper.kt
 
 object FragranceMapper {
-
+    
     /**
      * Maps nullable DTO to non-null Domain model.
      * Returns Left(AppError.NetworkError.ParseError) if required fields are missing.
@@ -230,19 +230,19 @@ object FragranceMapper {
                 message = "Fragrance ID is missing from server response"
             ).asLeft()
         }
-
+        
         if (name.isNullOrBlank()) {
             return AppError.NetworkError.ParseError(
                 message = "Fragrance name is missing from server response"
             ).asLeft()
         }
-
+        
         if (brand.isNullOrBlank()) {
             return AppError.NetworkError.ParseError(
                 message = "Fragrance brand is missing from server response"
             ).asLeft()
         }
-
+        
         return Fragrance(
             id = id,
             name = name,
@@ -261,7 +261,7 @@ object FragranceMapper {
             fragellaId = fragellaId
         ).asRight()
     }
-
+    
     /**
      * Maps list of DTOs, filtering out invalid entries.
      * Never crashes - always returns a valid list (potentially empty).
@@ -274,32 +274,32 @@ object FragranceMapper {
 }
 
 object UserMapper {
-
+    
     fun UserDto.toDomain(): Result<User> {
         if (id.isNullOrBlank()) {
             return AppError.NetworkError.ParseError(
                 message = "User ID is missing"
             ).asLeft()
         }
-
+        
         if (username.isNullOrBlank()) {
             return AppError.NetworkError.ParseError(
                 message = "Username is missing"
             ).asLeft()
         }
-
+        
         if (email.isNullOrBlank()) {
             return AppError.NetworkError.ParseError(
                 message = "Email is missing"
             ).asLeft()
         }
-
+        
         if (createdAt == null) {
             return AppError.NetworkError.ParseError(
                 message = "Created timestamp is missing"
             ).asLeft()
         }
-
+        
         return User(
             id = id,
             username = username,
@@ -317,32 +317,32 @@ object UserMapper {
 }
 
 object PostMapper {
-
+    
     fun PostDto.toDomain(): Result<Post> {
         if (id.isNullOrBlank()) {
             return AppError.NetworkError.ParseError(
                 message = "Post ID is missing"
             ).asLeft()
         }
-
+        
         if (userId.isNullOrBlank()) {
             return AppError.NetworkError.ParseError(
                 message = "User ID is missing"
             ).asLeft()
         }
-
+        
         if (fragranceIds.isNullOrEmpty()) {
             return AppError.NetworkError.ParseError(
                 message = "Post must have at least one fragrance linked"
             ).asLeft()
         }
-
+        
         if (createdAt == null) {
             return AppError.NetworkError.ParseError(
                 message = "Created timestamp is missing"
             ).asLeft()
         }
-
+        
         return Post(
             id = id,
             userId = userId,
@@ -358,12 +358,12 @@ object PostMapper {
             listingData = listingData?.mapNotNull { it.toPostListing() } ?: emptyList()
         ).asRight()
     }
-
+    
     private fun PostListingDto.toPostListing(): PostListing? {
         val fragranceId = fragranceId ?: return null
         val price = price ?: return null
         val condition = condition ?: return null
-
+        
         return PostListing(
             fragranceId = fragranceId,
             price = price,
@@ -383,16 +383,16 @@ class FragranceRepositoryImpl(
     private val apiClient: ApiClient,
     private val cachedFragranceDao: CachedFragranceDao
 ) : FragranceRepository {
-
+    
     override suspend fun searchFragrances(
         query: String,
         page: Int,
         limit: Int
     ): Result<List<Fragrance>> {
         return try {
-            val response: ApiResponseDto<List<FragranceDto>> =
+            val response: ApiResponseDto<List<FragranceDto>> = 
                 apiClient.searchFragrances(query, page, limit)
-
+            
             // Handle nullable API response
             if (response.success != true) {
                 return AppError.NetworkError.ServerError(
@@ -400,16 +400,16 @@ class FragranceRepositoryImpl(
                     message = response.error ?: response.message ?: "Unknown error"
                 ).asLeft()
             }
-
+            
             val dtos = response.data ?: emptyList()
-
+            
             // Safely map DTOs to domain models
             // Invalid entries are filtered out, not causing crashes
             val fragrances = dtos.toDomainList()
-
+            
             // Even if all DTOs were invalid, return empty list (not an error)
             fragrances.asRight()
-
+            
         } catch (e: SerializationException) {
             AppError.NetworkError.ParseError(
                 message = "Failed to parse server response: ${e.message}",
@@ -426,28 +426,28 @@ class FragranceRepositoryImpl(
             ).asLeft()
         }
     }
-
+    
     override suspend fun getFragranceById(id: String): Result<Fragrance> {
         return try {
-            val response: ApiResponseDto<FragranceDto> =
+            val response: ApiResponseDto<FragranceDto> = 
                 apiClient.getFragrance(id)
-
+            
             if (response.success != true) {
                 return AppError.ContentError.FragranceNotFound(
                     fragranceId = id
                 ).asLeft()
             }
-
+            
             val dto = response.data
             if (dto == null) {
                 return AppError.ContentError.FragranceNotFound(
                     fragranceId = id
                 ).asLeft()
             }
-
+            
             // Map DTO to domain - returns Either
             dto.toDomain()
-
+            
         } catch (e: SerializationException) {
             AppError.NetworkError.ParseError(
                 message = "Failed to parse fragrance data",
@@ -471,19 +471,19 @@ class FragranceRepositoryImpl(
 val JsonConfig = Json {
     // Lenient parsing - don't crash on malformed JSON
     isLenient = true
-
+    
     // Ignore unknown keys - API might add new fields
     ignoreUnknownKeys = true
-
+    
     // Don't crash if server sends null for non-nullable field
     coerceInputValues = true
-
+    
     // Use defaults when values are missing
     encodeDefaults = true
-
+    
     // Pretty print for debugging
     prettyPrint = BuildConfig.DEBUG
-
+    
     // Handle polymorphic types
     classDiscriminator = "type"
 }
@@ -611,7 +611,7 @@ fun processFragrances(fragrances: List<FragranceDto>?) {
 ```kotlin
 sealed class AppError {
     // ... existing errors ...
-
+    
     sealed class NetworkError : AppError() {
         data class ParseError(
             override val message: String = "Failed to parse server response",
@@ -647,80 +647,80 @@ fun FragranceDto.toDomain(): Result<Fragrance> {
 sealed class AppError {
     abstract val message: String
     abstract val cause: Throwable?
-
+    
     // Network Errors
     sealed class NetworkError : AppError() {
         data class NoConnection(
             override val message: String = "No internet connection available",
             override val cause: Throwable? = null
         ) : NetworkError()
-
+        
         data class Timeout(
             override val message: String = "Request timed out. Please try again",
             override val cause: Throwable? = null
         ) : NetworkError()
-
+        
         data class ServerError(
             val statusCode: Int,
             override val message: String = "Server error occurred (Code: $statusCode)",
             override val cause: Throwable? = null
         ) : NetworkError()
-
+        
         data class ParseError(
             override val message: String = "Failed to parse server response",
             override val cause: Throwable? = null
         ) : NetworkError()
     }
-
+    
     // Authentication Errors
     sealed class AuthError : AppError() {
         data class InvalidCredentials(
             override val message: String = "Invalid email or password",
             override val cause: Throwable? = null
         ) : AuthError()
-
+        
         data class UserAlreadyExists(
             override val message: String = "An account with this email already exists",
             override val cause: Throwable? = null
         ) : AuthError()
-
+        
         data class TokenExpired(
             override val message: String = "Your session has expired. Please login again",
             override val cause: Throwable? = null
         ) : AuthError()
-
+        
         data class Unauthorized(
             override val message: String = "You are not authorized to perform this action",
             override val cause: Throwable? = null
         ) : AuthError()
     }
-
+    
     // Validation Errors
     sealed class ValidationError : AppError() {
         data class InvalidEmail(
             override val message: String = "Please enter a valid email address",
             override val cause: Throwable? = null
         ) : ValidationError()
-
+        
         data class PasswordTooShort(
             val minLength: Int = 8,
             override val message: String = "Password must be at least $minLength characters",
             override val cause: Throwable? = null
         ) : ValidationError()
-
+        
         data class RequiredFieldEmpty(
             val fieldName: String,
             override val message: String = "$fieldName is required",
             override val cause: Throwable? = null
         ) : ValidationError()
-
+        
         data class InvalidInput(
             val fieldName: String,
             override val message: String = "Invalid $fieldName",
             override val cause: Throwable? = null
         ) : ValidationError()
     }
-
+    
     // Content Errors
     sealed class ContentError : AppError() {
         data class FragranceNotFound(
@@ -728,42 +728,42 @@ sealed class AppError {
             override val message: String = "Fragrance not found",
             override val cause: Throwable? = null
         ) : ContentError()
-
+        
         data class PostNotFound(
             val postId: String,
             override val message: String = "Post not found",
             override val cause: Throwable? = null
         ) : ContentError()
-
+        
         data class UploadFailed(
             override val message: String = "Failed to upload media. Please try again",
             override val cause: Throwable? = null
         ) : ContentError()
-
+        
         data class InsufficientPermissions(
             override val message: String = "You don't have permission to perform this action",
             override val cause: Throwable? = null
         ) : ContentError()
     }
-
+    
     // Storage Errors
     sealed class StorageError : AppError() {
         data class ReadFailed(
             override val message: String = "Failed to read data from storage",
             override val cause: Throwable? = null
         ) : StorageError()
-
+        
         data class WriteFailed(
             override val message: String = "Failed to save data",
             override val cause: Throwable? = null
         ) : StorageError()
-
+        
         data class CacheMiss(
             override val message: String = "Data not found in cache",
             override val cause: Throwable? = null
         ) : StorageError()
     }
-
+    
     // Generic/Unknown Errors
     data class Unknown(
         override val message: String = "An unexpected error occurred",
@@ -778,46 +778,46 @@ sealed class AppError {
 sealed class Either<out L, out R> {
     data class Left<out L>(val value: L) : Either<L, Nothing>()
     data class Right<out R>(val value: R) : Either<Nothing, R>()
-
+    
     val isRight get() = this is Right<R>
     val isLeft get() = this is Left<L>
-
+    
     fun <L> left(a: L) = Left(a)
     fun <R> right(b: R) = Right(b)
-
+    
     inline fun <C> fold(ifLeft: (L) -> C, ifRight: (R) -> C): C =
         when (this) {
             is Left -> ifLeft(value)
             is Right -> ifRight(value)
         }
-
+    
     inline fun <C> map(f: (R) -> C): Either<L, C> =
         when (this) {
             is Left -> Left(value)
             is Right -> Right(f(value))
         }
-
+    
     inline fun <C> flatMap(f: (R) -> Either<L, C>): Either<L, C> =
         when (this) {
             is Left -> Left(value)
             is Right -> f(value)
         }
-
+    
     inline fun onRight(action: (R) -> Unit): Either<L, R> {
         if (this is Right) action(value)
         return this
     }
-
+    
     inline fun onLeft(action: (L) -> Unit): Either<L, R> {
         if (this is Left) action(value)
         return this
     }
-
+    
     fun getOrNull(): R? = when (this) {
         is Right -> value
         is Left -> null
     }
-
+    
     fun leftOrNull(): L? = when (this) {
         is Left -> value
         is Right -> null
@@ -844,9 +844,9 @@ interface FragranceRepository {
         page: Int = 0,
         limit: Int = 20
     ): Result<List<Fragrance>>
-
+    
     suspend fun getFragranceById(id: String): Result<Fragrance>
-
+    
     suspend fun getSimilarFragrances(id: String): Result<List<Fragrance>>
 }
 
@@ -855,7 +855,7 @@ class FragranceRepositoryImpl(
     private val apiClient: ApiClient,
     private val localCache: FragranceCache
 ) : FragranceRepository {
-
+    
     override suspend fun searchFragrances(
         query: String,
         page: Int,
@@ -867,10 +867,10 @@ class FragranceRepositoryImpl(
             if (cached.isNotEmpty()) {
                 return cached.asRight()
             }
-
+            
             // Fetch from API
             val response = apiClient.searchFragrances(query, page, limit)
-
+            
             when {
                 response.isSuccessful && response.data != null -> {
                     localCache.save(response.data)
@@ -920,16 +920,16 @@ sealed class UiState<out T> {
 
 // android/src/main/kotlin/ui/base/BaseViewModel.kt
 abstract class BaseViewModel : ViewModel() {
-
+    
     private val _error = MutableSharedFlow<AppError>()
     val error: SharedFlow<AppError> = _error.asSharedFlow()
-
+    
     protected fun handleError(error: AppError) {
         viewModelScope.launch {
             _error.emit(error)
         }
     }
-
+    
     protected fun <T> Either<AppError, T>.handleResult(
         onSuccess: (T) -> Unit,
         onError: ((AppError) -> Unit)? = null
@@ -950,14 +950,14 @@ class HomeViewModel(
     private val postRepository: PostRepository,
     private val fragranceRepository: FragranceRepository
 ) : BaseViewModel() {
-
+    
     private val _uiState = MutableStateFlow<UiState<HomeScreenData>>(UiState.Idle)
     val uiState: StateFlow<UiState<HomeScreenData>> = _uiState.asStateFlow()
-
+    
     fun loadFeed(refresh: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
-
+            
             postRepository.getFeed(page = 0, limit = 20)
                 .handleResult(
                     onSuccess = { posts ->
@@ -972,7 +972,7 @@ class HomeViewModel(
                 )
         }
     }
-
+    
     fun searchFragrances(query: String) {
         if (query.isBlank()) {
             handleError(
@@ -980,7 +980,7 @@ class HomeViewModel(
             )
             return
         }
-
+        
         viewModelScope.launch {
             fragranceRepository.searchFragrances(query)
                 .handleResult(
@@ -1009,7 +1009,7 @@ fun BaseErrorScreen(
     modifier: Modifier = Modifier
 ) {
     val errorInfo = remember(error) { error.toErrorInfo() }
-
+    
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -1023,27 +1023,27 @@ fun BaseErrorScreen(
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.error
         )
-
+        
         Spacer(modifier = Modifier.height(16.dp))
-
+        
         Text(
             text = errorInfo.title,
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
-
+        
         Spacer(modifier = Modifier.height(8.dp))
-
+        
         Text(
             text = error.message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-
+        
         Spacer(modifier = Modifier.height(24.dp))
-
+        
         if (onRetry != null) {
             Button(
                 onClick = onRetry,
@@ -1058,7 +1058,7 @@ fun BaseErrorScreen(
                 Text("Try Again")
             }
         }
-
+        
         if (onDismiss != null) {
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onDismiss) {
@@ -1136,16 +1136,16 @@ fun InlineErrorMessage(
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(24.dp)
             )
-
+            
             Spacer(modifier = Modifier.width(12.dp))
-
+            
             Text(
                 text = error.message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.weight(1f)
             )
-
+            
             if (onDismiss != null) {
                 IconButton(onClick = onDismiss) {
                     Icon(
@@ -1208,7 +1208,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
+    
     // Observe errors from ViewModel
     LaunchedEffect(Unit) {
         viewModel.error.collect { error ->
@@ -1219,7 +1219,7 @@ fun HomeScreen(
             )
         }
     }
-
+    
     Scaffold(
         snackbarHost = { ErrorSnackbarHost(snackbarHostState) }
     ) { padding ->
@@ -1227,18 +1227,18 @@ fun HomeScreen(
             is UiState.Idle -> {
                 // Initial state
             }
-
+            
             is UiState.Loading -> {
                 LoadingIndicator()
             }
-
+            
             is UiState.Success -> {
                 HomeContent(
                     data = state.data,
                     onRefresh = { viewModel.loadFeed(refresh = true) }
                 )
             }
-
+            
             is UiState.Error -> {
                 BaseErrorScreen(
                     error = state.error,
@@ -1255,16 +1255,16 @@ fun HomeScreen(
 ```kotlin
 // shared/src/commonMain/kotlin/domain/validation/Validator.kt
 object Validator {
-
+    
     fun validateEmail(email: String): Result<String> {
         return when {
             email.isBlank() -> AppError.ValidationError.RequiredFieldEmpty("Email").asLeft()
-            !email.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) ->
+            !email.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) -> 
                 AppError.ValidationError.InvalidEmail().asLeft()
             else -> email.asRight()
         }
     }
-
+    
     fun validatePassword(password: String): Result<String> {
         return when {
             password.isBlank() -> AppError.ValidationError.RequiredFieldEmpty("Password").asLeft()
@@ -1272,7 +1272,7 @@ object Validator {
             else -> password.asRight()
         }
     }
-
+    
     fun validateUsername(username: String): Result<String> {
         return when {
             username.isBlank() -> AppError.ValidationError.RequiredFieldEmpty("Username").asLeft()
@@ -1364,7 +1364,8 @@ sealed interface ProfileRoute {
 - Each tab's back stack stays fully self-contained and type-safe.
 - Back navigation and up-navigation targets stay unambiguous per tab — "fragrance detail reached from Search" and "from Marketplace" can carry different back-stack context.
 - A shared `DetailRoute` reintroduces "which tab does this detail belong to?" ambiguity and complicates the typed per-tab `NavigationState`.
-  Accept the verbosity. Revisit this decision **only** if the shared-detail set grows large (many more shared destinations than tab-specific ones).
+
+Accept the verbosity. Revisit this decision **only** if the shared-detail set grows large (many more shared destinations than tab-specific ones).
 
 ### 2. Per-Tab Navigation State
 
@@ -1619,6 +1620,7 @@ Because each tab already owns an isolated back stack, the per-tab `NavigationSta
 - ✅ Log errors with stack traces for debugging
 - ✅ Provide retry mechanisms for recoverable errors
 - ✅ Use type-safe error handling throughout
+
 ### ❌ DON'T
 - ❌ Never throw exceptions for expected failures
 - ❌ Don't use nullable types for error handling
@@ -1628,11 +1630,12 @@ Because each tab already owns an isolated back stack, the per-tab `NavigationSta
 - ❌ Don't ignore errors silently
 - ❌ Don't use `try-catch` for flow control
 - ❌ Don't create error types outside the sealed hierarchy
+
 ## Testing Error Scenarios
 
 ```kotlin
 class FragranceRepositoryTest {
-
+    
     @Test
     fun `searchFragrances returns Left when network unavailable`() = runTest {
         // Given
@@ -1640,20 +1643,20 @@ class FragranceRepositoryTest {
             apiClient = FakeApiClient(simulateNoConnection = true),
             localCache = FakeCache()
         )
-
+        
         // When
         val result = repository.searchFragrances("test")
-
+        
         // Then
         assertTrue(result.isLeft)
         assertTrue(result.leftOrNull() is AppError.NetworkError.NoConnection)
     }
-
+    
     @Test
     fun `validateEmail returns Left for invalid email`() {
         // When
         val result = Validator.validateEmail("invalid-email")
-
+        
         // Then
         assertTrue(result.isLeft)
         assertTrue(result.leftOrNull() is AppError.ValidationError.InvalidEmail)
@@ -1700,7 +1703,7 @@ object ErrorLogger {
 class FragranceApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-
+        
         startKoin {
             androidLogger(Level.ERROR) // Only show errors in production
             androidContext(this@FragranceApplication)
@@ -1720,7 +1723,7 @@ class FragranceApplication : Application() {
 ```kotlin
 // android/src/main/kotlin/di/NetworkModule.kt
 val networkModule = module {
-
+    
     // HTTP Client
     single {
         HttpClient(OkHttp) {
@@ -1731,7 +1734,7 @@ val networkModule = module {
                     ignoreUnknownKeys = true
                 })
             }
-
+            
             install(Logging) {
                 logger = object : Logger {
                     override fun log(message: String) {
@@ -1742,13 +1745,13 @@ val networkModule = module {
                 }
                 level = if (BuildConfig.DEBUG) LogLevel.BODY else LogLevel.NONE
             }
-
+            
             install(HttpTimeout) {
                 requestTimeoutMillis = 30_000
                 connectTimeoutMillis = 30_000
                 socketTimeoutMillis = 30_000
             }
-
+            
             // Add auth token to requests
             install(Auth) {
                 bearer {
@@ -1760,7 +1763,7 @@ val networkModule = module {
             }
         }
     }
-
+    
     // API Client
     single<ApiClient> {
         ApiClientImpl(
@@ -1768,7 +1771,7 @@ val networkModule = module {
             baseUrl = BuildConfig.API_BASE_URL
         )
     }
-
+    
     // Token Manager
     single {
         TokenManager(context = androidContext())
@@ -1780,7 +1783,7 @@ val networkModule = module {
 ```kotlin
 // android/src/main/kotlin/di/DatabaseModule.kt
 val databaseModule = module {
-
+    
     // Room Database
     single {
         Room.databaseBuilder(
@@ -1791,13 +1794,13 @@ val databaseModule = module {
             .fallbackToDestructiveMigration() // Remove in production
             .build()
     }
-
+    
     // DAOs
     single { get<FragranceDatabase>().userFragranceDao() }
     single { get<FragranceDatabase>().cachedFragranceDao() }
     single { get<FragranceDatabase>().postDao() }
     single { get<FragranceDatabase>().listingDao() }
-
+    
     // DataStore
     single {
         androidContext().dataStore
@@ -1812,14 +1815,14 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "ap
 ```kotlin
 // android/src/main/kotlin/di/RepositoryModule.kt
 val repositoryModule = module {
-
+    
     single<AuthRepository> {
         AuthRepositoryImpl(
             apiClient = get(),
             tokenManager = get()
         )
     }
-
+    
     single<FragranceRepository> {
         FragranceRepositoryImpl(
             apiClient = get(),
@@ -1827,21 +1830,21 @@ val repositoryModule = module {
             userFragranceDao = get()
         )
     }
-
+    
     single<PostRepository> {
         PostRepositoryImpl(
             apiClient = get(),
             postDao = get()
         )
     }
-
+    
     single<ListingRepository> {
         ListingRepositoryImpl(
             apiClient = get(),
             listingDao = get()
         )
     }
-
+    
     single<UserRepository> {
         UserRepositoryImpl(
             apiClient = get(),
@@ -1855,23 +1858,23 @@ val repositoryModule = module {
 ```kotlin
 // android/src/main/kotlin/di/UseCaseModule.kt
 val useCaseModule = module {
-
+    
     // Authentication Use Cases
     factory { LoginUseCase(authRepository = get()) }
     factory { RegisterUseCase(authRepository = get()) }
     factory { LogoutUseCase(authRepository = get(), tokenManager = get()) }
-
+    
     // Fragrance Use Cases
     factory { SearchFragrancesUseCase(fragranceRepository = get()) }
     factory { GetFragranceDetailsUseCase(fragranceRepository = get()) }
     factory { AddToCollectionUseCase(fragranceRepository = get()) }
-
+    
     // Post Use Cases
     factory { CreatePostUseCase(postRepository = get()) }
     factory { GetFeedUseCase(postRepository = get()) }
     factory { LikePostUseCase(postRepository = get()) }
     factory { CommentOnPostUseCase(postRepository = get()) }
-
+    
     // Marketplace Use Cases
     factory { CreateListingUseCase(listingRepository = get()) }
     factory { SearchListingsUseCase(listingRepository = get()) }
@@ -1883,29 +1886,29 @@ val useCaseModule = module {
 ```kotlin
 // android/src/main/kotlin/di/ViewModelModule.kt
 val viewModelModule = module {
-
+    
     // Auth ViewModels
     viewModel { LoginViewModel(loginUseCase = get()) }
     viewModel { RegisterViewModel(registerUseCase = get()) }
-
+    
     // Home ViewModels
     viewModel { HomeViewModel(getFeedUseCase = get(), fragranceRepository = get()) }
-
+    
     // Post ViewModels
-    viewModel {
+    viewModel { 
         PostCreationViewModel(
             createPostUseCase = get(),
             searchFragrancesUseCase = get()
         )
     }
-
+    
     viewModel { parameters ->
         PostDetailViewModel(
             postId = parameters.get(),
             postRepository = get()
         )
     }
-
+    
     // Profile ViewModels
     viewModel { parameters ->
         ProfileViewModel(
@@ -1914,7 +1917,7 @@ val viewModelModule = module {
             postRepository = get()
         )
     }
-
+    
     // Marketplace ViewModels
     viewModel {
         MarketplaceViewModel(
@@ -1922,7 +1925,7 @@ val viewModelModule = module {
             fragranceRepository = get()
         )
     }
-
+    
     viewModel { parameters ->
         ListingDetailViewModel(
             listingId = parameters.get(),
@@ -1951,19 +1954,19 @@ interface NoParamsUseCase<out R> {
 class SearchFragrancesUseCase(
     private val fragranceRepository: FragranceRepository
 ) : UseCase<SearchFragrancesUseCase.Params, List<Fragrance>> {
-
+    
     data class Params(
         val query: String,
         val page: Int = 0,
         val limit: Int = 20
     )
-
+    
     override suspend fun invoke(params: Params): Result<List<Fragrance>> {
         // Validate input
         if (params.query.isBlank()) {
             return AppError.ValidationError.RequiredFieldEmpty("Search query").asLeft()
         }
-
+        
         // Call repository
         return fragranceRepository.searchFragrances(
             query = params.query,
@@ -1977,7 +1980,7 @@ class SearchFragrancesUseCase(
 class SearchViewModel(
     private val searchFragrancesUseCase: SearchFragrancesUseCase
 ) : BaseViewModel() {
-
+    
     fun search(query: String) {
         viewModelScope.launch {
             searchFragrancesUseCase(
@@ -2020,12 +2023,12 @@ class HomeViewModel : BaseViewModel() {
 ```kotlin
 // android/src/test/kotlin/di/TestModule.kt
 val testModule = module {
-
+    
     // Mock repositories
     single<FragranceRepository> { FakeFragranceRepository() }
     single<PostRepository> { FakePostRepository() }
     single<AuthRepository> { FakeAuthRepository() }
-
+    
     // Real use cases (testing business logic)
     factory { SearchFragrancesUseCase(fragranceRepository = get()) }
     factory { CreatePostUseCase(postRepository = get()) }
@@ -2035,10 +2038,10 @@ val testModule = module {
 #### Unit Test with Koin
 ```kotlin
 class SearchFragrancesUseCaseTest : KoinTest {
-
+    
     private lateinit var searchUseCase: SearchFragrancesUseCase
     private lateinit var fakeRepository: FakeFragranceRepository
-
+    
     @Before
     fun setup() {
         startKoin {
@@ -2047,12 +2050,12 @@ class SearchFragrancesUseCaseTest : KoinTest {
         searchUseCase = get()
         fakeRepository = get<FragranceRepository>() as FakeFragranceRepository
     }
-
+    
     @After
     fun tearDown() {
         stopKoin()
     }
-
+    
     @Test
     fun `search returns fragrances when query is valid`() = runTest {
         // Given
@@ -2060,24 +2063,24 @@ class SearchFragrancesUseCaseTest : KoinTest {
             Fragrance(id = "1", name = "Test", brand = "Brand")
         )
         fakeRepository.setFragrances(expectedFragrances)
-
+        
         // When
         val result = searchUseCase(
             SearchFragrancesUseCase.Params(query = "Test")
         )
-
+        
         // Then
         assertTrue(result.isRight)
         assertEquals(expectedFragrances, result.getOrNull())
     }
-
+    
     @Test
     fun `search returns validation error when query is empty`() = runTest {
         // When
         val result = searchUseCase(
             SearchFragrancesUseCase.Params(query = "")
         )
-
+        
         // Then
         assertTrue(result.isLeft)
         assertTrue(result.leftOrNull() is AppError.ValidationError.RequiredFieldEmpty)
@@ -2088,22 +2091,22 @@ class SearchFragrancesUseCaseTest : KoinTest {
 #### ViewModel Test without Koin
 ```kotlin
 class HomeViewModelTest {
-
+    
     private lateinit var viewModel: HomeViewModel
     private lateinit var fakeGetFeedUseCase: FakeGetFeedUseCase
     private lateinit var fakeFragranceRepository: FakeFragranceRepository
-
+    
     @Before
     fun setup() {
         fakeGetFeedUseCase = FakeGetFeedUseCase()
         fakeFragranceRepository = FakeFragranceRepository()
-
+        
         viewModel = HomeViewModel(
             getFeedUseCase = fakeGetFeedUseCase,
             fragranceRepository = fakeFragranceRepository
         )
     }
-
+    
     @Test
     fun `loadFeed updates state to Success when use case succeeds`() = runTest {
         // Given
@@ -2111,26 +2114,26 @@ class HomeViewModelTest {
             Post(id = "1", userId = "user1", contentFormat = ContentFormat.TEXT)
         )
         fakeGetFeedUseCase.setResult(expectedPosts.asRight())
-
+        
         // When
         viewModel.loadFeed()
-
+        
         // Then
         advanceUntilIdle()
         val state = viewModel.uiState.value
         assertTrue(state is UiState.Success)
         assertEquals(expectedPosts, (state as UiState.Success).data.posts)
     }
-
+    
     @Test
     fun `loadFeed updates state to Error when use case fails`() = runTest {
         // Given
         val error = AppError.NetworkError.NoConnection()
         fakeGetFeedUseCase.setResult(error.asLeft())
-
+        
         // When
         viewModel.loadFeed()
-
+        
         // Then
         advanceUntilIdle()
         val state = viewModel.uiState.value
@@ -2153,10 +2156,10 @@ fun `descriptive test name in backticks describing behavior`() = runTest {
     val input = "test input"
     val expectedOutput = "expected result"
     repository.setupTestData()
-
+    
     // Act (When)
     val result = systemUnderTest.performAction(input)
-
+    
     // Assert (Then)
     assertEquals(expectedOutput, result)
     verify(mockDependency).wasCalledWith(input)
@@ -2185,20 +2188,20 @@ fun `descriptive test name in backticks describing behavior`() = runTest {
 ```kotlin
 // android/src/test/kotlin/fakes/FakeFragranceRepository.kt
 class FakeFragranceRepository : FragranceRepository {
-
+    
     private var fragrances = mutableListOf<Fragrance>()
     private var shouldReturnError = false
     private var errorToReturn: AppError? = null
-
+    
     fun setFragrances(fragrances: List<Fragrance>) {
         this.fragrances = fragrances.toMutableList()
     }
-
+    
     fun setError(error: AppError) {
         shouldReturnError = true
         errorToReturn = error
     }
-
+    
     override suspend fun searchFragrances(
         query: String,
         page: Int,
@@ -2207,22 +2210,22 @@ class FakeFragranceRepository : FragranceRepository {
         if (shouldReturnError) {
             return (errorToReturn ?: AppError.Unknown()).asLeft()
         }
-
+        
         val results = fragrances.filter { fragrance ->
             fragrance.name.contains(query, ignoreCase = true) ||
             fragrance.brand.contains(query, ignoreCase = true)
         }
-
+        
         return results.asRight()
     }
-
+    
     override suspend fun getFragranceById(id: String): Result<Fragrance> {
         if (shouldReturnError) {
             return (errorToReturn ?: AppError.Unknown()).asLeft()
         }
-
+        
         val fragrance = fragrances.find { it.id == id }
-        return fragrance?.asRight()
+        return fragrance?.asRight() 
             ?: AppError.ContentError.FragranceNotFound(id).asLeft()
     }
 }
@@ -2235,22 +2238,22 @@ class FakeFragranceRepository : FragranceRepository {
 // testImplementation("app.cash.turbine:turbine:1.0.0")
 
 class HomeViewModelTest {
-
+    
     @Test
     fun `uiState emits Loading then Success when loadFeed succeeds`() = runTest {
         // Given
         val posts = listOf(Post(id = "1"))
         fakeGetFeedUseCase.setResult(posts.asRight())
         val viewModel = HomeViewModel(fakeGetFeedUseCase, fakeFragranceRepository)
-
+        
         // When/Then
         viewModel.uiState.test {
             assertEquals(UiState.Idle, awaitItem())
-
+            
             viewModel.loadFeed()
-
+            
             assertEquals(UiState.Loading, awaitItem())
-
+            
             val successState = awaitItem()
             assertTrue(successState is UiState.Success)
             assertEquals(posts, (successState as UiState.Success).data.posts)
@@ -2274,10 +2277,10 @@ fun `async operation completes successfully`() = runTest {
 @Test
 fun `operation with delay works correctly`() = runTest {
     val startTime = currentTime
-
+    
     viewModel.performDelayedAction()
     advanceTimeBy(5000) // Fast-forward time
-
+    
     val endTime = currentTime
     assertEquals(5000, endTime - startTime)
 }
@@ -2287,22 +2290,22 @@ fun `operation with delay works correctly`() = runTest {
 
 ```kotlin
 class PostRepositoryTest {
-
+    
     @Test
     fun `createPost returns NetworkError when network unavailable`() = runTest {
         // Given
         fakeApiClient.simulateNoConnection()
-
+        
         // When
         val result = repository.createPost(createPostRequest)
-
+        
         // Then
         assertTrue(result.isLeft)
         val error = result.leftOrNull()
         assertTrue(error is AppError.NetworkError.NoConnection)
         assertEquals("No internet connection available", error?.message)
     }
-
+    
     @Test
     fun `createPost returns ValidationError when post has no fragrances`() = runTest {
         // Given
@@ -2310,10 +2313,10 @@ class PostRepositoryTest {
             contentFormat = ContentFormat.TEXT,
             fragranceIds = emptyList() // Invalid!
         )
-
+        
         // When
         val result = repository.createPost(invalidPost)
-
+        
         // Then
         assertTrue(result.isLeft)
         assertTrue(result.leftOrNull() is AppError.ValidationError)
@@ -2329,20 +2332,22 @@ class PostRepositoryTest {
 - ✅ All ViewModels: 80%+
 - ✅ Validation Logic: 100%
 - ✅ Error Mapping: 100%
-  **Focus on:**
+
+**Focus on:**
 - ✅ Happy path (success scenarios)
 - ✅ Error paths (network errors, validation errors)
 - ✅ Edge cases (empty lists, null values)
 - ✅ Boundary conditions (max/min values)
+
 ### 8. Integration Tests
 
 ```kotlin
 @RunWith(AndroidJUnit4::class)
 class FragranceDatabaseTest {
-
+    
     private lateinit var database: FragranceDatabase
     private lateinit var dao: UserFragranceDao
-
+    
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -2352,12 +2357,12 @@ class FragranceDatabaseTest {
         ).build()
         dao = database.userFragranceDao()
     }
-
+    
     @After
     fun tearDown() {
         database.close()
     }
-
+    
     @Test
     fun insertAndRetrieveFragrance() = runTest {
         // Given
@@ -2366,11 +2371,11 @@ class FragranceDatabaseTest {
             name = "Test Fragrance",
             brand = "Test Brand"
         )
-
+        
         // When
         dao.insertUserFragrance(fragrance)
         val retrieved = dao.getAllUserFragrances().first()
-
+        
         // Then
         assertEquals(1, retrieved.size)
         assertEquals("Test Fragrance", retrieved[0].name)
@@ -2383,26 +2388,26 @@ class FragranceDatabaseTest {
 ```kotlin
 // For complex scenarios where fakes aren't sufficient
 class ComplexViewModelTest {
-
+    
     private val mockRepository = mockk<FragranceRepository>()
     private lateinit var viewModel: SearchViewModel
-
+    
     @Before
     fun setup() {
         viewModel = SearchViewModel(mockRepository)
     }
-
+    
     @Test
     fun `search calls repository with correct parameters`() = runTest {
         // Given
         val query = "test query"
-        coEvery {
-            mockRepository.searchFragrances(query, any(), any())
+        coEvery { 
+            mockRepository.searchFragrances(query, any(), any()) 
         } returns emptyList<Fragrance>().asRight()
-
+        
         // When
         viewModel.search(query)
-
+        
         // Then
         coVerify { mockRepository.searchFragrances(query, 0, 20) }
     }
@@ -2446,6 +2451,7 @@ app/src/
 - ✅ Use `runTest` for coroutine tests
 - ✅ Make tests deterministic and repeatable
 - ✅ Keep tests independent (no shared state)
+
 ### ❌ DON'T
 - ❌ Don't test Android framework code
 - ❌ Don't test third-party libraries
@@ -2454,7 +2460,37 @@ app/src/
 - ❌ Don't test implementation details
 - ❌ Don't write tests that depend on execution order
 - ❌ Don't ignore failing tests
+
 ---
+
+## Accessibility (Compose Semantics)
+
+**CRITICAL**: All interactive and meaningful UI elements MUST expose correct Compose semantics so TalkBack and other accessibility services can announce and operate them correctly. Don't hand-write `Modifier.semantics { ... }` blocks inline in screen code — use the shared accessibility Modifier extensions in `ui/accessibility/AccessibilityModifiers.kt` (`accessibleLabel`, `accessibleClickable`, `accessibleCombinedClickable`, `mergedGroup`, `accessibleToggle`, `clearedDescription`, `withCustomActions`, `collectionContainer`/`collectionItem`, `accessibleHeading`, `accessiblePane`, `accessibleState`, `decorative`) so the merge-vs-clear distinction stays consistent across the codebase instead of being re-decided ad hoc on every card.
+
+### Core rule: merge vs. clear
+
+- `mergedGroup()` — for a natural group of **non-interactive** text children (e.g. a card's metadata row: username, caption, like count). Never pair it with a hand-written content description; let the real child text concatenate on its own, or the description will drift out of sync the next time a child's text changes.
+- `clearedDescription()` / `accessibleToggle()` — for a custom component whose children are purely decorative and need one hand-written, unified announcement instead (e.g. a favorite/like toggle's icon + label, or a listing card whose price/condition/name read better rewritten than concatenated).
+- Never attach `clickable`/`toggleable` to a child living inside a `mergedGroup()` block. Anything independently actionable either stays outside the merged group as its own focusable control, or gets exposed via `withCustomActions` on the parent.
+
+### Mandatory Patterns
+
+#### ✅ DO
+- ✅ Use the shared `ui/accessibility` extensions instead of ad hoc `Modifier.semantics {}`
+- ✅ Give every icon-only interactive element a content description, directly or via `accessibleLabel`/`accessibleClickable`
+- ✅ Mark purely decorative `Image`/`Icon` children with `contentDescription = null`
+- ✅ Give `LazyColumn`/`LazyRow`/grid containers `collectionContainer`/`collectionItem` semantics so position is trackable
+- ✅ Give bottom sheets and dialogs a unique `accessiblePane` title
+- ✅ Run Compose UI Check on new or changed composables before opening a PR, and Accessibility Scanner on the running screen before merging
+- ✅ Add semantics assertions (e.g. `onNodeWithContentDescription`, `stateDescription` checks) for the highest-value interactive nodes — like/follow toggle, checkout submit, quantity stepper — to the existing ViewModel/repository test suite
+
+#### ❌ DON'T
+- ❌ Don't hand-aggregate child text into a `contentDescription` on a `mergedGroup()` node — it goes stale
+- ❌ Don't reuse a generic `accessiblePane` title (`"Sheet"`, `"Details"`) across unrelated screens — TalkBack uses it as an identifier
+- ❌ Don't ship a new icon-only button without a content description
+- ❌ Don't build auto-advancing or infinite-loop carousels — treat this as a design constraint to avoid, not something to patch with accessibility semantics after the fact
+
+Full pattern-by-pattern rationale and a screen-by-screen mapping (auth, feed, marketplace, search, profile) lives in `talkback-accessibility-guidelines.md`.
 
 ## Summary
 
@@ -2466,4 +2502,5 @@ This error handling system provides:
 5. **Testable**: Easy to test error scenarios
 6. **Consistent**: Same pattern throughout the entire app
 7. **Recoverable**: Retry mechanisms for appropriate errors
-   Follow these patterns religiously for a robust, production-ready error handling system.
+
+Follow these patterns religiously for a robust, production-ready error handling system.
