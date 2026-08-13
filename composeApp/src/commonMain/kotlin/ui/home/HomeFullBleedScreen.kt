@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,6 +63,7 @@ import ui.base.UiState
 import ui.components.VideoPlayer
 import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
+import ui.navigation.mainNavTabs
 import ui.theme.DmSansFamily
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
@@ -561,21 +561,12 @@ private fun BlendedHeader(
                     color = colorScheme.primary,
                     fontFamily = PlayfairDisplayFamily,
                 )
-                Row {
-                    IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = colorScheme.primary,
-                        )
-                    }
+                IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notifications",
+                        tint = colorScheme.primary,
+                    )
                 }
             }
 
@@ -627,12 +618,7 @@ private fun BlendedBottomNav(
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
 
-    val navItems =
-        listOf(
-            Pair(Icons.Default.Person, "Home"),
-            Pair(Icons.Default.Search, "Search"),
-            Pair(Icons.Default.Person, "Profile"),
-        )
+    val navItems = mainNavTabs()
 
     Box(modifier = modifier.fillMaxWidth()) {
         // Gradient scrim
@@ -657,7 +643,7 @@ private fun BlendedBottomNav(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            navItems.forEachIndexed { index, (icon, label) ->
+            navItems.forEachIndexed { index, item ->
                 val isActive = index == navTab
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -671,17 +657,29 @@ private fun BlendedBottomNav(
                         modifier = Modifier.size(spacing.iconSizeMedium),
                     ) {
                         Icon(
-                            imageVector = icon,
-                            contentDescription = label,
+                            imageVector = item.icon,
+                            contentDescription = item.title,
                             tint = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(spacing.iconSizeMedium),
                         )
                     }
                     Text(
-                        text = label,
+                        text = item.title,
                         fontSize = 12.sp,
                         color = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
                     )
+                    // Gold active-tab pip for visual consistency
+                    if (isActive) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(top = 2.dp)
+                                    .size(width = 20.dp, height = 3.dp)
+                                    .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
+                        )
+                    } else {
+                        Box(modifier = Modifier.padding(top = 2.dp).height(3.dp))
+                    }
                 }
             }
         }
