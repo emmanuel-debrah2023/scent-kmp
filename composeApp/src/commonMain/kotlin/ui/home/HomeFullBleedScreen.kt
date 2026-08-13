@@ -64,6 +64,7 @@ import ui.base.UiState
 import ui.components.VideoPlayer
 import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
+import ui.navigation.mainNavTabs
 import ui.theme.DmSansFamily
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
@@ -627,12 +628,7 @@ private fun BlendedBottomNav(
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
 
-    val navItems =
-        listOf(
-            Pair(Icons.Default.Person, "Home"),
-            Pair(Icons.Default.Search, "Search"),
-            Pair(Icons.Default.Person, "Profile"),
-        )
+    val navItems = mainNavTabs()
 
     Box(modifier = modifier.fillMaxWidth()) {
         // Gradient scrim
@@ -657,7 +653,7 @@ private fun BlendedBottomNav(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            navItems.forEachIndexed { index, (icon, label) ->
+            navItems.forEachIndexed { index, item ->
                 val isActive = index == navTab
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -671,14 +667,14 @@ private fun BlendedBottomNav(
                         modifier = Modifier.size(spacing.iconSizeMedium),
                     ) {
                         Icon(
-                            imageVector = icon,
-                            contentDescription = label,
+                            imageVector = item.icon,
+                            contentDescription = item.title,
                             tint = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(spacing.iconSizeMedium),
                         )
                     }
                     Text(
-                        text = label,
+                        text = item.title,
                         fontSize = 12.sp,
                         color = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
                     )
