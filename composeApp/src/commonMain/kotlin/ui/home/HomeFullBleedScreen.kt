@@ -1,24 +1,17 @@
 package ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -28,7 +21,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.ModeComment
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
@@ -44,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,10 +51,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import ui.base.UiState
+import ui.components.BlendedBottomNav
+import ui.components.BlendedHeader
 import ui.components.VideoPlayer
 import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
-import ui.navigation.mainNavTabs
 import ui.theme.DmSansFamily
 import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
@@ -187,7 +179,8 @@ fun HomeFullBleedScreen(
 
         BlendedHeader(
             listState = listState,
-            topTab = topTab,
+            selectedTab = topTab,
+            tabs = listOf("Fragrances", "Community"),
             onTabSelected = {
                 topTab = it
                 onTopTabSelected(it)
@@ -196,8 +189,8 @@ fun HomeFullBleedScreen(
         )
 
         BlendedBottomNav(
-            navTab = navTab,
-            onNavSelected = {
+            selectedTab = navTab,
+            onTabSelected = {
                 navTab = it
                 if (it != 0) onNavTabSelected(it)
             },
@@ -486,199 +479,6 @@ private fun StarRow(
                 tint = if (index < rating) ScentThemeExtras.accent else colorScheme.outline,
                 modifier = Modifier.size(spacing.iconSizeSmall),
             )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
-// Blended header overlay
-// ─────────────────────────────────────────────
-
-@Composable
-private fun BlendedHeader(
-    listState: LazyListState,
-    topTab: Int,
-    onTabSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val spacing = ScentThemeExtras.spacing
-
-    val scrimAlpha by remember {
-        derivedStateOf {
-            if (listState.firstVisibleItemIndex > 0) {
-                1f
-            } else {
-                (listState.firstVisibleItemScrollOffset / 400f).coerceIn(0f, 1f)
-            }
-        }
-    }
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Gradient scrim layer
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                colorScheme.background,
-                                colorScheme.background.copy(alpha = 0.88f),
-                                Color.Transparent,
-                            ),
-                        ),
-                    ),
-        )
-        // Solid scrim layer (fades in on scroll)
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(colorScheme.background.copy(alpha = scrimAlpha)),
-        )
-
-        // Header content
-        Column(
-            modifier =
-                Modifier
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 20.dp),
-        ) {
-            // Brand row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "scent",
-                    style = ScentThemeExtras.wordmark,
-                    color = colorScheme.primary,
-                )
-                IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = colorScheme.primary,
-                    )
-                }
-            }
-
-            // Tabs
-            Row(
-                modifier = Modifier.padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
-                listOf("Fragrances", "Community").forEachIndexed { index, label ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { onTabSelected(index) },
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 18.sp,
-                            fontWeight = if (index == topTab) FontWeight.Bold else FontWeight.Normal,
-                            color = if (index == topTab) colorScheme.primary else colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = spacing.xxs),
-                        )
-                        if (index == topTab) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .width(40.dp)
-                                        .height(3.dp)
-                                        .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
-                            )
-                        } else {
-                            Box(modifier = Modifier.height(3.dp))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
-// Blended bottom nav overlay
-// ─────────────────────────────────────────────
-
-@Composable
-private fun BlendedBottomNav(
-    navTab: Int,
-    onNavSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val spacing = ScentThemeExtras.spacing
-
-    val navItems = mainNavTabs()
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Gradient scrim
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, colorScheme.background, colorScheme.background),
-                        ),
-                    ),
-        )
-
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(vertical = spacing.xs),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            navItems.forEachIndexed { index, item ->
-                val isActive = index == navTab
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .padding(vertical = spacing.xxs),
-                ) {
-                    IconButton(
-                        onClick = { onNavSelected(index) },
-                        modifier = Modifier.size(spacing.iconSizeMedium),
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.title,
-                            tint = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(spacing.iconSizeMedium),
-                        )
-                    }
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
-                    )
-                    // Gold active-tab pip for visual consistency
-                    if (isActive) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .padding(top = 2.dp)
-                                    .size(width = 20.dp, height = 3.dp)
-                                    .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
-                        )
-                    } else {
-                        Box(modifier = Modifier.padding(top = 2.dp).height(3.dp))
-                    }
-                }
-            }
         }
     }
 }

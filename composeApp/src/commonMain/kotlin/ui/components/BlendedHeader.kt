@@ -1,0 +1,172 @@
+package ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import ui.theme.ScentTheme
+import ui.theme.ScentThemeExtras
+
+/**
+ * Full-bleed overlay header with a scroll-reactive scrim, brand wordmark,
+ * notifications action, and a tab row with gold active underlines.
+ *
+ * @param listState       Used to derive scrim opacity as the list scrolls.
+ * @param selectedTab     Index of the currently selected tab.
+ * @param tabs            Labels for each tab (e.g. ["Fragrances", "Community"]).
+ * @param onTabSelected   Called with the tapped tab index.
+ * @param onNotificationsClick Forwarded to the notifications icon button.
+ */
+@Composable
+fun BlendedHeader(
+    listState: LazyListState,
+    selectedTab: Int,
+    tabs: List<String>,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    onNotificationsClick: () -> Unit = {},
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val spacing = ScentThemeExtras.spacing
+
+    val scrimAlpha by remember {
+        derivedStateOf {
+            if (listState.firstVisibleItemIndex > 0) {
+                1f
+            } else {
+                (listState.firstVisibleItemScrollOffset / 400f).coerceIn(0f, 1f)
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        // Gradient scrim layer
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                colorScheme.background,
+                                colorScheme.background.copy(alpha = 0.88f),
+                                Color.Transparent,
+                            ),
+                        ),
+                    ),
+        )
+        // Solid scrim layer (fades in on scroll)
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(colorScheme.background.copy(alpha = scrimAlpha)),
+        )
+
+        // Header content
+        Column(
+            modifier =
+                Modifier
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 20.dp),
+        ) {
+            // Brand row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "scent",
+                    style = ScentThemeExtras.wordmark,
+                    color = colorScheme.primary,
+                )
+                IconButton(onClick = onNotificationsClick, modifier = Modifier.size(spacing.xxl)) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notifications",
+                        tint = colorScheme.primary,
+                    )
+                }
+            }
+
+            // Tab row
+            Row(
+                modifier = Modifier.padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+            ) {
+                tabs.forEachIndexed { index, label ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { onTabSelected(index) },
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 18.sp,
+                            fontWeight = if (index == selectedTab) FontWeight.Bold else FontWeight.Normal,
+                            color = if (index == selectedTab) colorScheme.primary else colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = spacing.xxs),
+                        )
+                        if (index == selectedTab) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .width(40.dp)
+                                        .height(3.dp)
+                                        .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
+                            )
+                        } else {
+                            Box(modifier = Modifier.height(3.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=412dp,height=300dp")
+@Composable
+private fun BlendedHeaderPreview() {
+    ScentTheme {
+        BlendedHeader(
+            listState = rememberLazyListState(),
+            selectedTab = 0,
+            tabs = listOf("Fragrances", "Community"),
+            onTabSelected = {},
+        )
+    }
+}
