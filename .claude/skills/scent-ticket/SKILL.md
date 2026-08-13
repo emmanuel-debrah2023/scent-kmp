@@ -34,12 +34,12 @@ Full schema detail lives in `references/schema.md` — read it if you need exact
 
 1. For each item to log, work out: a short **Task name**, a one-to-two sentence **Description** giving enough context that it's actionable without the original conversation, and best-guess **Priority** / **Task type** / **Effort level**. Don't leave these blank just because the user didn't specify — infer sensible defaults from context (e.g. a security/data-integrity fix from a code review is `High` priority; a "nice to have" is `Low`).
 2. `Task type` is a multi-select with a fixed vocabulary. Map freely:
-    - New capability the app doesn't have yet → `💬 Feature request`
-    - Something broken or incorrect → `🐞 Bug`
-    - Visual/UX refinement, small polish pass on existing UI → `💅 Polish`
-    - README, architecture docs, runbooks, comments-as-documentation, anything whose deliverable is written explanation rather than code → `📝 Docs`
-    - Infra/tooling/config/refactor work a developer would do but a user would never notice directly — linting, static analysis, test setup, CI, dependency upgrades, splitting a god-class, extracting a shared module → `🔧 Tech Task`
-    - When something could plausibly be either Polish or Tech Task, ask: would a non-engineer notice this shipped? If no, it's Tech Task.
+   - New capability the app doesn't have yet → `💬 Feature request`
+   - Something broken or incorrect → `🐞 Bug`
+   - Visual/UX refinement, small polish pass on existing UI → `💅 Polish`
+   - README, architecture docs, runbooks, comments-as-documentation, anything whose deliverable is written explanation rather than code → `📝 Docs`
+   - Infra/tooling/config/refactor work a developer would do but a user would never notice directly — linting, static analysis, test setup, CI, dependency upgrades, splitting a god-class, extracting a shared module → `🔧 Tech Task`
+   - When something could plausibly be either Polish or Tech Task, ask: would a non-engineer notice this shipped? If no, it's Tech Task.
 3. **Write Acceptance Criteria on every ticket, no exceptions.** This is what turns a one-line task name into something checkable later — write it as a short newline-separated checklist of concrete, testable conditions, not a restatement of the description. Aim for 2-5 bullets. **Always include an ADS-STE100 compliance checkpoint** (references Scent's authoritative architecture guideline, `docs/architecture-guidelines.md`). Bad: "Works correctly." Good:
    ```
    - Video screen renders without crashing on both Android and iOS targets
@@ -49,11 +49,27 @@ Full schema detail lives in `references/schema.md` — read it if you need exact
    - ktlint and detekt pass with no new violations
    ```
    If the ticket came from an ADR action item or code-review finding, the "problem" described there usually implies the AC directly (e.g. "resolve the duplicate AuthModels.kt" → AC is "only one AuthModels.kt exists" + "server module still compiles" + "passes ADS-STE100 review"). Don't skip ADS-STE100 compliance even for small tickets — it's the contract for the codebase.
+
+   **New UI screens and components must state how accessibility is handled in the same AC — never as a follow-up ticket.** If the ticket builds or changes a Composable screen, card, button, toggle, or other UI component, add at least one concrete accessibility line using the shared `ui/accessibility` Modifier extensions (`accessibleLabel`, `accessibleClickable`, `mergedGroup`, `accessibleToggle`, `clearedDescription`, `withCustomActions`, `collectionContainer`/`collectionItem`, `accessiblePane`, `accessibleState` — see `docs/architecture-guidelines.md`'s Accessibility section for which one fits). Bad (accessibility as its own bullet with no substance): "- Accessible." Good, folded into a screen-build ticket's AC alongside the rest:
+   ```
+   - MarketplaceScreen renders a LazyColumn of ListingCards from UiState<List<Listing>>
+   - ListingCard uses clearedDescription for one clean "name, condition, price" announcement; decorative badge icons marked non-semantic
+   - LazyColumn uses collectionContainer/collectionItem semantics
+   - Complies with ADS-STE100
+   ```
+   Don't spin up a second "make X accessible" ticket for a screen or component that hasn't shipped yet — that's exactly the afterthought pattern this rule exists to avoid. A standalone accessibility ticket is only appropriate for *retrofitting* accessibility onto UI that's already built and shipped (check the repo — if the screen/component doesn't exist in `composeApp/src/commonMain/kotlin/ui` yet, fold the AC into whichever ticket builds it instead of creating a new one). If you're about to create a ticket like "M2: Wire X screen..." or "Build Y component," write the accessibility AC into it directly rather than defaulting to a separate pass.
+
+   **Any ticket touching testable logic must include a concrete unit-test AC line — not just the ADS-STE100 checkpoint.** ADS-STE100 compliance covers *how* the code is structured (Either, UiState, DI); it doesn't by itself guarantee tests exist. Applies to ViewModels, use cases, repositories, mappers, validators, and Ktor routes — anything `docs/architecture-guidelines.md`'s test-coverage bar names (ViewModels 80%+, use cases 100%, repositories 90%+, validation/error-mapping 100%). Name what's actually being tested, not a generic "add tests" bullet:
+   ```
+   - MarketplaceViewModel has tests for loading, success, and error UiState transitions (Turbine)
+   - GetListingsUseCase has a test for the empty-page and validation-failure paths
+   ```
+   Bad: "- Tests added." Good tickets say *what* behavior the tests pin down, mirroring the "state how accessibility is handled" rule above rather than a bare checkbox. Skip this line only for tickets with no testable logic at all — pure docs, config/tooling with no new code path, or copy/asset changes.
 4. **Set Feature Branch on every ticket.** Even before a branch exists, propose one following the repo's existing convention (`<type>/<kebab-case-description>`, e.g. `feature/video-screen`, `fix/auth-token-refresh`, `chore/introduce-ktlint-detekt`), derived from the Task type:
-    - `💬 Feature request` → `feature/...`
-    - `🐞 Bug` → `fix/...`
-    - `💅 Polish`, `📝 Docs`, `🔧 Tech Task` → `chore/...`
-      Once real work starts and an actual branch (or PR) exists, update this field to the real branch name or PR URL rather than leaving the proposed one stale — treat the proposed name as a placeholder the assignee should use, not a permanent record of what was actually pushed.
+   - `💬 Feature request` → `feature/...`
+   - `🐞 Bug` → `fix/...`
+   - `💅 Polish`, `📝 Docs`, `🔧 Tech Task` → `chore/...`
+   Once real work starts and an actual branch (or PR) exists, update this field to the real branch name or PR URL rather than leaving the proposed one stale — treat the proposed name as a placeholder the assignee should use, not a permanent record of what was actually pushed.
 5. Create pages via the Notion connector's page-creation tool, targeting the data source URL above. Set `Status` to `Not started` unless told otherwise. Leave `Assignee` and `Due date` unset unless the user specifies them — don't guess a person or date.
 6. When creating several tickets at once (e.g. from a list of action items), create them one at a time but batch the work — don't stop to ask about each one individually unless something is genuinely ambiguous (e.g. you can't tell if two bullet points are one ticket or two).
 7. After creating, report back a short list of what was created (task name + inferred type/priority + proposed branch) and link to the board view so the user can see them land in the right column.
