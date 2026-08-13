@@ -87,7 +87,7 @@ fun BottleItem(
         Spacer(Modifier.height(8.dp))
         Text(
             text = entry.fragrance.name,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 10.sp),
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -98,7 +98,7 @@ fun BottleItem(
         if (sizeMeta.isNotBlank()) {
             Text(
                 text = sizeMeta,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                 color = ScentThemeExtras.gray400,
                 maxLines = 1,
                 textAlign = TextAlign.Center,

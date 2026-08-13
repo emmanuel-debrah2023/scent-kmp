@@ -71,7 +71,7 @@ fun ListingCard(
                     text = listing.fragrance.brand.uppercase(),
                     style =
                         MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 8.sp,
+                            fontSize = 10.sp,
                             letterSpacing = 1.2.sp,
                             fontWeight = FontWeight.SemiBold,
                         ),
@@ -79,7 +79,7 @@ fun ListingCard(
                 )
                 Text(
                     text = listing.fragrance.name,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 16.sp),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
@@ -91,12 +91,12 @@ fun ListingCard(
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = "£${listing.price.roundToInt()}",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 19.sp),
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = if (listing.isNegotiable) "negotiable" else "firm",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                     color = ScentThemeExtras.gray400,
                 )
             }

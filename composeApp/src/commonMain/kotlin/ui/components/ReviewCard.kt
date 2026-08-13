@@ -47,14 +47,14 @@ fun ReviewCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = review.fragrance.name,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 16.sp),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
                         text = review.fragrance.brand.uppercase(),
                         style =
                             MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 8.sp,
+                                fontSize = 10.sp,
                                 letterSpacing = 1.2.sp,
                                 fontWeight = FontWeight.SemiBold,
                             ),
