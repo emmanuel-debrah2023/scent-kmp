@@ -1,0 +1,11 @@
+package org.scent.project.domain.usecase
+
+import org.scent.project.domain.model.Post
+import org.scent.project.domain.repository.ProfileRepository
+import org.scent.project.domain.util.Result
+
+open class GetUserLikesUseCase(
+    private val repository: ProfileRepository,
+) {
+    open suspend operator fun invoke(userId: Int): Result<List<Post>> = repository.getUserLikes(userId)
+}

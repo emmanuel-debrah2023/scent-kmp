@@ -33,12 +33,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -69,20 +65,18 @@ import org.koin.core.parameter.parametersOf
 import org.scent.project.domain.model.AuthUser
 import org.scent.project.domain.model.CollectionEntry
 import org.scent.project.domain.model.CollectionStatus
-import org.scent.project.domain.model.ContentFormat
 import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.Review
 import org.scent.project.domain.model.User
 import ui.base.UiState
+import ui.components.BottleItem
 import ui.components.EmptyState
+import ui.components.ListingCard
+import ui.components.PostTile
+import ui.components.ReviewCard
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
-import kotlin.math.roundToInt
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Entry point — stateful wrapper that owns the ViewModel
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ProfileScreen(
@@ -107,10 +101,6 @@ fun ProfileScreen(
         modifier = modifier,
     )
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Stateless content
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ProfileContent(
@@ -235,10 +225,6 @@ private fun ProfileLoaded(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Collapsing top bar
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun CollapsingTopBar(
     data: ProfileData,
@@ -321,10 +307,6 @@ private fun FollowPillButton(
         )
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Profile header
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ProfileHeader(
@@ -585,10 +567,6 @@ private fun OtherProfileActions(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Avatar
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun ProfileAvatar(
     displayName: String,
@@ -640,10 +618,6 @@ private fun deriveInitials(displayName: String): String {
         else -> ""
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab row
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ProfileTabRow(
@@ -708,10 +682,6 @@ private fun ProfileTabRow(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab content
-// ─────────────────────────────────────────────────────────────────────────────
-
 private fun LazyListScope.profileTabContent(
     data: ProfileData,
     selectedTab: ProfileTab,
@@ -770,64 +740,6 @@ private fun PostGridRow(
         }
         repeat(3 - posts.size) {
             Box(modifier = Modifier.weight(1f).aspectRatio(1f))
-        }
-    }
-}
-
-@Composable
-private fun PostTile(
-    post: Post,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier =
-            modifier
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        val imageUrl = post.mediaUrls.firstOrNull()
-        if (imageUrl != null) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
-        }
-        if (post.contentFormat == ContentFormat.VIDEO) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(16.dp),
-            )
-        }
-        if (post.likeCount > 0) {
-            Row(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(10.dp),
-                )
-                Text(
-                    text = post.likeCount.toString(),
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
         }
     }
 }
@@ -958,83 +870,6 @@ private fun CollectionSection(
     }
 }
 
-@Composable
-private fun BottleItem(
-    entry: CollectionEntry,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val gray400 = ScentThemeExtras.gray400
-
-    Column(
-        modifier =
-            modifier
-                .width(78.dp)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = onClick,
-                ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // Cap
-        Box(
-            modifier =
-                Modifier
-                    .size(width = 16.dp, height = 13.dp)
-                    .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                    .background(MaterialTheme.colorScheme.outline),
-        )
-        // Neck
-        Box(
-            modifier =
-                Modifier
-                    .size(width = 9.dp, height = 7.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant),
-        )
-        // Body
-        Box(
-            modifier =
-                Modifier
-                    .size(width = 56.dp, height = 76.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center,
-        ) {
-            val imageUrl = entry.fragrance.imageUrls.firstOrNull()
-            if (imageUrl != null) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = entry.fragrance.name,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        val sizeMeta = entry.bottleSizeMl?.let { "${it}ml" } ?: ""
-        if (sizeMeta.isNotBlank()) {
-            Text(
-                text = sizeMeta,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                color = gray400,
-                maxLines = 1,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-
 // Listings
 private fun LazyListScope.listingsTabContent(
     listings: List<Listing>,
@@ -1064,87 +899,6 @@ private fun LazyListScope.listingsTabContent(
         )
     }
     item { Spacer(Modifier.height(20.dp)) }
-}
-
-@Composable
-private fun ListingCard(
-    listing: Listing,
-    modifier: Modifier = Modifier,
-) {
-    val gray400 = ScentThemeExtras.gray400
-
-    androidx.compose.material3.Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        elevation =
-            androidx.compose.material3.CardDefaults
-                .cardElevation(defaultElevation = 4.dp),
-        colors =
-            androidx.compose.material3.CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-            ),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(width = 64.dp, height = 78.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            ) {
-                val imageUrl = listing.fragrance.imageUrls.firstOrNull()
-                if (imageUrl != null) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                }
-            }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = listing.fragrance.brand.uppercase(),
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 10.sp,
-                            letterSpacing = 1.2.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                    color = gray400,
-                )
-                Text(
-                    text = listing.fragrance.name,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = listing.condition,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = "£${listing.price.roundToInt()}",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 19.sp),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = if (listing.isNegotiable) "negotiable" else "firm",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                    color = gray400,
-                )
-            }
-        }
-    }
 }
 
 // Reviews
@@ -1178,77 +932,6 @@ private fun LazyListScope.reviewsTabContent(
     item { Spacer(Modifier.height(20.dp)) }
 }
 
-@Composable
-private fun ReviewCard(
-    review: Review,
-    modifier: Modifier = Modifier,
-) {
-    val gray400 = ScentThemeExtras.gray400
-    val accent = ScentThemeExtras.accent
-
-    androidx.compose.material3.Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        elevation =
-            androidx.compose.material3.CardDefaults
-                .cardElevation(defaultElevation = 4.dp),
-        colors =
-            androidx.compose.material3.CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-            ),
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = review.fragrance.name,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = review.fragrance.brand.uppercase(),
-                        style =
-                            MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 10.sp,
-                                letterSpacing = 1.2.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                        color = gray400,
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Text(
-                        text = review.rating.toString(),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-            if (review.content.isNotBlank()) {
-                Spacer(Modifier.height(9.dp))
-                Text(
-                    text = review.content,
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-    }
-}
-
 // Likes — same grid as Posts
 private fun LazyListScope.likesTabContent(likes: List<Post>) {
     if (likes.isEmpty()) {
@@ -1266,10 +949,6 @@ private fun LazyListScope.likesTabContent(likes: List<Post>) {
         PostGridRow(posts = row, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Previews
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Preview(showBackground = true)
 @Composable

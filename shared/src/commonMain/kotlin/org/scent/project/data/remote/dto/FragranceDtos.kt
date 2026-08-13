@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class FragranceResponse(
-    @SerialName("id") val id: Int? = null,
-    @SerialName("seller_id") val sellerId: Int? = null,
+    @SerialName("id") val id: Int? = null, // TODO: server-guaranteed invariant — make non-nullable
+    @SerialName("seller_id") val sellerId: Int? = null, // TODO: server-guaranteed invariant — make non-nullable
     @SerialName("name") val name: String? = null,
     @SerialName("brand") val brand: String? = null,
     @SerialName("description") val description: String? = null,
@@ -21,7 +21,7 @@ data class FragranceResponse(
     @SerialName("notes") val notes: List<FragranceNoteDto>? = null,
     @SerialName("rating") val rating: Float? = null,
     @SerialName("review_count") val reviewCount: Int? = null,
-    @SerialName("created_at") val createdAt: Long? = null,
+    @SerialName("created_at") val createdAt: Long? = null, // TODO: server-guaranteed invariant — make non-nullable
 )
 
 @Serializable

@@ -5,9 +5,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PostDto(
-    val id: String? = null,
+    val id: String? = null, // TODO: server-guaranteed invariant — make non-nullable
     @SerialName("user_id")
-    val userId: String? = null,
+    val userId: String? = null, // TODO: server-guaranteed invariant — make non-nullable
     @SerialName("content_format")
     val contentFormat: String? = null,
     @SerialName("text_content")
@@ -24,7 +24,7 @@ data class PostDto(
     @SerialName("share_count")
     val shareCount: Int? = null,
     @SerialName("created_at")
-    val createdAt: Long? = null,
+    val createdAt: Long? = null, // TODO: server-guaranteed invariant — make non-nullable
     @SerialName("listing_data")
     val listingData: List<PostListingDto>? = null,
     @SerialName("is_liked")
