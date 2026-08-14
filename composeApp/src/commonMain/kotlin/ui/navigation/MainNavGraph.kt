@@ -2,7 +2,6 @@ package ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -10,7 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.scent.project.domain.model.AuthUser
-import ui.components.AppScaffold
+import ui.components.BlendedScaffold
 import ui.home.ScentHomeHost
 import ui.profile.ProfileScreen
 
@@ -26,17 +25,15 @@ fun MainGraph(
                 onNavTabSelected = { nav.selectedTab = Tab.entries[it] },
             )
         else ->
-            AppScaffold(
+            BlendedScaffold(
                 selectedTab = nav.selectedTab.ordinal,
                 onTabSelected = { nav.selectedTab = Tab.entries[it] },
-            ) { innerPadding ->
-                Box(modifier = Modifier.padding(innerPadding)) {
-                    when (nav.selectedTab) {
-                        Tab.HOME -> Unit
-                        Tab.SEARCH -> SearchNavHost(nav.searchNav)
-                        Tab.PROFILE -> ProfileNavHost(nav.profileNav, user, onLogout)
-                        Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav)
-                    }
+            ) {
+                when (nav.selectedTab) {
+                    Tab.HOME -> Unit
+                    Tab.SEARCH -> SearchNavHost(nav.searchNav)
+                    Tab.PROFILE -> ProfileNavHost(nav.profileNav, user, onLogout)
+                    Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav)
                 }
             }
     }

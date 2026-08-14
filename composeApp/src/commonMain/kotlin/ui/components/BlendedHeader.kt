@@ -6,21 +6,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,10 +39,13 @@ import ui.theme.ScentThemeExtras
  * notifications action, and a tab row with gold active underlines.
  *
  * @param listState       Used to derive scrim opacity as the list scrolls.
- * @param selectedTab     Index of the currently selected tab.
- * @param tabs            Labels for each tab (e.g. ["Fragrances", "Community"]).
- * @param onTabSelected   Called with the tapped tab index.
- * @param onNotificationsClick Forwarded to the notifications icon button.
+ * @param selectedTab     Index of the currently selected tab. Ignored when [tabs] is empty.
+ * @param tabs            Labels for the tab row (e.g. ["Fragrances", "Community"]).
+ *                        Pass an empty list to omit the tab row entirely.
+ * @param onTabSelected   Called with the tapped tab index. Ignored when [tabs] is empty.
+ * @param actions         Icon buttons placed in the trailing end of the brand row.
+ *                        Receives [RowScope] so callers compose any combination of
+ *                        [IconButton]s without this component knowing the details.
  */
 @Composable
 fun BlendedHeader(
@@ -55,7 +54,7 @@ fun BlendedHeader(
     tabs: List<String>,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    onNotificationsClick: () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
@@ -114,42 +113,38 @@ fun BlendedHeader(
                     style = ScentThemeExtras.wordmark,
                     color = colorScheme.primary,
                 )
-                IconButton(onClick = onNotificationsClick, modifier = Modifier.size(spacing.xxl)) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = colorScheme.primary,
-                    )
-                }
+                Row(content = actions)
             }
 
-            // Tab row
-            Row(
-                modifier = Modifier.padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
-                tabs.forEachIndexed { index, label ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { onTabSelected(index) },
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 18.sp,
-                            fontWeight = if (index == selectedTab) FontWeight.Bold else FontWeight.Normal,
-                            color = if (index == selectedTab) colorScheme.primary else colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = spacing.xxs),
-                        )
-                        if (index == selectedTab) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .width(40.dp)
-                                        .height(3.dp)
-                                        .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
+            // Tab row — omitted when no tabs are supplied
+            if (tabs.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
+                ) {
+                    tabs.forEachIndexed { index, label ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.clickable { onTabSelected(index) },
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 18.sp,
+                                fontWeight = if (index == selectedTab) FontWeight.Bold else FontWeight.Normal,
+                                color = if (index == selectedTab) colorScheme.primary else colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = spacing.xxs),
                             )
-                        } else {
-                            Box(modifier = Modifier.height(3.dp))
+                            if (index == selectedTab) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .width(40.dp)
+                                            .height(3.dp)
+                                            .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
+                                )
+                            } else {
+                                Box(modifier = Modifier.height(3.dp))
+                            }
                         }
                     }
                 }

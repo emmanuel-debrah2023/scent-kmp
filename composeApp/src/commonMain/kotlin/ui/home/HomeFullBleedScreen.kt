@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.ModeComment
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
@@ -51,8 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import ui.base.UiState
-import ui.components.BlendedBottomNav
-import ui.components.BlendedHeader
+import ui.components.BlendedScaffold
 import ui.components.VideoPlayer
 import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
@@ -80,8 +80,6 @@ fun HomeFullBleedScreen(
     onTopTabSelected: (Int) -> Unit = {},
     onNavTabSelected: (Int) -> Unit = {},
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-
     val feedViewModel: FeedViewModel = koinViewModel()
     val feedUiState by feedViewModel.uiState.collectAsState()
 
@@ -92,7 +90,24 @@ fun HomeFullBleedScreen(
 
     val listState = rememberLazyListState()
 
-    Box(modifier = modifier.fillMaxSize().background(colorScheme.background)) {
+    BlendedScaffold(
+        selectedTab = navTab,
+        onTabSelected = {
+            navTab = it
+            if (it != 0) onNavTabSelected(it)
+        },
+        modifier = modifier,
+        listState = listState,
+        headerTabs = listOf("Fragrances", "Community"),
+        selectedHeaderTab = topTab,
+        onHeaderTabSelected = {
+            topTab = it
+            onTopTabSelected(it)
+        },
+        actions = {
+            NotificationsAction(tint = MaterialTheme.colorScheme.primary)
+        },
+    ) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -176,25 +191,21 @@ fun HomeFullBleedScreen(
 
             item { Spacer(Modifier.height(150.dp)) }
         }
+    }
+}
 
-        BlendedHeader(
-            listState = listState,
-            selectedTab = topTab,
-            tabs = listOf("Fragrances", "Community"),
-            onTabSelected = {
-                topTab = it
-                onTopTabSelected(it)
-            },
-            modifier = Modifier.align(Alignment.TopStart),
-        )
+// ─────────────────────────────────────────────
+// Header action composables
+// ─────────────────────────────────────────────
 
-        BlendedBottomNav(
-            selectedTab = navTab,
-            onTabSelected = {
-                navTab = it
-                if (it != 0) onNavTabSelected(it)
-            },
-            modifier = Modifier.align(Alignment.BottomStart),
+@Composable
+private fun NotificationsAction(tint: androidx.compose.ui.graphics.Color) {
+    val spacing = ScentThemeExtras.spacing
+    IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
+        Icon(
+            imageVector = Icons.Default.Notifications,
+            contentDescription = "Notifications",
+            tint = tint,
         )
     }
 }
