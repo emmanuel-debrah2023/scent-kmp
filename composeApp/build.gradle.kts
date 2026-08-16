@@ -9,6 +9,15 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
 }
 
+// hotswan-compiler instruments every function it can reach — including shared's
+// classes — with a runtime interpreter shim that only bootstraps on a live
+// device/JVMTI agent. Applying it unconditionally breaks `allTests` on a bare
+// JVM. Opt in via -PhotswanEnabled=true (or ORG_GRADLE_PROJECT_hotswanEnabled),
+// which the HotSwan IDE plugin sets automatically for its own build/install runs.
+if (project.hasProperty("hotswanEnabled")) {
+    apply(plugin = "com.github.skydoves.compose.hotswan.compiler")
+}
+
 val projectProperties =
     Properties().apply {
         val envFile = rootProject.file(".env")

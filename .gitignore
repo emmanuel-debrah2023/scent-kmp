@@ -36,5 +36,12 @@ api_keys.properties
 .claude/.scent-gates.pre-compact.json
 # Notion workspace identifiers (share via secure channel, not git)
 .claude/.scent-notion.env
+# HotSwan MCP config — machine-specific (absolute plugin jar path per IDE install)
+.mcp.json
 # Skill backups created during bundle installs
 .claude/.backup/
+.hotswan/
+# HotSwan screenshot/snapshot captures — local only
+snapshots/
+# Working notes for a paused ticket — not part of this branch
+docs/inset-audit.md

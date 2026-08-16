@@ -38,6 +38,7 @@ kotlinx-coroutines = "1.8.1"
 androidx-media3 = "1.7.1"
 datastore = "1.1.1"
 h2 = "2.2.224"
+hotswan = "2.0.0-beta04"
 
 [libraries]
 # Kotlin
@@ -135,3 +136,4 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-plugin" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+hotswan-compiler = { id = "com.github.skydoves.compose.hotswan.compiler", version.ref = "hotswan" }
