@@ -70,6 +70,37 @@ To seed the local feed with sample posts (requires `STREAM_PROVIDER=fake`):
 curl -X POST "http://localhost:8080/api/v1/dev/seed-feed?count=10"
 ```
 
+### HotSwan hot reload (Compose UI iteration)
+
+Compose HotSwan gives AI-driven hot reload on a running device — structural
+Compose changes land in under a second, no app restart.
+
+- **Gradle plugin** — `2.0.0-beta04`, declared in `libs.versions.toml` as
+  `hotswan-compiler`. Applied in `composeApp/build.gradle.kts` **only when the
+  `hotswanEnabled` project property is set** — the plugin instruments every
+  function it can reach (including `shared`'s classes) with a runtime
+  interpreter shim that requires a live device/JVMTI agent to bootstrap, so
+  applying it unconditionally breaks `allTests` on a bare JVM. In the HotSwan
+  IDE plugin's settings, add an environment variable
+  `ORG_GRADLE_PROJECT_hotswanEnabled=true` for its build/install invocations —
+  Gradle maps `ORG_GRADLE_PROJECT_<name>` env vars to project properties
+  automatically, so the plugin activates for HotSwan's own builds but stays off
+  for `./gradlew ktlintCheck detekt allTests`.
+- **IDE plugin** — install the matching `2.0.0-beta04` build from the beta
+  channel at [hotswan.dev/install](https://hotswan.dev/install) (not in the
+  default Marketplace search). Gradle and IDE plugin versions must match.
+- **MCP config** — in Android Studio, go to
+  **Settings → Tools → Compose HotSwan → Copy MCP Config to Clipboard**, then
+  paste it into `.mcp.json` at the repo root. This file is gitignored — it
+  embeds an absolute path to your local plugin install, so each contributor
+  generates their own. Set the **App Module** to `composeApp` (not the default
+  `:app`) and add the `ORG_GRADLE_PROJECT_hotswanEnabled=true` environment
+  variable in the same settings panel.
+- **Starting a session** — run the app on a device/emulator, then in Claude
+  Code call `hotswan_get_status` to confirm connection and `hotswan_start` to
+  begin watching. See the HotSwan workflow section in `.claude/CLAUDE.md` for
+  the edit → reload → screenshot loop.
+
 ## Architecture
 
 Scent follows a clean, layered architecture documented in `docs/architecture-guidelines.md`.
