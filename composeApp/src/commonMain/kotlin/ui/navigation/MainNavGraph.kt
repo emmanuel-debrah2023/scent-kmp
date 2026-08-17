@@ -10,7 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.scent.project.domain.model.AuthUser
-import ui.components.AppScaffold
+import ui.components.BlendedScaffold
 import ui.home.ScentHomeHost
 import ui.profile.ProfileScreen
 
@@ -26,7 +26,7 @@ fun MainGraph(
                 onNavTabSelected = { nav.selectedTab = Tab.entries[it] },
             )
         else ->
-            AppScaffold(
+            BlendedScaffold(
                 selectedTab = nav.selectedTab.ordinal,
                 onTabSelected = { nav.selectedTab = Tab.entries[it] },
             ) { innerPadding ->

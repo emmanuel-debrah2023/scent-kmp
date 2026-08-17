@@ -7,6 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
 private val ScentLightColorScheme =
     lightColorScheme(
@@ -76,10 +79,19 @@ fun ScentTheme(
     @Suppress("UNUSED_VARIABLE")
     val colorScheme = ScentLightColorScheme
 
+    val wordmarkStyle =
+        TextStyle(
+            fontFamily = PlayfairDisplayFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 27.sp,
+            letterSpacing = (-1).sp,
+        )
+
     CompositionLocalProvider(
         LocalScentSpacing provides ScentSpacing(),
         LocalScentElevation provides ScentElevation(),
         LocalScentMotion provides ScentMotion(),
+        LocalScentWordmark provides wordmarkStyle,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -116,4 +128,12 @@ object ScentThemeExtras {
 
     // Neutral grey for inactive labels and faint metadata.
     val gray400: Color get() = ScentGray400
+
+    // Brand wordmark — Playfair Display Bold 27sp, −1sp tracking.
+    // Use for the "scent" logotype in TopAppBar and BlendedHeader.
+    // Colour is always colorScheme.primary — callers set it via the Text color param.
+    val wordmark: TextStyle
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalScentWordmark.current
 }

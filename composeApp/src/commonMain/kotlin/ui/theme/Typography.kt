@@ -2,6 +2,7 @@ package ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -10,6 +11,11 @@ import org.jetbrains.compose.resources.Font
 import scent.composeapp.generated.resources.Res
 import scent.composeapp.generated.resources.dm_sans
 import scent.composeapp.generated.resources.playfair_display
+
+// Brand wordmark token — Playfair Display Bold 27sp, −1sp tracking.
+// Provided by ScentTheme; read via ScentThemeExtras.wordmark.
+// Colour is always colorScheme.primary — callers set it via the Text color param.
+val LocalScentWordmark = staticCompositionLocalOf { TextStyle.Default }
 
 val PlayfairDisplayFamily: FontFamily
     @Composable get() =

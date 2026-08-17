@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import ui.theme.ScentThemeExtras
 
 @Composable
 fun TopAppBar(
@@ -45,8 +46,8 @@ fun TopAppBar(
     ) {
         Text(
             text = "scent",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
+            style = ScentThemeExtras.wordmark,
+            color = MaterialTheme.colorScheme.primary,
         )
 
         Row(

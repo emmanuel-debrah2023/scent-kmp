@@ -1,24 +1,18 @@
 package ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -31,7 +25,6 @@ import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import ui.base.UiState
+import ui.components.BlendedScaffold
 import ui.components.VideoPlayer
 import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
@@ -88,8 +81,6 @@ fun HomeFullBleedScreen(
     onTopTabSelected: (Int) -> Unit = {},
     onNavTabSelected: (Int) -> Unit = {},
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-
     val feedViewModel: FeedViewModel = koinViewModel()
     val feedUiState by feedViewModel.uiState.collectAsState()
 
@@ -100,10 +91,37 @@ fun HomeFullBleedScreen(
 
     val listState = rememberLazyListState()
 
-    Box(modifier = modifier.fillMaxSize().background(colorScheme.background)) {
+    // Fragrances and Community render entirely different item sets in the same
+    // LazyColumn; without this, switching tabs keeps the old scroll position and
+    // the new list opens mid-scroll, hidden behind the header.
+    LaunchedEffect(topTab) { listState.scrollToItem(0) }
+
+    BlendedScaffold(
+        selectedTab = navTab,
+        onTabSelected = {
+            navTab = it
+            if (it != 0) onNavTabSelected(it)
+        },
+        modifier = modifier,
+        listState = listState,
+        headerTabs = listOf("Fragrances", "Community"),
+        selectedHeaderTab = topTab,
+        onHeaderTabSelected = {
+            topTab = it
+            onTopTabSelected(it)
+        },
+        actions = {
+            NotificationsAction(tint = MaterialTheme.colorScheme.primary)
+        },
+    ) { innerPadding ->
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
+            // Fragrances is intentionally full-bleed — HeroItem is tall enough to
+            // clear the header on its own. Community has no hero, so its first
+            // item needs the header's real clearance or it renders underneath it.
+            contentPadding =
+                if (topTab == 1) PaddingValues(top = innerPadding.calculateTopPadding()) else PaddingValues(0.dp),
         ) {
             if (topTab == 0) {
                 item { HeroItem(onOpenVideo = { onOpenVideo("") }) }
@@ -184,24 +202,21 @@ fun HomeFullBleedScreen(
 
             item { Spacer(Modifier.height(150.dp)) }
         }
+    }
+}
 
-        BlendedHeader(
-            listState = listState,
-            topTab = topTab,
-            onTabSelected = {
-                topTab = it
-                onTopTabSelected(it)
-            },
-            modifier = Modifier.align(Alignment.TopStart),
-        )
+// ─────────────────────────────────────────────
+// Header action composables
+// ─────────────────────────────────────────────
 
-        BlendedBottomNav(
-            navTab = navTab,
-            onNavSelected = {
-                navTab = it
-                if (it != 0) onNavTabSelected(it)
-            },
-            modifier = Modifier.align(Alignment.BottomStart),
+@Composable
+private fun NotificationsAction(tint: androidx.compose.ui.graphics.Color) {
+    val spacing = ScentThemeExtras.spacing
+    IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
+        Icon(
+            imageVector = Icons.Default.Notifications,
+            contentDescription = "Notifications",
+            tint = tint,
         )
     }
 }
@@ -486,204 +501,6 @@ private fun StarRow(
                 tint = if (index < rating) ScentThemeExtras.accent else colorScheme.outline,
                 modifier = Modifier.size(spacing.iconSizeSmall),
             )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
-// Blended header overlay
-// ─────────────────────────────────────────────
-
-@Composable
-private fun BlendedHeader(
-    listState: LazyListState,
-    topTab: Int,
-    onTabSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val spacing = ScentThemeExtras.spacing
-
-    val scrimAlpha by remember {
-        derivedStateOf {
-            if (listState.firstVisibleItemIndex > 0) {
-                1f
-            } else {
-                (listState.firstVisibleItemScrollOffset / 400f).coerceIn(0f, 1f)
-            }
-        }
-    }
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Gradient scrim layer
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                colorScheme.background,
-                                colorScheme.background.copy(alpha = 0.88f),
-                                Color.Transparent,
-                            ),
-                        ),
-                    ),
-        )
-        // Solid scrim layer (fades in on scroll)
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(colorScheme.background.copy(alpha = scrimAlpha)),
-        )
-
-        // Header content
-        Column(
-            modifier =
-                Modifier
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 20.dp),
-        ) {
-            // Brand row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "scent",
-                    fontSize = 27.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp,
-                    color = colorScheme.primary,
-                    fontFamily = PlayfairDisplayFamily,
-                )
-                Row {
-                    IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = colorScheme.primary,
-                        )
-                    }
-                }
-            }
-
-            // Tabs
-            Row(
-                modifier = Modifier.padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
-                listOf("Fragrances", "Community").forEachIndexed { index, label ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { onTabSelected(index) },
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 18.sp,
-                            fontWeight = if (index == topTab) FontWeight.Bold else FontWeight.Normal,
-                            color = if (index == topTab) colorScheme.primary else colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = spacing.xxs),
-                        )
-                        if (index == topTab) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .width(40.dp)
-                                        .height(3.dp)
-                                        .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
-                            )
-                        } else {
-                            Box(modifier = Modifier.height(3.dp))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
-// Blended bottom nav overlay
-// ─────────────────────────────────────────────
-
-@Composable
-private fun BlendedBottomNav(
-    navTab: Int,
-    onNavSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val spacing = ScentThemeExtras.spacing
-
-    val navItems =
-        listOf(
-            Pair(Icons.Default.Person, "Home"),
-            Pair(Icons.Default.Search, "Search"),
-            Pair(Icons.Default.Person, "Profile"),
-        )
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Gradient scrim
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, colorScheme.background, colorScheme.background),
-                        ),
-                    ),
-        )
-
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(vertical = spacing.xs),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            navItems.forEachIndexed { index, (icon, label) ->
-                val isActive = index == navTab
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .padding(vertical = spacing.xxs),
-                ) {
-                    IconButton(
-                        onClick = { onNavSelected(index) },
-                        modifier = Modifier.size(spacing.iconSizeMedium),
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(spacing.iconSizeMedium),
-                        )
-                    }
-                    Text(
-                        text = label,
-                        fontSize = 12.sp,
-                        color = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
         }
     }
 }
