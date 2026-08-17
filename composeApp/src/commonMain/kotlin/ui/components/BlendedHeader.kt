@@ -112,11 +112,16 @@ fun BlendedHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "scent",
-                    style = ScentThemeExtras.wordmark,
-                    color = colorScheme.primary,
-                )
+                Box(
+                    modifier = Modifier.height(spacing.xxl),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = "scent",
+                        style = ScentThemeExtras.wordmark,
+                        color = colorScheme.primary,
+                    )
+                }
                 Row(content = actions)
             }
 
