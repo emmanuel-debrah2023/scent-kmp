@@ -18,6 +18,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT" || exit 1
 STATE=".claude/.scent-gates.json"
 mkdir -p .claude
+[ -f "$STATE" ] || echo '{}' > "$STATE"
 
 py() { command -v python3 >/dev/null && python3 "$@"; }
 
