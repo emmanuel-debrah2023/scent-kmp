@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -90,6 +91,11 @@ fun HomeFullBleedScreen(
 
     val listState = rememberLazyListState()
 
+    // Fragrances and Community render entirely different item sets in the same
+    // LazyColumn; without this, switching tabs keeps the old scroll position and
+    // the new list opens mid-scroll, hidden behind the header.
+    LaunchedEffect(topTab) { listState.scrollToItem(0) }
+
     BlendedScaffold(
         selectedTab = navTab,
         onTabSelected = {
@@ -107,10 +113,15 @@ fun HomeFullBleedScreen(
         actions = {
             NotificationsAction(tint = MaterialTheme.colorScheme.primary)
         },
-    ) { _ ->
+    ) { innerPadding ->
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
+            // Fragrances is intentionally full-bleed — HeroItem is tall enough to
+            // clear the header on its own. Community has no hero, so its first
+            // item needs the header's real clearance or it renders underneath it.
+            contentPadding =
+                if (topTab == 1) PaddingValues(top = innerPadding.calculateTopPadding()) else PaddingValues(0.dp),
         ) {
             if (topTab == 0) {
                 item { HeroItem(onOpenVideo = { onOpenVideo("") }) }
