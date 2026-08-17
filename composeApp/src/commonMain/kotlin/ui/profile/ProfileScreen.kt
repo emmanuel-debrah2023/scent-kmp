@@ -891,6 +891,7 @@ private fun LazyListScope.listingsTabContent(
     items(listings) { listing ->
         ListingCard(
             listing = listing,
+            onClick = {},
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
         )
     }
