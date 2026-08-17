@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import org.scent.project.domain.model.AuthUser
 import ui.components.BlendedScaffold
 import ui.home.ScentHomeHost
+import ui.marketplace.MarketplaceScreen
 import ui.profile.ProfileScreen
 
 @Composable
@@ -75,7 +76,10 @@ private fun ProfileNavHost(
 private fun MarketplaceNavHost(nav: NavigationState<MarketplaceRoute>) {
     val current by nav.current
     when (current) {
-        is MarketplaceRoute.Listings -> PlaceholderScreen("Marketplace")
+        is MarketplaceRoute.Listings ->
+            MarketplaceScreen(
+                onListingClick = { id -> nav.navigateTo(MarketplaceRoute.ListingDetail(id)) },
+            )
         is MarketplaceRoute.ListingDetail -> PlaceholderScreen("Listing Detail")
         is MarketplaceRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
     }

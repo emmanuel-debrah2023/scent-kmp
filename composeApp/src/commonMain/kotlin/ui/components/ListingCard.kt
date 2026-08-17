@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.Listing
+import ui.accessibility.clearedDescription
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 import kotlin.math.roundToInt
@@ -33,10 +34,12 @@ import kotlin.math.roundToInt
 @Composable
 fun ListingCard(
     listing: Listing,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().clearedDescription(listingContentDescription(listing)),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
@@ -87,6 +90,13 @@ fun ListingCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (listing.sellerUsername.isNotEmpty()) {
+                    Text(
+                        text = "sold by ${listing.sellerUsername}",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = ScentThemeExtras.gray400,
+                    )
+                }
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
@@ -104,6 +114,15 @@ fun ListingCard(
     }
 }
 
+// Single hand-written announcement (see clearedDescription) instead of concatenating
+// child text, since price/condition/seller read better rewritten than merged.
+private fun listingContentDescription(listing: Listing): String {
+    val priceTerms = if (listing.isNegotiable) "negotiable" else "firm price"
+    return "${listing.fragrance.name} by ${listing.fragrance.brand}, " +
+        "${listing.condition} condition, £${listing.price.roundToInt()}, $priceTerms, " +
+        "sold by ${listing.sellerUsername}"
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun ListingCardPreview() {
@@ -114,10 +133,12 @@ private fun ListingCardPreview() {
                     id = 1,
                     fragrance = Fragrance(id = 1, name = "Aventus", brand = "Creed"),
                     sellerId = 1,
+                    sellerUsername = "scent_collector",
                     price = 185.0,
                     condition = "90% full",
                     isNegotiable = true,
                 ),
+            onClick = {},
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -133,10 +154,12 @@ private fun ListingCardFirmPreview() {
                     id = 2,
                     fragrance = Fragrance(id = 2, name = "Santal 33", brand = "Le Labo"),
                     sellerId = 2,
+                    sellerUsername = "notes_and_musk",
                     price = 120.0,
                     condition = "Unused",
                     isNegotiable = false,
                 ),
+            onClick = {},
             modifier = Modifier.padding(16.dp),
         )
     }
