@@ -1,5 +1,7 @@
 package org.scent.project
 
+import data.schema.FragrancesTable
+import data.schema.ListingsTable
 import data.schema.PostHashtagsTable
 import data.schema.PostsTable
 import data.schema.UsersTable
@@ -33,13 +35,17 @@ class DevRoutesTest {
             driver = "org.h2.Driver",
         )
         transaction {
-            SchemaUtils.create(UsersTable, PostsTable, PostHashtagsTable)
+            SchemaUtils.create(UsersTable, PostsTable, PostHashtagsTable, FragrancesTable, ListingsTable)
         }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private fun postCount(): Long = transaction { PostsTable.selectAll().count() }
+
+    private fun listingCount(): Long = transaction { ListingsTable.selectAll().count() }
+
+    private fun fragranceCount(): Long = transaction { FragrancesTable.selectAll().count() }
 
     private fun withApp(block: suspend io.ktor.server.testing.ApplicationTestBuilder.() -> Unit) =
         testApplication {
@@ -113,5 +119,83 @@ class DevRoutesTest {
                         .count()
                 }
             assertEquals(1L, seedUserCount)
+        }
+
+    // ── seed-listings ────────────────────────────────────────────────────────
+
+    @Test
+    fun `seed-listings count=5 returns 201 with seeded=5 and matching fragrance rows`() =
+        withApp {
+            val response = client.post("/api/v1/dev/seed-listings?count=5")
+
+            assertEquals(HttpStatusCode.Created, response.status)
+            val body = Json.decodeFromString<SeedResponse>(response.bodyAsText())
+            assertEquals(5, body.seeded)
+            assertTrue(body.userId > 0)
+            assertEquals(5L, listingCount())
+            assertEquals(5L, fragranceCount())
+        }
+
+    @Test
+    fun `seed-listings count=60 is capped to 50`() =
+        withApp {
+            val response = client.post("/api/v1/dev/seed-listings?count=60")
+
+            assertEquals(HttpStatusCode.Created, response.status)
+            val body = Json.decodeFromString<SeedResponse>(response.bodyAsText())
+            assertEquals(50, body.seeded)
+            assertEquals(50L, listingCount())
+        }
+
+    @Test
+    fun `seed-listings no count param defaults to 10`() =
+        withApp {
+            val response = client.post("/api/v1/dev/seed-listings")
+
+            assertEquals(HttpStatusCode.Created, response.status)
+            val body = Json.decodeFromString<SeedResponse>(response.bodyAsText())
+            assertEquals(10, body.seeded)
+            assertEquals(10L, listingCount())
+        }
+
+    @Test
+    fun `seed-listings calling twice reuses seed seller and listings are additive`() =
+        withApp {
+            val first = client.post("/api/v1/dev/seed-listings?count=3")
+            val second = client.post("/api/v1/dev/seed-listings?count=3")
+
+            assertEquals(HttpStatusCode.Created, first.status)
+            assertEquals(HttpStatusCode.Created, second.status)
+
+            val firstBody = Json.decodeFromString<SeedResponse>(first.bodyAsText())
+            val secondBody = Json.decodeFromString<SeedResponse>(second.bodyAsText())
+
+            // Same seed seller reused
+            assertEquals(firstBody.userId, secondBody.userId)
+
+            // Listings are additive: 3 + 3 = 6
+            assertEquals(6L, listingCount())
+
+            // Only one seed seller in the table
+            val seedSellerCount =
+                transaction {
+                    UsersTable
+                        .selectAll()
+                        .where { UsersTable.username eq "scent_seed_seller" }
+                        .count()
+                }
+            assertEquals(1L, seedSellerCount)
+        }
+
+    @Test
+    fun `seed-listings and seed-feed use distinct seed users`() =
+        withApp {
+            val feedResponse = client.post("/api/v1/dev/seed-feed?count=1")
+            val listingsResponse = client.post("/api/v1/dev/seed-listings?count=1")
+
+            val feedBody = Json.decodeFromString<SeedResponse>(feedResponse.bodyAsText())
+            val listingsBody = Json.decodeFromString<SeedResponse>(listingsResponse.bodyAsText())
+
+            assertTrue(feedBody.userId != listingsBody.userId)
         }
 }

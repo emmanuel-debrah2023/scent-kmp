@@ -1,5 +1,8 @@
 package routing
 
+import data.schema.FragranceCondition
+import data.schema.FragrancesTable
+import data.schema.ListingsTable
 import data.schema.PostHashtagsTable
 import data.schema.PostsTable
 import data.schema.UsersTable
@@ -38,12 +41,21 @@ private val seedHashtags = listOf("fragrance", "scentoftheday", "niche", "perfum
 private const val DEFAULT_SEED_COUNT = 10
 private const val MAX_SEED_COUNT = 50
 
-private fun resolveSeedUserId(): Int =
+private fun resolveSeedUserId(): Int = resolveSeedUser("scent_seed_bot", "seed@scent.dev", "Scent Seed Bot")
+
+private fun resolveSeedSellerId(): Int =
+    resolveSeedUser("scent_seed_seller", "seed-seller@scent.dev", "Scent Seed Seller")
+
+private fun resolveSeedUser(
+    username: String,
+    email: String,
+    displayName: String,
+): Int =
     transaction {
         val existing =
             UsersTable
                 .selectAll()
-                .where { UsersTable.username eq "scent_seed_bot" }
+                .where { UsersTable.username eq username }
                 .singleOrNull()
 
         if (existing != null) {
@@ -51,9 +63,9 @@ private fun resolveSeedUserId(): Int =
         } else {
             UsersTable
                 .insertAndGetId {
-                    it[UsersTable.username] = "scent_seed_bot"
-                    it[UsersTable.email] = "seed@scent.dev"
-                    it[UsersTable.displayName] = "Scent Seed Bot"
+                    it[UsersTable.username] = username
+                    it[UsersTable.email] = email
+                    it[UsersTable.displayName] = displayName
                     it[UsersTable.createdAt] =
                         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                 }.value
@@ -87,6 +99,58 @@ private fun insertSeedPosts(
     }
 }
 
+private data class SeedFragrance(
+    val name: String,
+    val brand: String,
+    val price: Double,
+)
+
+private val seedFragrances =
+    listOf(
+        SeedFragrance("Aventus", "Creed", 285.0),
+        SeedFragrance("Santal 33", "Le Labo", 180.0),
+        SeedFragrance("Baccarat Rouge 540", "Maison Francis Kurkdjian", 325.0),
+        SeedFragrance("Sauvage", "Dior", 95.0),
+        SeedFragrance("Black Orchid", "Tom Ford", 140.0),
+        SeedFragrance("Bleu de Chanel", "Chanel", 110.0),
+        SeedFragrance("Oud Wood", "Tom Ford", 250.0),
+        SeedFragrance("Light Blue", "Dolce & Gabbana", 70.0),
+    )
+
+private fun insertSeedListings(
+    sellerId: Int,
+    count: Int,
+) {
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    val conditions = FragranceCondition.entries
+    repeat(count) { index ->
+        transaction {
+            val seed = seedFragrances[index % seedFragrances.size]
+            val condition = conditions[index % conditions.size]
+
+            val fragranceId =
+                FragrancesTable
+                    .insertAndGetId {
+                        it[FragrancesTable.sellerId] = sellerId
+                        it[name] = seed.name
+                        it[brand] = seed.brand
+                        it[price] = seed.price.toBigDecimal()
+                        it[FragrancesTable.condition] = condition
+                        it[createdAt] = now
+                    }.value
+
+            ListingsTable.insertAndGetId {
+                it[ListingsTable.sellerId] = sellerId
+                it[ListingsTable.fragranceId] = fragranceId
+                it[price] = seed.price.toBigDecimal()
+                it[ListingsTable.condition] = condition
+                it[isNegotiable] = index % 2 == 0
+                it[createdAt] = now
+            }
+        }
+    }
+}
+
 fun Route.devRoutes() {
     route("/api/v1/dev") {
         post("/seed-feed") {
@@ -98,6 +162,17 @@ fun Route.devRoutes() {
             insertSeedPosts(seedUserId, count)
 
             call.respond(HttpStatusCode.Created, SeedResponse(seeded = count, userId = seedUserId))
+        }
+
+        post("/seed-listings") {
+            val count =
+                (call.request.queryParameters["count"]?.toIntOrNull() ?: DEFAULT_SEED_COUNT)
+                    .coerceAtMost(MAX_SEED_COUNT)
+
+            val seedSellerId = resolveSeedSellerId()
+            insertSeedListings(seedSellerId, count)
+
+            call.respond(HttpStatusCode.Created, SeedResponse(seeded = count, userId = seedSellerId))
         }
     }
 }
