@@ -2,6 +2,7 @@ package ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,12 +29,14 @@ fun MainGraph(
             BlendedScaffold(
                 selectedTab = nav.selectedTab.ordinal,
                 onTabSelected = { nav.selectedTab = Tab.entries[it] },
-            ) {
-                when (nav.selectedTab) {
-                    Tab.HOME -> Unit
-                    Tab.SEARCH -> SearchNavHost(nav.searchNav)
-                    Tab.PROFILE -> ProfileNavHost(nav.profileNav, user, onLogout)
-                    Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav)
+            ) { innerPadding ->
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    when (nav.selectedTab) {
+                        Tab.HOME -> Unit
+                        Tab.SEARCH -> SearchNavHost(nav.searchNav)
+                        Tab.PROFILE -> ProfileNavHost(nav.profileNav, user, onLogout)
+                        Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav)
+                    }
                 }
             }
     }

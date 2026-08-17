@@ -20,9 +20,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ui.navigation.mainNavTabs
 import ui.theme.ScentTheme
@@ -35,32 +39,38 @@ import ui.theme.ScentThemeExtras
  *
  * @param selectedTab   Index of the currently active tab.
  * @param onTabSelected Called with the tapped tab index.
+ * @param onHeightMeasured Reports the bar's real measured height (visible content
+ *                      only — the scrim paints in the draw phase and adds no layout
+ *                      size) so callers can reserve bottom clearance for content.
  */
 @Composable
 fun BlendedBottomNav(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onHeightMeasured: (Dp) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
+    val density = LocalDensity.current
 
     val navItems = mainNavTabs()
 
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Gradient scrim
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, colorScheme.background, colorScheme.background),
-                        ),
-                    ),
-        )
-
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { onHeightMeasured(with(density) { it.size.height.toDp() }) }
+                .drawBehind {
+                    // Gradient scrim — fades from transparent to the background colour
+                    drawRect(
+                        brush =
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, colorScheme.background, colorScheme.background),
+                            ),
+                    )
+                },
+    ) {
         Row(
             modifier =
                 Modifier

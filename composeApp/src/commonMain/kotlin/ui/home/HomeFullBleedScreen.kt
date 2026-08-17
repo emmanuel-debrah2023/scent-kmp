@@ -107,7 +107,7 @@ fun HomeFullBleedScreen(
         actions = {
             NotificationsAction(tint = MaterialTheme.colorScheme.primary)
         },
-    ) {
+    ) { _ ->
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),

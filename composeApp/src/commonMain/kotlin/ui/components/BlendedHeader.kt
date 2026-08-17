@@ -25,10 +25,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ui.theme.ScentTheme
@@ -46,6 +50,9 @@ import ui.theme.ScentThemeExtras
  * @param actions         Icon buttons placed in the trailing end of the brand row.
  *                        Receives [RowScope] so callers compose any combination of
  *                        [IconButton]s without this component knowing the details.
+ * @param onHeightMeasured Reports the header's real measured height (visible content
+ *                        only — the scrim paints in the draw phase and adds no layout
+ *                        size) so callers can offset non-full-bleed content below it.
  */
 @Composable
 fun BlendedHeader(
@@ -55,9 +62,11 @@ fun BlendedHeader(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
+    onHeightMeasured: (Dp) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
+    val density = LocalDensity.current
 
     val scrimAlpha by remember {
         derivedStateOf {
@@ -69,32 +78,27 @@ fun BlendedHeader(
         }
     }
 
-    Box(modifier = modifier.fillMaxWidth()) {
-        // Gradient scrim layer
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                colorScheme.background,
-                                colorScheme.background.copy(alpha = 0.88f),
-                                Color.Transparent,
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { onHeightMeasured(with(density) { it.size.height.toDp() }) }
+                .drawBehind {
+                    // Gradient scrim — always visible, covers the header area
+                    drawRect(
+                        brush =
+                            Brush.verticalGradient(
+                                listOf(
+                                    colorScheme.background,
+                                    colorScheme.background.copy(alpha = 0.88f),
+                                    Color.Transparent,
+                                ),
                             ),
-                        ),
-                    ),
-        )
-        // Solid scrim layer (fades in on scroll)
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(colorScheme.background.copy(alpha = scrimAlpha)),
-        )
-
+                    )
+                    // Solid scrim — fades in on scroll for text readability
+                    drawRect(color = colorScheme.background.copy(alpha = scrimAlpha))
+                },
+    ) {
         // Header content
         Column(
             modifier =
