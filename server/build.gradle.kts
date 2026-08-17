@@ -1,4 +1,5 @@
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
 
@@ -16,6 +17,13 @@ application {
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
+}
+
+// The application plugin's `run` task forks a new JVM — it does not inherit `-D`
+// system properties passed to the Gradle invocation itself. Forward STREAM_PROVIDER
+// explicitly so `./gradlew :server:run -DSTREAM_PROVIDER=fake` reaches Application.kt.
+tasks.named<JavaExec>("run") {
+    System.getProperty("STREAM_PROVIDER")?.let { systemProperty("STREAM_PROVIDER", it) }
 }
 
 dependencies {
