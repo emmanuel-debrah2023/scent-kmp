@@ -8,6 +8,7 @@ import org.scent.project.data.remote.dto.CreateListingRequest
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.CreateListingParams
 import org.scent.project.domain.model.Listing
+import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.repository.ListingRepository
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
@@ -20,7 +21,7 @@ class ListingRepositoryImpl(
     override suspend fun getListings(
         cursor: String?,
         limit: Int,
-    ): Result<List<Listing>> =
+    ): Result<ListingPage> =
         safeApiCall(
             onHttpError = { status ->
                 AppError.NetworkError.ServerError(statusCode = status).asLeft()
@@ -28,7 +29,7 @@ class ListingRepositoryImpl(
         ) {
             val response = api.getListings(cursor, limit)
             val listings = response.listings?.toDomainList() ?: emptyList()
-            listings.asRight()
+            ListingPage(listings = listings, nextCursor = response.nextCursor).asRight()
         }
 
     override suspend fun createListing(params: CreateListingParams): Result<Listing> {
