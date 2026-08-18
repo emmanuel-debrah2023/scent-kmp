@@ -69,15 +69,9 @@ fun Route.listingRoutes() {
 
             val result =
                 transaction {
-                    val dbQuery =
-                        ListingsTable.selectAll().where {
+                    val filterOp: Op<Boolean> =
+                        run {
                             val activeFilter: Op<Boolean> = ListingsTable.isActive eq true
-                            val cursorFilter: Op<Boolean> =
-                                if (cursor != null) {
-                                    ListingsTable.id less cursor
-                                } else {
-                                    Op.TRUE
-                                }
                             val fragranceFilter: Op<Boolean> =
                                 if (fragranceId != null) {
                                     ListingsTable.fragranceId eq fragranceId
@@ -104,23 +98,45 @@ fun Route.listingRoutes() {
                                 } else {
                                     Op.TRUE
                                 }
-                            activeFilter and cursorFilter and fragranceFilter and
-                                conditionFilter and minPriceFilter and maxPriceFilter
+                            activeFilter and fragranceFilter and conditionFilter and
+                                minPriceFilter and maxPriceFilter
+                        }
+
+                    val totalCount =
+                        ListingsTable
+                            .selectAll()
+                            .where { filterOp }
+                            .count()
+
+                    val cursorFilter: Op<Boolean> =
+                        if (cursor != null) {
+                            ListingsTable.id less cursor
+                        } else {
+                            Op.TRUE
                         }
 
                     val rows =
-                        dbQuery
+                        ListingsTable
+                            .selectAll()
+                            .where { filterOp and cursorFilter }
                             .orderBy(ListingsTable.id, SortOrder.DESC)
                             .limit(limit)
                             .toList()
 
-                    rows.mapNotNull { row ->
-                        buildListingDto(row[ListingsTable.id].value, row)
-                    }
+                    val dtos =
+                        rows.mapNotNull { row ->
+                            buildListingDto(row[ListingsTable.id].value, row)
+                        }
+
+                    dtos to totalCount
                 }
 
-            val nextCursor = result.lastOrNull()?.id?.toString()
-            this.call.respond(HttpStatusCode.OK, ListingListResponse(result, nextCursor))
+            val (listings, totalCount) = result
+            val nextCursor = listings.lastOrNull()?.id?.toString()
+            this.call.respond(
+                HttpStatusCode.OK,
+                ListingListResponse(listings, nextCursor, totalCount.toInt()),
+            )
         }
 
         get("/{id}") {

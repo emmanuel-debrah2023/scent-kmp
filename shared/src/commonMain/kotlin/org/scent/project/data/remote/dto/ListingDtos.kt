@@ -21,6 +21,7 @@ data class ListingResponse(
 data class ListingListResponseDto(
     val listings: List<ListingResponse>? = null,
     val nextCursor: String? = null,
+    val totalCount: Int? = null,
 )
 
 @Serializable

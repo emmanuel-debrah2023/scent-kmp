@@ -67,6 +67,23 @@ class ListingRepositoryImplTest {
         }
 
     @Test
+    fun `getListings surfaces totalCount from the response`() =
+        runTest {
+            val api =
+                FakeListingApi().apply {
+                    listingsResponse =
+                        ListingListResponseDto(
+                            listings = listOf(validListingResponse),
+                            totalCount = 312,
+                        )
+                }
+
+            val result = repo(api).getListings()
+
+            assertEquals(312, requireNotNull(result.getOrNull()).totalCount)
+        }
+
+    @Test
     fun `getListings returns NoConnection on IOException`() =
         runTest {
             val api = FakeListingApi().apply { listingsException = IOException("offline") }
