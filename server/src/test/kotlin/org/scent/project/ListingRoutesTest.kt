@@ -200,6 +200,29 @@ class ListingRoutesTest {
         }
 
     @Test
+    fun `GET listings totalCount reflects the filtered total, not the page size`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller5")
+            val fragranceId = seedFragrance(userId)
+            seedListing(userId, fragranceId, condition = FragranceCondition.NEW)
+            seedListing(userId, fragranceId, condition = FragranceCondition.NEW)
+            seedListing(userId, fragranceId, condition = FragranceCondition.USED)
+
+            val response = client.get("/api/v1/listings?condition=NEW&limit=1")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertEquals(1, body["listings"]?.jsonArray?.size)
+            assertEquals(2, body["totalCount"]?.jsonPrimitive?.int)
+        }
+
+    @Test
     fun `GET listings filters by price range`() =
         testApplication {
             application {

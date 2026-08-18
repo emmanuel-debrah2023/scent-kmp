@@ -26,6 +26,9 @@ data class ScentSpacing(
     val iconSizeLarge: Dp = 32.dp,
     val authMaxWidth: Dp = 384.dp,
     val cardImageHeight: Dp = 200.dp,
+    val searchBarHeight: Dp = 36.dp,
+    val chipHeight: Dp = 32.dp,
+    val cardHeroHeight: Dp = 172.dp,
 )
 
 val LocalScentSpacing = staticCompositionLocalOf { ScentSpacing() }

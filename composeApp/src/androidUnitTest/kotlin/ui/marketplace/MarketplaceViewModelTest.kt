@@ -7,7 +7,9 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -23,7 +25,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MarketplaceViewModelTest {
@@ -50,8 +54,13 @@ class MarketplaceViewModelTest {
     @Test
     fun `loadListings transitions Idle to Loading to Success with listings`() =
         runTest {
-            val page = ListingPage(listings = listOf(makeListing(1), makeListing(2)), nextCursor = "cursor1")
-            var stateWhenUseCaseCalled: UiState<MarketplaceState>? = null
+            val page =
+                ListingPage(
+                    listings = listOf(makeListing(1), makeListing(2)),
+                    nextCursor = "cursor1",
+                    totalCount = 312,
+                )
+            var stateWhenUseCaseCalled: UiState<MarketplaceUiState>? = null
 
             coEvery { getListingsUseCase(any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.uiState.value
@@ -62,16 +71,34 @@ class MarketplaceViewModelTest {
                 assertEquals(UiState.Idle, awaitItem())
                 viewModel.loadListings()
                 val state = awaitItem()
-                assertIs<UiState.Success<MarketplaceState>>(state)
+                assertIs<UiState.Success<MarketplaceUiState>>(state)
                 assertEquals(2, state.data.listings.size)
                 assertEquals("cursor1", state.data.nextCursor)
+                assertEquals(312, state.data.totalCount)
             }
 
             assertEquals(UiState.Loading, stateWhenUseCaseCalled)
         }
 
     @Test
-    fun `loadListings transitions Idle to Loading to Error on failure`() =
+    fun `loadListings surfaces a generic error for a non-connectivity failure`() =
+        runTest {
+            val error = AppError.NetworkError.ServerError(statusCode = 500)
+
+            coEvery { getListingsUseCase(any(), any()) } returns error.asLeft()
+
+            viewModel.uiState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.loadListings()
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertEquals(error, state.error)
+                assertFalse(state.error is AppError.NetworkError.NoConnection)
+            }
+        }
+
+    @Test
+    fun `loadListings surfaces a NoConnection error distinctly for offline copy`() =
         runTest {
             val error = AppError.NetworkError.NoConnection()
 
@@ -82,7 +109,7 @@ class MarketplaceViewModelTest {
                 viewModel.loadListings()
                 val state = awaitItem()
                 assertIs<UiState.Error>(state)
-                assertEquals(error, state.error)
+                assertIs<AppError.NetworkError.NoConnection>(state.error)
             }
         }
 
@@ -160,7 +187,7 @@ class MarketplaceViewModelTest {
         }
 
     @Test
-    fun `loadNextPage reverts isLoadingMore on error and keeps existing listings`() =
+    fun `loadNextPage on connectivity failure sets isConnectionLost and keeps existing items`() =
         runTest {
             coEvery { getListingsUseCase(null, any()) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
@@ -177,7 +204,48 @@ class MarketplaceViewModelTest {
                     .first()
                     .id,
             )
-            assertEquals(false, state.data.isLoadingMore)
+            assertFalse(state.data.isLoadingMore)
+            assertTrue(state.data.isConnectionLost)
+        }
+
+    @Test
+    fun `loadNextPage does not start a second request while one is already in flight`() =
+        runTest {
+            coEvery { getListingsUseCase(null, any()) } returns
+                ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
+            viewModel.loadListings()
+
+            // A real suspension point keeps the first call in flight so the second call's
+            // guard check (isLoadingMore) actually has something to observe.
+            coEvery { getListingsUseCase("c1", any()) } coAnswers {
+                delay(100)
+                ListingPage(listings = listOf(makeListing(2)), nextCursor = "c2").asRight()
+            }
+            viewModel.loadNextPage()
+            viewModel.loadNextPage()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { getListingsUseCase("c1", any()) }
+        }
+
+    @Test
+    fun `retryLoadMore clears isConnectionLost and retries the failed page`() =
+        runTest {
+            coEvery { getListingsUseCase(null, any()) } returns
+                ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
+            viewModel.loadListings()
+
+            coEvery { getListingsUseCase("c1", any()) } returns AppError.NetworkError.NoConnection().asLeft()
+            viewModel.loadNextPage()
+            assertTrue((viewModel.uiState.value as UiState.Success).data.isConnectionLost)
+
+            coEvery { getListingsUseCase("c1", any()) } returns
+                ListingPage(listings = listOf(makeListing(2)), nextCursor = "c2").asRight()
+            viewModel.retryLoadMore()
+
+            val state = viewModel.uiState.value as UiState.Success
+            assertFalse(state.data.isConnectionLost)
+            assertEquals(listOf(1, 2), state.data.listings.map { it.id })
         }
 
     // ─────────────────────────────────────────────

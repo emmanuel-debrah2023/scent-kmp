@@ -1,8 +1,8 @@
 package org.scent.project.data.repository
 
 import org.scent.project.data.local.TokenStorage
-import org.scent.project.data.mapper.ListingMapper.toDomainList
 import org.scent.project.data.mapper.ListingMapper.toListing
+import org.scent.project.data.mapper.ListingMapper.toListingPage
 import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.dto.CreateListingRequest
 import org.scent.project.domain.error.AppError
@@ -27,9 +27,7 @@ class ListingRepositoryImpl(
                 AppError.NetworkError.ServerError(statusCode = status).asLeft()
             },
         ) {
-            val response = api.getListings(cursor, limit)
-            val listings = response.listings?.toDomainList() ?: emptyList()
-            ListingPage(listings = listings, nextCursor = response.nextCursor).asRight()
+            api.getListings(cursor, limit).toListingPage().asRight()
         }
 
     override suspend fun createListing(params: CreateListingParams): Result<Listing> {
