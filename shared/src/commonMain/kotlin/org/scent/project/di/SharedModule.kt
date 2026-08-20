@@ -27,6 +27,7 @@ import org.scent.project.domain.repository.ListingRepository
 import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.repository.ProfileRepository
 import org.scent.project.domain.usecase.CreateListingUseCase
+import org.scent.project.domain.usecase.GetBrandSuggestionsUseCase
 import org.scent.project.domain.usecase.GetCurrentUserUseCase
 import org.scent.project.domain.usecase.GetFeedUseCase
 import org.scent.project.domain.usecase.GetFragranceDetailUseCase
@@ -111,6 +112,8 @@ fun sharedModule(
 
     // Listings
     factory { GetListingsUseCase(repository = get()) }
+
+    factory { GetBrandSuggestionsUseCase(repository = get()) }
 
     factory { CreateListingUseCase(repository = get()) }
 

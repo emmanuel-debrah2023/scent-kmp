@@ -8,6 +8,7 @@ import org.scent.project.data.remote.api.FragranceApi
 import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.api.PostApi
 import org.scent.project.data.remote.dto.AuthResponse
+import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.CreateListingRequest
 import org.scent.project.data.remote.dto.CreatePostRequest
 import org.scent.project.data.remote.dto.CreatePostResponseDto
@@ -247,6 +248,7 @@ class FakeFragranceRepository : FragranceRepository {
 
 class FakeListingRepository : ListingRepository {
     var getListingsResult: Result<ListingPage> = AppError.Unknown().asLeft()
+    var brandSuggestionsResult: Result<List<String>> = emptyList<String>().asRight()
     var createListingResult: Result<Listing> = AppError.Unknown().asLeft()
 
     var lastListingsCursor: String? = null
@@ -256,6 +258,8 @@ class FakeListingRepository : ListingRepository {
     var lastListingsVolume: Int? = null
     var lastListingsMinPrice: Double? = null
     var lastListingsMaxPrice: Double? = null
+    var lastBrandQuery: String? = null
+    var lastBrandLimit: Int? = null
     var lastCreateParams: CreateListingParams? = null
 
     override suspend fun getListings(
@@ -275,6 +279,15 @@ class FakeListingRepository : ListingRepository {
         lastListingsMinPrice = minPrice
         lastListingsMaxPrice = maxPrice
         return getListingsResult
+    }
+
+    override suspend fun getBrandSuggestions(
+        query: String,
+        limit: Int,
+    ): Result<List<String>> {
+        lastBrandQuery = query
+        lastBrandLimit = limit
+        return brandSuggestionsResult
     }
 
     override suspend fun createListing(params: CreateListingParams): Result<Listing> {
@@ -357,6 +370,9 @@ class FakeListingApi : ListingApi {
     var listingsResponse: ListingListResponseDto? = null
     var listingsException: Exception? = null
 
+    var brandsResponse: BrandListResponseDto? = null
+    var brandsException: Exception? = null
+
     var createResponse: ListingResponse? = null
     var createException: Exception? = null
 
@@ -365,6 +381,8 @@ class FakeListingApi : ListingApi {
     var lastListingsVolume: Int? = null
     var lastListingsMinPrice: Double? = null
     var lastListingsMaxPrice: Double? = null
+    var lastBrandQuery: String? = null
+    var lastBrandLimit: Int? = null
 
     override suspend fun getListings(
         cursor: String?,
@@ -382,6 +400,16 @@ class FakeListingApi : ListingApi {
         lastListingsMaxPrice = maxPrice
         listingsException?.let { throw it }
         return listingsResponse ?: error("FakeListingApi.listingsResponse not set")
+    }
+
+    override suspend fun getBrandSuggestions(
+        query: String,
+        limit: Int,
+    ): BrandListResponseDto {
+        lastBrandQuery = query
+        lastBrandLimit = limit
+        brandsException?.let { throw it }
+        return brandsResponse ?: error("FakeListingApi.brandsResponse not set")
     }
 
     override suspend fun createListing(

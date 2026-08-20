@@ -46,3 +46,8 @@ data class ListingListResponse(
 data class ListingCreatedResponse(
     val id: Int,
 )
+
+@Serializable
+data class BrandListResponse(
+    val brands: List<String>,
+)

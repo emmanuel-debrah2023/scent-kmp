@@ -23,6 +23,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import models.BrandListResponse
 import models.CreateListingServerRequest
 import models.ErrorResponse
 import models.FragranceNoteResponseDto
@@ -38,8 +39,10 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
@@ -159,6 +162,46 @@ fun Route.listingRoutes() {
                 HttpStatusCode.OK,
                 ListingListResponse(listings, nextCursor, totalCount.toInt()),
             )
+        }
+
+        get("/brands") {
+            // '%' and '_' are LIKE wildcards; a user typing them into a typeahead would
+            // otherwise match the whole table. Stripped rather than escaped so we don't
+            // depend on Exposed's LikePattern escape support.
+            val query =
+                this.call.request.queryParameters["query"]
+                    ?.lowercase()
+                    ?.filterNot { it == '%' || it == '_' }
+                    ?.trim()
+                    .orEmpty()
+            val limit =
+                this.call.request.queryParameters["limit"]
+                    ?.toIntOrNull()
+                    ?.coerceIn(1, MAX_BRAND_SUGGESTIONS) ?: DEFAULT_BRAND_SUGGESTIONS
+
+            // No query means no suggestion intent — answer empty rather than scanning.
+            if (query.isEmpty()) {
+                return@get this.call.respond(HttpStatusCode.OK, BrandListResponse(emptyList()))
+            }
+
+            val brands =
+                transaction {
+                    ListingsTable
+                        .innerJoin(FragrancesTable)
+                        .select(FragrancesTable.brand)
+                        .where {
+                            ListingsTable.isActive eq true and
+                                (FragrancesTable.isActive eq true) and
+                                (FragrancesTable.brand.lowerCase() like "%$query%")
+                        }.withDistinct()
+                        .orderBy(FragrancesTable.brand, SortOrder.ASC)
+                        // Over-fetch: 'Dior' and 'dior' are distinct SQL rows but one brand.
+                        .limit(limit * 2)
+                        .map { it[FragrancesTable.brand] }
+                }.distinctBy { it.lowercase() }
+                    .take(limit)
+
+            this.call.respond(HttpStatusCode.OK, BrandListResponse(brands))
         }
 
         get("/{id}") {
@@ -436,3 +479,6 @@ private fun buildListingDto(
                 .toEpochMilliseconds(),
     )
 }
+
+private const val DEFAULT_BRAND_SUGGESTIONS = 8
+private const val MAX_BRAND_SUGGESTIONS = 20

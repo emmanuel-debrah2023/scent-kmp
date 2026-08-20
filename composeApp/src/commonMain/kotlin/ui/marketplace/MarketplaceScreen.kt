@@ -70,8 +70,10 @@ fun MarketplaceScreen(
     modifier: Modifier = Modifier,
     onSearchClick: () -> Unit = {},
     viewModel: MarketplaceViewModel = koinViewModel(),
+    brandSuggestionViewModel: BrandSuggestionViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val brandSuggestions by brandSuggestionViewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadListings()
@@ -141,10 +143,20 @@ fun MarketplaceScreen(
             currentFilters = data?.activeFilters ?: emptyList(),
             onApply = { filters ->
                 viewModel.applyFilters(filters)
+                // This ViewModel is screen-scoped and outlives the sheet; without the
+                // reset, reopening flashes the previous session's dropdown.
+                brandSuggestionViewModel.reset()
                 isFilterSheetOpen = false
             },
-            onDismiss = { isFilterSheetOpen = false },
+            onDismiss = {
+                brandSuggestionViewModel.reset()
+                isFilterSheetOpen = false
+            },
             initialFocus = filterSheetFocus,
+            brandSuggestions = brandSuggestions,
+            onBrandQueryChange = brandSuggestionViewModel::onQueryChange,
+            onBrandSuggestionAccepted = brandSuggestionViewModel::onSuggestionAccepted,
+            onBrandSuggestionRetry = brandSuggestionViewModel::onRetry,
         )
     }
 }

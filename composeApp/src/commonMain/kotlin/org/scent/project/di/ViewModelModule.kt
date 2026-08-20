@@ -6,6 +6,7 @@ import org.scent.project.domain.model.AuthUser
 import ui.auth.AuthViewModel
 import ui.auth.SessionViewModel
 import ui.feed.FeedViewModel
+import ui.marketplace.BrandSuggestionViewModel
 import ui.marketplace.MarketplaceViewModel
 import ui.profile.ProfileViewModel
 import ui.video.VideoViewModel
@@ -18,4 +19,5 @@ val viewModelModule =
         viewModel { (authUser: AuthUser) -> ProfileViewModel(authUser, get(), get(), get(), get(), get(), get()) }
         viewModel { (url: String) -> VideoViewModel(url) }
         viewModel { MarketplaceViewModel(get()) }
+        viewModel { BrandSuggestionViewModel(get()) }
     }

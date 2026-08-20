@@ -5,10 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -25,11 +29,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.validation.Validator
+import ui.accessibility.accessibleClickable
 import ui.accessibility.accessibleHeading
 import ui.accessibility.accessibleLabel
+import ui.accessibility.accessibleLiveRegion
 import ui.accessibility.accessiblePane
+import ui.accessibility.accessibleState
 import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
+import ui.base.UiState
 import ui.components.ScentTextField
 import ui.components.SelectableChip
 import ui.components.buttons.ScentPrimaryButton
@@ -57,6 +65,10 @@ fun MarketplaceFilterSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     initialFocus: FilterCategory? = null,
+    brandSuggestions: UiState<List<String>> = UiState.Idle,
+    onBrandQueryChange: (String) -> Unit = {},
+    onBrandSuggestionAccepted: (String) -> Unit = {},
+    onBrandSuggestionRetry: () -> Unit = {},
 ) {
     val spacing = ScentThemeExtras.spacing
     var brand by remember { mutableStateOf(currentFilters.labelFor(FilterCategory.BRAND).orEmpty()) }
@@ -96,6 +108,7 @@ fun MarketplaceFilterSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = spacing.md, vertical = spacing.sm)
                     .accessiblePane("Filters"),
             verticalArrangement = Arrangement.spacedBy(spacing.lg),
@@ -106,12 +119,19 @@ fun MarketplaceFilterSheet(
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            ScentTextField(
+            BrandSection(
                 value = brand,
-                onValueChange = { brand = it },
-                label = "Brand",
-                placeholder = "e.g. Dior",
-                modifier = Modifier.highlightedIf(initialFocus == FilterCategory.BRAND),
+                onValueChange = {
+                    brand = it
+                    onBrandQueryChange(it)
+                },
+                suggestions = brandSuggestions,
+                onSuggestionSelect = { suggestion ->
+                    brand = suggestion
+                    onBrandSuggestionAccepted(suggestion)
+                },
+                onRetry = onBrandSuggestionRetry,
+                highlighted = initialFocus == FilterCategory.BRAND,
             )
 
             FacetSection(
@@ -170,6 +190,7 @@ fun MarketplaceFilterSheet(
                     // leave; closing the sheet here would fight that.
                     onClick = {
                         brand = ""
+                        onBrandQueryChange("")
                         condition = null
                         size = null
                         minPrice = ""
@@ -263,6 +284,115 @@ private fun PriceSection(
     }
 }
 
+@Composable
+private fun BrandSection(
+    value: String,
+    onValueChange: (String) -> Unit,
+    suggestions: UiState<List<String>>,
+    onSuggestionSelect: (String) -> Unit,
+    onRetry: () -> Unit,
+    highlighted: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = ScentThemeExtras.spacing
+    Column(
+        modifier = modifier.highlightedIf(highlighted).padding(spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(spacing.xs),
+    ) {
+        ScentTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = "Brand",
+            placeholder = "e.g. Dior",
+            modifier = Modifier.accessibleLabel("Brand"),
+        )
+        BrandSuggestionList(
+            state = suggestions,
+            query = value,
+            onSelect = onSuggestionSelect,
+            onRetry = onRetry,
+        )
+    }
+}
+
+/**
+ * Inline, NOT a Popup/DropdownMenu: an overlay inside a ModalBottomSheet fights the
+ * sheet's IME insets and drag-to-dismiss, and would land on top of Condition's chips.
+ * Expanding inline reflows the sheet instead, so there is no z-order to get wrong.
+ * A plain Column, NOT a LazyColumn — the parent now has verticalScroll, and a lazy
+ * list in an infinite-height parent throws at measure time. Eight rows never needs it.
+ */
+@Composable
+private fun BrandSuggestionList(
+    state: UiState<List<String>>,
+    query: String,
+    onSelect: (String) -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (state) {
+        is UiState.Idle -> Unit
+        is UiState.Loading -> SuggestionHintRow(text = "Searching brands…", modifier = modifier)
+        is UiState.Error ->
+            SuggestionHintRow(
+                text =
+                    if (state.error is AppError.NetworkError.NoConnection) {
+                        "You're offline. Tap to retry."
+                    } else {
+                        "Couldn't load brand suggestions. Tap to retry."
+                    },
+                modifier = modifier.accessibleClickable(label = "Retry brand suggestions", onClick = onRetry),
+            )
+        is UiState.Success ->
+            if (state.data.isEmpty()) {
+                SuggestionHintRow(text = "No brands match \"$query\"", modifier = modifier)
+            } else {
+                val brands = state.data.take(MAX_VISIBLE_SUGGESTIONS)
+                Column(
+                    modifier =
+                        modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .collectionContainer(rowCount = brands.size)
+                            .accessibleLiveRegion()
+                            .accessibleState("${brands.size} brand suggestions available"),
+                ) {
+                    brands.forEachIndexed { index, brandName ->
+                        Text(
+                            text = brandName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(ScentThemeExtras.spacing.buttonHeight)
+                                    .collectionItem(rowIndex = index)
+                                    .accessibleClickable(label = "Use brand $brandName") { onSelect(brandName) }
+                                    .padding(horizontal = ScentThemeExtras.spacing.sm)
+                                    .wrapContentHeight(),
+                        )
+                    }
+                }
+            }
+    }
+}
+
+@Composable
+private fun SuggestionHintRow(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.fillMaxWidth().accessibleLiveRegion().padding(vertical = ScentThemeExtras.spacing.xxs),
+    )
+}
+
+private const val MAX_VISIBLE_SUGGESTIONS = 8
+
 /** Tints the section that [MarketplaceScreen] opened the sheet to focus, so tapping an
  * applied chip's body visibly lands on the right facet rather than a generic sheet. */
 @Composable
@@ -321,6 +451,46 @@ private fun MarketplaceFilterSheetPriceFocusPreview() {
             onApply = {},
             onDismiss = {},
             initialFocus = FilterCategory.PRICE,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MarketplaceFilterSheetBrandSuggestionsPreview() {
+    ScentTheme {
+        MarketplaceFilterSheet(
+            currentFilters = emptyList(),
+            onApply = {},
+            onDismiss = {},
+            brandSuggestions = UiState.Success(listOf("Dior", "Diptyque", "Dolce & Gabbana")),
+            initialFocus = FilterCategory.BRAND,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MarketplaceFilterSheetBrandNoMatchPreview() {
+    ScentTheme {
+        MarketplaceFilterSheet(
+            currentFilters = listOf(ActiveFilter(FilterCategory.BRAND, "Dioor", "Dioor")),
+            onApply = {},
+            onDismiss = {},
+            brandSuggestions = UiState.Success(emptyList()),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MarketplaceFilterSheetBrandErrorPreview() {
+    ScentTheme {
+        MarketplaceFilterSheet(
+            currentFilters = emptyList(),
+            onApply = {},
+            onDismiss = {},
+            brandSuggestions = UiState.Error(AppError.NetworkError.NoConnection()),
         )
     }
 }

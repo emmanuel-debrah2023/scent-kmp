@@ -16,5 +16,10 @@ interface ListingRepository {
         maxPrice: Double? = null,
     ): Result<ListingPage>
 
+    suspend fun getBrandSuggestions(
+        query: String,
+        limit: Int = 8,
+    ): Result<List<String>>
+
     suspend fun createListing(params: CreateListingParams): Result<Listing>
 }
