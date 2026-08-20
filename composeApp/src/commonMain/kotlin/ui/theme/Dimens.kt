@@ -26,6 +26,17 @@ data class ScentSpacing(
     val iconSizeLarge: Dp = 32.dp,
     val authMaxWidth: Dp = 384.dp,
     val cardImageHeight: Dp = 200.dp,
+    val chipHeight: Dp = 32.dp,
+    val chipMarkerSize: Dp = 8.dp, // Gold dot marking a chip as an applied filter
+    val cardHeroHeight: Dp = 172.dp,
+    // Skeleton placeholder line heights, mirroring the text styles they stand in for.
+    val skeletonLineSmall: Dp = 12.dp,
+    val skeletonLineMedium: Dp = 20.dp,
+    val skeletonLineLarge: Dp = 24.dp,
+    val skeletonMetaWidth: Dp = 80.dp,
+    val skeletonBadgeWidth: Dp = 32.dp,
+    // Bottom-nav clearance for full-bleed scrolling lists: nav height + element-gap breathing room.
+    val listBottomClearance: Dp = 96.dp,
 )
 
 val LocalScentSpacing = staticCompositionLocalOf { ScentSpacing() }

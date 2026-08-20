@@ -126,6 +126,9 @@ object ScentThemeExtras {
     val interactive: Color get() = ScentInteractive
     val onInteractive: Color get() = ScentOnInteractive
 
+    // Listing image placeholder tint — mirrors Home's full-bleed card tones.
+    val listingPlaceholder: Color get() = ScentListingPlaceholder
+
     // Neutral grey for inactive labels and faint metadata.
     val gray400: Color get() = ScentGray400
 

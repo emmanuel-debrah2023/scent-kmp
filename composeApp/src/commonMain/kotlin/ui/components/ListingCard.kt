@@ -1,107 +1,268 @@
 package ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Liquor
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.Listing
+import ui.accessibility.clearedDescription
+import ui.components.buttons.ScentPrimaryButton
+import ui.components.buttons.ScentSecondaryButton
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 import kotlin.math.roundToInt
 
+private const val CONDITION_MAX_LENGTH = 14
+
 @Composable
 fun ListingCard(
     listing: Listing,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-    ) {
+    ListingCardScaffold(listing = listing, onClick = onClick, modifier = modifier)
+}
+
+@Composable
+fun ListingCardWithOffer(
+    listing: Listing,
+    onClick: () -> Unit,
+    onBuyNow: () -> Unit,
+    onMakeOffer: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListingCardScaffold(listing = listing, onClick = onClick, modifier = modifier) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(width = 64.dp, height = 80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            ) {
-                val imageUrl = listing.fragrance.imageUrls.firstOrNull()
-                if (imageUrl != null) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                }
+            if (listing.isNegotiable) {
+                ScentSecondaryButton(
+                    text = "Offer",
+                    onClick = onMakeOffer,
+                    modifier = Modifier.weight(1f),
+                )
             }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ScentPrimaryButton(
+                text = "Buy now",
+                onClick = onBuyNow,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ListingCardScaffold(
+    listing: Listing,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().clearedDescription(listingContentDescription(listing)),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = ScentThemeExtras.elevation.card),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        ListingHero(listing = listing)
+
+        Column(
+            modifier = Modifier.padding(ScentThemeExtras.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xxs),
+        ) {
+            Text(
+                text = listing.fragrance.brand.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = ScentThemeExtras.gray400,
+            )
+            Text(
+                text = listing.fragrance.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            volumeConcentrationLine(listing.fragrance.volume, listing.fragrance.concentration)?.let { line ->
                 Text(
-                    text = listing.fragrance.brand.uppercase(),
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 10.sp,
-                            letterSpacing = 1.2.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                    color = ScentThemeExtras.gray400,
-                )
-                Text(
-                    text = listing.fragrance.name,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 17.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = listing.condition,
+                    text = line,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xxs),
+            ) {
                 Text(
                     text = "£${listing.price.roundToInt()}",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 19.sp),
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = if (listing.isNegotiable) "negotiable" else "firm",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                    text = if (listing.isNegotiable) "or offer" else "firm",
+                    style = MaterialTheme.typography.bodySmall,
                     color = ScentThemeExtras.gray400,
                 )
             }
+            if (listing.stockQuantity > 1) {
+                Text(
+                    text = "${listing.stockQuantity} available",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ScentThemeExtras.gray400,
+                )
+            }
+
+            ScentDivider(modifier = Modifier.padding(vertical = ScentThemeExtras.spacing.xxs))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = listing.sellerUsername,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (listing.fragrance.rating > 0f) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xxs),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeSmall),
+                            tint = ScentThemeExtras.accent,
+                        )
+                        Text(
+                            text = ratingText(listing.fragrance.rating),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            footer?.invoke()
         }
     }
+}
+
+@Composable
+private fun ListingHero(listing: Listing) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(ScentThemeExtras.spacing.cardHeroHeight),
+        contentAlignment = Alignment.Center,
+    ) {
+        val imageUrl = listing.fragrance.imageUrls.firstOrNull()
+        if (imageUrl != null) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    ScentThemeExtras.listingPlaceholder,
+                                    ScentThemeExtras.listingPlaceholder.copy(alpha = 0.6f),
+                                ),
+                            ),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Liquor,
+                    contentDescription = null,
+                    modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeLarge),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(ScentThemeExtras.spacing.xs)
+                    .background(MaterialTheme.colorScheme.surfaceContainerLowest, MaterialTheme.shapes.small)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
+                    .padding(horizontal = ScentThemeExtras.spacing.xs, vertical = ScentThemeExtras.spacing.xxs),
+        ) {
+            Text(
+                text = truncatedCondition(listing.condition),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+private fun volumeConcentrationLine(
+    volume: Int?,
+    concentration: String?,
+): String? =
+    when {
+        volume != null && concentration != null -> "${volume}ml · $concentration"
+        volume != null -> "${volume}ml"
+        concentration != null -> concentration
+        else -> null
+    }
+
+private fun truncatedCondition(condition: String): String =
+    if (condition.length <= CONDITION_MAX_LENGTH) {
+        condition
+    } else {
+        condition.take(CONDITION_MAX_LENGTH - 1).trimEnd() + "…"
+    }
+
+private fun ratingText(rating: Float): String {
+    val tenths = (rating * 10).roundToInt()
+    return "${tenths / 10}.${tenths % 10}"
+}
+
+// Single hand-written announcement (see clearedDescription) instead of concatenating
+// child text, since price/condition/seller read better rewritten than merged.
+private fun listingContentDescription(listing: Listing): String {
+    val priceTerms = if (listing.isNegotiable) "or offer" else "firm price"
+    return "${listing.fragrance.name} by ${listing.fragrance.brand}, " +
+        "${listing.condition} condition, £${listing.price.roundToInt()}, $priceTerms, " +
+        "sold by ${listing.sellerUsername}"
 }
 
 @Preview(showBackground = true)
@@ -112,12 +273,23 @@ private fun ListingCardPreview() {
             listing =
                 Listing(
                     id = 1,
-                    fragrance = Fragrance(id = 1, name = "Aventus", brand = "Creed"),
+                    fragrance =
+                        Fragrance(
+                            id = 1,
+                            name = "Aventus",
+                            brand = "Creed",
+                            volume = 100,
+                            concentration = "EDP",
+                            rating = 4.5f,
+                        ),
                     sellerId = 1,
+                    sellerUsername = "scent_collector",
                     price = 185.0,
                     condition = "90% full",
                     isNegotiable = true,
+                    stockQuantity = 3,
                 ),
+            onClick = {},
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -133,10 +305,12 @@ private fun ListingCardFirmPreview() {
                     id = 2,
                     fragrance = Fragrance(id = 2, name = "Santal 33", brand = "Le Labo"),
                     sellerId = 2,
+                    sellerUsername = "notes_and_musk",
                     price = 120.0,
-                    condition = "Unused",
+                    condition = "Unused, sealed box",
                     isNegotiable = false,
                 ),
+            onClick = {},
             modifier = Modifier.padding(16.dp),
         )
     }

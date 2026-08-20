@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.Listing
+import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import org.scent.project.fakes.FakeListingRepository
@@ -24,7 +25,7 @@ class GetListingsUseCaseTest {
     }
 
     @Test
-    fun `returns Right with listing list on success`() =
+    fun `returns Right with listing page on success`() =
         runTest {
             val listings =
                 listOf(
@@ -36,12 +37,14 @@ class GetListingsUseCaseTest {
                         condition = "NEW",
                     ),
                 )
-            repository.getListingsResult = listings.asRight()
+            repository.getListingsResult = ListingPage(listings = listings, nextCursor = "c2").asRight()
 
             val result = useCase()
 
             assertTrue(result.isRight)
-            assertEquals(1, result.getOrNull()!!.size)
+            val page = requireNotNull(result.getOrNull())
+            assertEquals(1, page.listings.size)
+            assertEquals("c2", page.nextCursor)
         }
 
     @Test
@@ -58,7 +61,7 @@ class GetListingsUseCaseTest {
     @Test
     fun `forwards cursor and limit to repository`() =
         runTest {
-            repository.getListingsResult = emptyList<Listing>().asRight()
+            repository.getListingsResult = ListingPage(listings = emptyList()).asRight()
 
             useCase(cursor = "c1", limit = 10)
 

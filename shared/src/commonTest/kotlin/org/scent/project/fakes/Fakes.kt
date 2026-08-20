@@ -29,6 +29,7 @@ import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Listing
+import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.repository.FragranceRepository
@@ -238,7 +239,7 @@ class FakeFragranceRepository : FragranceRepository {
 // -------------------------------------------------------------------------
 
 class FakeListingRepository : ListingRepository {
-    var getListingsResult: Result<List<Listing>> = AppError.Unknown().asLeft()
+    var getListingsResult: Result<ListingPage> = AppError.Unknown().asLeft()
     var createListingResult: Result<Listing> = AppError.Unknown().asLeft()
 
     var lastListingsCursor: String? = null
@@ -248,7 +249,7 @@ class FakeListingRepository : ListingRepository {
     override suspend fun getListings(
         cursor: String?,
         limit: Int,
-    ): Result<List<Listing>> {
+    ): Result<ListingPage> {
         lastListingsCursor = cursor
         lastListingsLimit = limit
         return getListingsResult

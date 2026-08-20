@@ -46,7 +46,41 @@ class ListingRepositoryImplTest {
             val result = repo(api).getListings()
 
             assertTrue(result.isRight)
-            assertEquals(1, result.getOrNull()!!.size)
+            assertEquals(1, requireNotNull(result.getOrNull()).listings.size)
+        }
+
+    @Test
+    fun `getListings surfaces nextCursor from the response`() =
+        runTest {
+            val api =
+                FakeListingApi().apply {
+                    listingsResponse =
+                        ListingListResponseDto(
+                            listings = listOf(validListingResponse),
+                            nextCursor = "cursor-2",
+                        )
+                }
+
+            val result = repo(api).getListings()
+
+            assertEquals("cursor-2", requireNotNull(result.getOrNull()).nextCursor)
+        }
+
+    @Test
+    fun `getListings surfaces totalCount from the response`() =
+        runTest {
+            val api =
+                FakeListingApi().apply {
+                    listingsResponse =
+                        ListingListResponseDto(
+                            listings = listOf(validListingResponse),
+                            totalCount = 312,
+                        )
+                }
+
+            val result = repo(api).getListings()
+
+            assertEquals(312, requireNotNull(result.getOrNull()).totalCount)
         }
 
     @Test
