@@ -249,6 +249,38 @@ class MarketplaceViewModelTest {
         }
 
     // ─────────────────────────────────────────────
+    // Filters
+    //
+    // Coverage stops at the guard branches: nothing can apply a filter until the
+    // filter sheet ships, so there is no state with a populated activeFilters to
+    // remove from. Extend these once an apply path exists.
+    // ─────────────────────────────────────────────
+
+    @Test
+    fun `removeFilter is a no-op before listings have loaded`() =
+        runTest {
+            viewModel.removeFilter("Brand")
+
+            assertEquals(UiState.Idle, viewModel.uiState.value)
+        }
+
+    @Test
+    fun `clearAllFilters leaves loaded listings untouched`() =
+        runTest {
+            coEvery { getListingsUseCase(any(), any()) } returns
+                ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
+            viewModel.loadListings()
+
+            viewModel.clearAllFilters()
+
+            val state = viewModel.uiState.value as UiState.Success
+            assertEquals(listOf(1), state.data.listings.map { it.id })
+            assertEquals("c1", state.data.nextCursor)
+            assertTrue(state.data.activeFilters.isEmpty())
+            coVerify(exactly = 1) { getListingsUseCase(any(), any()) }
+        }
+
+    // ─────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────
 

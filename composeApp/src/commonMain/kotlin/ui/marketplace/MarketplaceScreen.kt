@@ -1,5 +1,10 @@
 package ui.marketplace
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,8 +46,6 @@ import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
 import ui.base.UiState
 import ui.components.AppliedFilterChip
-import ui.components.CategoryFilterChip
-import ui.components.ChipShape
 import ui.components.EmptyState
 import ui.components.ErrorState
 import ui.components.ErrorStateVariant
@@ -50,19 +54,20 @@ import ui.components.GradientFadeEdge
 import ui.components.ListingCardWithOffer
 import ui.components.ScentDivider
 import ui.components.SearchEntryField
-import ui.components.shimmerPlaceholder
 import ui.theme.ScentThemeExtras
 
 private const val PAGINATION_THRESHOLD = 3
 private const val SKELETON_CARD_COUNT = 6
-private val FILTER_CATEGORIES = listOf("Brand", "Condition", "Size")
+
+// Below two chips, removing them one at a time is no slower than a clear-all.
+private const val CLEAR_ALL_THRESHOLD = 2
 
 @Composable
 fun MarketplaceScreen(
     onListingClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onSearchClick: () -> Unit = {},
-    onOpenFilterSheet: () -> Unit = {},
+    onOpenFilterSheet: (String?) -> Unit = {},
     viewModel: MarketplaceViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -77,9 +82,10 @@ fun MarketplaceScreen(
         MarketplaceHeader(
             totalCount = data?.totalCount,
             activeFilters = data?.activeFilters ?: emptyList(),
-            isLoading = uiState is UiState.Idle || uiState is UiState.Loading,
             onSearchClick = onSearchClick,
             onOpenFilterSheet = onOpenFilterSheet,
+            onRemoveFilter = viewModel::removeFilter,
+            onClearAllFilters = viewModel::clearAllFilters,
         )
 
         when (val state = uiState) {
@@ -115,7 +121,7 @@ fun MarketplaceScreen(
                     onListingClick = onListingClick,
                     onLoadNextPage = viewModel::loadNextPage,
                     onRetryConnection = viewModel::retryLoadMore,
-                    onOpenFilterSheet = onOpenFilterSheet,
+                    onClearFilters = viewModel::clearAllFilters,
                     modifier = Modifier.weight(1f),
                 )
         }
@@ -126,9 +132,10 @@ fun MarketplaceScreen(
 private fun MarketplaceHeader(
     totalCount: Int?,
     activeFilters: List<ActiveFilter>,
-    isLoading: Boolean,
     onSearchClick: () -> Unit,
-    onOpenFilterSheet: () -> Unit,
+    onOpenFilterSheet: (String?) -> Unit,
+    onRemoveFilter: (String) -> Unit,
+    onClearAllFilters: () -> Unit,
 ) {
     val spacing = ScentThemeExtras.spacing
 
@@ -168,29 +175,66 @@ private fun MarketplaceHeader(
             )
             FilterButton(
                 activeFilterCount = activeFilters.size,
-                onClick = onOpenFilterSheet,
+                onClick = { onOpenFilterSheet(null) },
             )
         }
 
-        if (isLoading) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                items(FILTER_CATEGORIES.size) {
+        AppliedFilterRow(
+            filters = activeFilters,
+            onEditFilter = onOpenFilterSheet,
+            onRemoveFilter = onRemoveFilter,
+            onClearAll = onClearAllFilters,
+        )
+    }
+}
+
+/**
+ * The applied-filter chips, absent entirely until the user applies one. Animated so
+ * the header grows and shrinks with the first and last chip instead of snapping.
+ */
+@Composable
+private fun AppliedFilterRow(
+    filters: List<ActiveFilter>,
+    onEditFilter: (String) -> Unit,
+    onRemoveFilter: (String) -> Unit,
+    onClearAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = ScentThemeExtras.spacing
+    AnimatedVisibility(
+        visible = filters.isNotEmpty(),
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut(),
+        modifier = modifier,
+    ) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            items(filters, key = { it.category }) { filter ->
+                AppliedFilterChip(
+                    label = filter.label,
+                    onClick = { onEditFilter(filter.category) },
+                    onRemove = { onRemoveFilter(filter.category) },
+                    modifier = Modifier.animateItem(),
+                )
+            }
+            if (filters.size >= CLEAR_ALL_THRESHOLD) {
+                item(key = "clear-all") {
                     Box(
                         modifier =
                             Modifier
-                                .size(width = spacing.chipPlaceholderWidth, height = spacing.chipHeight)
-                                .shimmerPlaceholder(ChipShape),
-                    )
-                }
-            }
-        } else {
-            val appliedCategories = activeFilters.map { it.category }.toSet()
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                items(activeFilters, key = { it.category }) { filter ->
-                    AppliedFilterChip(label = filter.label, onRemove = {})
-                }
-                items(FILTER_CATEGORIES.filterNot { it in appliedCategories }) { category ->
-                    CategoryFilterChip(label = category, onClick = onOpenFilterSheet)
+                                .height(spacing.touchTarget)
+                                .accessibleClickable(label = "Clear all filters", onClick = onClearAll)
+                                .padding(horizontal = spacing.sm),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Clear all",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = ScentThemeExtras.interactive,
+                        )
+                    }
                 }
             }
         }
@@ -217,7 +261,7 @@ private fun MarketplaceBody(
     onListingClick: (Int) -> Unit,
     onLoadNextPage: () -> Unit,
     onRetryConnection: () -> Unit,
-    onOpenFilterSheet: () -> Unit,
+    onClearFilters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (state.listings.isEmpty()) {
@@ -228,7 +272,7 @@ private fun MarketplaceBody(
                     title = "No listings match",
                     message = "Try adjusting or clearing your filters.",
                     actionLabel = "CLEAR FILTERS",
-                    onAction = onOpenFilterSheet,
+                    onAction = onClearFilters,
                 )
             } else {
                 EmptyState(

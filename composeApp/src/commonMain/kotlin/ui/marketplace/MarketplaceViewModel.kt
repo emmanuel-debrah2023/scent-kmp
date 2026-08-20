@@ -87,6 +87,24 @@ class MarketplaceViewModel(
         }
     }
 
+    /**
+     * Drops one applied filter. Only the chip row reacts — [GetListingsUseCase] takes no
+     * filter arguments yet, so there is no query to re-run until it does.
+     */
+    fun removeFilter(category: String) {
+        val current = (_uiState.value as? UiState.Success)?.data ?: return
+        _uiState.value =
+            UiState.Success(
+                current.copy(activeFilters = current.activeFilters.filterNot { it.category == category }),
+            )
+    }
+
+    /** Drops every applied filter at once. Same caveat as [removeFilter]. */
+    fun clearAllFilters() {
+        val current = (_uiState.value as? UiState.Success)?.data ?: return
+        _uiState.value = UiState.Success(current.copy(activeFilters = emptyList()))
+    }
+
     /** Retries the page that failed to load when the connection was lost mid-scroll. */
     fun retryLoadMore() {
         val current = (_uiState.value as? UiState.Success)?.data ?: return
