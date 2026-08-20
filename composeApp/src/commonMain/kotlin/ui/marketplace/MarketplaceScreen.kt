@@ -34,7 +34,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -67,7 +69,6 @@ fun MarketplaceScreen(
     onListingClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onSearchClick: () -> Unit = {},
-    onOpenFilterSheet: (String?) -> Unit = {},
     viewModel: MarketplaceViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -78,12 +79,20 @@ fun MarketplaceScreen(
 
     val data = (uiState as? UiState.Success)?.data
 
+    // The filter sheet is a modal over this screen, not a destination — it stays local
+    // state here rather than living in NavigationState (see ADS-STE100 navigation rules).
+    var filterSheetFocus by remember { mutableStateOf<FilterCategory?>(null) }
+    var isFilterSheetOpen by remember { mutableStateOf(false) }
+
     Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         MarketplaceHeader(
             totalCount = data?.totalCount,
             activeFilters = data?.activeFilters ?: emptyList(),
             onSearchClick = onSearchClick,
-            onOpenFilterSheet = onOpenFilterSheet,
+            onOpenFilterSheet = { facet ->
+                filterSheetFocus = facet
+                isFilterSheetOpen = true
+            },
             onRemoveFilter = viewModel::removeFilter,
             onClearAllFilters = viewModel::clearAllFilters,
         )
@@ -126,6 +135,18 @@ fun MarketplaceScreen(
                 )
         }
     }
+
+    if (isFilterSheetOpen) {
+        MarketplaceFilterSheet(
+            currentFilters = data?.activeFilters ?: emptyList(),
+            onApply = { filters ->
+                viewModel.applyFilters(filters)
+                isFilterSheetOpen = false
+            },
+            onDismiss = { isFilterSheetOpen = false },
+            initialFocus = filterSheetFocus,
+        )
+    }
 }
 
 @Composable
@@ -133,8 +154,8 @@ private fun MarketplaceHeader(
     totalCount: Int?,
     activeFilters: List<ActiveFilter>,
     onSearchClick: () -> Unit,
-    onOpenFilterSheet: (String?) -> Unit,
-    onRemoveFilter: (String) -> Unit,
+    onOpenFilterSheet: (FilterCategory?) -> Unit,
+    onRemoveFilter: (FilterCategory) -> Unit,
     onClearAllFilters: () -> Unit,
 ) {
     val spacing = ScentThemeExtras.spacing
@@ -195,8 +216,8 @@ private fun MarketplaceHeader(
 @Composable
 private fun AppliedFilterRow(
     filters: List<ActiveFilter>,
-    onEditFilter: (String) -> Unit,
-    onRemoveFilter: (String) -> Unit,
+    onEditFilter: (FilterCategory) -> Unit,
+    onRemoveFilter: (FilterCategory) -> Unit,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

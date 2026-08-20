@@ -10,5 +10,8 @@ open class GetListingsUseCase(
     open suspend operator fun invoke(
         cursor: String? = null,
         limit: Int = 20,
-    ): Result<ListingPage> = repository.getListings(cursor, limit)
+        brand: String? = null,
+        condition: String? = null,
+        volume: Int? = null,
+    ): Result<ListingPage> = repository.getListings(cursor, limit, brand, condition, volume)
 }

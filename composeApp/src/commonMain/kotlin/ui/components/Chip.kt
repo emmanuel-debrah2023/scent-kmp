@@ -1,6 +1,7 @@
 package ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
@@ -23,8 +25,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ui.accessibility.accessibleClickable
+import ui.accessibility.accessibleToggle
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
@@ -106,10 +111,65 @@ fun AppliedFilterChip(
     }
 }
 
+/**
+ * A single-select option chip for a filter sheet facet — filled [primary][MaterialTheme.colorScheme.primary]
+ * when [selected], outlined otherwise. Unlike [AppliedFilterChip] this has one tap
+ * target for the whole chip; there's nothing to remove until the sheet is applied.
+ */
+@Composable
+fun SelectableChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = ScentThemeExtras.spacing
+    Row(
+        modifier =
+            modifier
+                .height(spacing.chipHeight)
+                .clip(ChipShape)
+                .then(
+                    if (selected) {
+                        Modifier.background(MaterialTheme.colorScheme.primary)
+                    } else {
+                        Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, ChipShape)
+                    },
+                ).accessibleToggle(
+                    value = selected,
+                    label = label,
+                    role = Role.RadioButton,
+                    onValueChange = { onClick() },
+                ).padding(horizontal = spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+// No "full" pill radius token exists in ScentShapes — RoundedCornerShape(percent = 50)
+// is the one literal shape value in this file, used only for the chip pill silhouette.
+private val ChipShape = RoundedCornerShape(percent = 50)
+
 @Preview
 @Composable
 private fun AppliedFilterChipPreview() {
     ScentTheme {
         AppliedFilterChip(label = "Dior", onClick = {}, onRemove = {})
+    }
+}
+
+@Preview
+@Composable
+private fun SelectableChipPreview() {
+    ScentTheme {
+        Row(horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs)) {
+            SelectableChip(label = "New", selected = true, onClick = {})
+            SelectableChip(label = "Used", selected = false, onClick = {})
+        }
     }
 }

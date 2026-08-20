@@ -68,4 +68,16 @@ class GetListingsUseCaseTest {
             assertEquals("c1", repository.lastListingsCursor)
             assertEquals(10, repository.lastListingsLimit)
         }
+
+    @Test
+    fun `forwards brand condition and volume to repository`() =
+        runTest {
+            repository.getListingsResult = ListingPage(listings = emptyList()).asRight()
+
+            useCase(brand = "Dior", condition = "NEW", volume = 50)
+
+            assertEquals("Dior", repository.lastListingsBrand)
+            assertEquals("NEW", repository.lastListingsCondition)
+            assertEquals(50, repository.lastListingsVolume)
+        }
 }
