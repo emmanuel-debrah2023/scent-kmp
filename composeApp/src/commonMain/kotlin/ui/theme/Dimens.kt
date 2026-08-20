@@ -28,7 +28,10 @@ data class ScentSpacing(
     val cardImageHeight: Dp = 200.dp,
     val searchBarHeight: Dp = 36.dp,
     val chipHeight: Dp = 32.dp,
+    val chipPlaceholderWidth: Dp = 72.dp, // Shimmer stand-in for a filter chip before labels load
     val cardHeroHeight: Dp = 172.dp,
+    // Bottom-nav clearance for full-bleed scrolling lists: nav height + element-gap breathing room.
+    val listBottomClearance: Dp = 96.dp,
 )
 
 val LocalScentSpacing = staticCompositionLocalOf { ScentSpacing() }

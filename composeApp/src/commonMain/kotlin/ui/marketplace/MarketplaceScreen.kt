@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import org.scent.project.domain.error.AppError
 import ui.accessibility.accessibleClickable
@@ -47,7 +46,8 @@ import ui.components.EmptyState
 import ui.components.ErrorState
 import ui.components.ErrorStateVariant
 import ui.components.FilterButton
-import ui.components.ListingCard
+import ui.components.GradientFadeEdge
+import ui.components.ListingCardWithOffer
 import ui.components.ScentDivider
 import ui.components.SearchEntryField
 import ui.components.shimmerPlaceholder
@@ -56,7 +56,6 @@ import ui.theme.ScentThemeExtras
 private const val PAGINATION_THRESHOLD = 3
 private const val SKELETON_CARD_COUNT = 6
 private val FILTER_CATEGORIES = listOf("Brand", "Condition", "Size")
-private val ChipPlaceholderWidth = 72.dp
 
 @Composable
 fun MarketplaceScreen(
@@ -134,7 +133,10 @@ private fun MarketplaceHeader(
     val spacing = ScentThemeExtras.spacing
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.md),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = spacing.md),
         verticalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(top = spacing.sm)) {
@@ -176,7 +178,7 @@ private fun MarketplaceHeader(
                     Box(
                         modifier =
                             Modifier
-                                .size(width = ChipPlaceholderWidth, height = spacing.chipHeight)
+                                .size(width = spacing.chipPlaceholderWidth, height = spacing.chipHeight)
                                 .shimmerPlaceholder(ChipShape),
                     )
                 }
@@ -263,7 +265,13 @@ private fun MarketplaceBody(
                     .fillMaxSize()
                     .alpha(if (state.isConnectionLost) 0.55f else 1f)
                     .collectionContainer(rowCount = state.listings.size),
-            contentPadding = PaddingValues(spacing.md),
+            contentPadding =
+                PaddingValues(
+                    start = spacing.md,
+                    end = spacing.md,
+                    top = spacing.xl,
+                    bottom = spacing.listBottomClearance,
+                ),
             verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
             if (state.newListingsCount > 0) {
@@ -273,9 +281,11 @@ private fun MarketplaceBody(
             }
 
             itemsIndexed(state.listings, key = { _, listing -> listing.id }) { index, listing ->
-                ListingCard(
+                ListingCardWithOffer(
                     listing = listing,
                     onClick = { onListingClick(listing.id) },
+                    onBuyNow = {},
+                    onMakeOffer = {},
                     modifier = Modifier.collectionItem(rowIndex = index),
                 )
             }
@@ -319,6 +329,18 @@ private fun MarketplaceBody(
                 }
             }
         }
+
+        GradientFadeEdge(
+            modifier = Modifier.align(Alignment.TopCenter),
+            height = spacing.xl,
+            opaqueEdge = Alignment.Top,
+        )
+
+        GradientFadeEdge(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            height = spacing.xxl,
+            opaqueEdge = Alignment.Bottom,
+        )
 
         if (state.isConnectionLost) {
             ConnectionLostSnackbar(
