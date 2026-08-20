@@ -38,6 +38,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -66,6 +67,15 @@ fun Route.listingRoutes() {
             val maxPrice =
                 this.call.request.queryParameters["max_price"]
                     ?.toDoubleOrNull()
+            val brand =
+                this.call.request.queryParameters["brand"]
+            val volume =
+                this.call.request.queryParameters["volume"]
+                    ?.toIntOrNull()
+
+            // Brand/volume live on FragrancesTable, not ListingsTable — join so those two
+            // filters can run in the same query as the listing-level ones below.
+            val baseQuery = ListingsTable.innerJoin(FragrancesTable)
 
             val result =
                 transaction {
@@ -98,12 +108,24 @@ fun Route.listingRoutes() {
                                 } else {
                                     Op.TRUE
                                 }
+                            val brandFilter: Op<Boolean> =
+                                if (brand != null) {
+                                    FragrancesTable.brand.lowerCase() eq brand.lowercase()
+                                } else {
+                                    Op.TRUE
+                                }
+                            val volumeFilter: Op<Boolean> =
+                                if (volume != null) {
+                                    FragrancesTable.volume eq volume
+                                } else {
+                                    Op.TRUE
+                                }
                             activeFilter and fragranceFilter and conditionFilter and
-                                minPriceFilter and maxPriceFilter
+                                minPriceFilter and maxPriceFilter and brandFilter and volumeFilter
                         }
 
                     val totalCount =
-                        ListingsTable
+                        baseQuery
                             .selectAll()
                             .where { filterOp }
                             .count()
@@ -116,7 +138,7 @@ fun Route.listingRoutes() {
                         }
 
                     val rows =
-                        ListingsTable
+                        baseQuery
                             .selectAll()
                             .where { filterOp and cursorFilter }
                             .orderBy(ListingsTable.id, SortOrder.DESC)

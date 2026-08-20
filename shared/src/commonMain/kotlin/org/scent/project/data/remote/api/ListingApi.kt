@@ -18,6 +18,9 @@ interface ListingApi {
     suspend fun getListings(
         cursor: String? = null,
         limit: Int = 20,
+        brand: String? = null,
+        condition: String? = null,
+        volume: Int? = null,
     ): ListingListResponseDto
 
     suspend fun createListing(
@@ -35,11 +38,17 @@ class ListingApiImpl(
     override suspend fun getListings(
         cursor: String?,
         limit: Int,
+        brand: String?,
+        condition: String?,
+        volume: Int?,
     ): ListingListResponseDto =
         httpClient
             .get(listingsUrl) {
                 cursor?.let { parameter("cursor", it) }
                 parameter("limit", limit)
+                brand?.let { parameter("brand", it) }
+                condition?.let { parameter("condition", it) }
+                volume?.let { parameter("volume", it) }
             }.body()
 
     override suspend fun createListing(

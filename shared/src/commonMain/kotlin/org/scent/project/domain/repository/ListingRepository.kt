@@ -9,6 +9,9 @@ interface ListingRepository {
     suspend fun getListings(
         cursor: String? = null,
         limit: Int = 20,
+        brand: String? = null,
+        condition: String? = null,
+        volume: Int? = null,
     ): Result<ListingPage>
 
     suspend fun createListing(params: CreateListingParams): Result<Listing>

@@ -95,6 +95,21 @@ class ListingRepositoryImplTest {
         }
 
     @Test
+    fun `getListings forwards brand condition and volume to the api`() =
+        runTest {
+            val api =
+                FakeListingApi().apply {
+                    listingsResponse = ListingListResponseDto(listings = listOf(validListingResponse))
+                }
+
+            repo(api).getListings(brand = "Dior", condition = "NEW", volume = 50)
+
+            assertEquals("Dior", api.lastListingsBrand)
+            assertEquals("NEW", api.lastListingsCondition)
+            assertEquals(50, api.lastListingsVolume)
+        }
+
+    @Test
     fun `getListings returns ParseError on SerializationException`() =
         runTest {
             val api =

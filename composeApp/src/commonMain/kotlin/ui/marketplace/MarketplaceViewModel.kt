@@ -11,9 +11,22 @@ import org.scent.project.domain.usecase.GetListingsUseCase
 import ui.base.BaseViewModel
 import ui.base.UiState
 
-/** An applied filter chip. Nothing in this screen currently sets one — populated once the filter sheet ships. */
+/** The three facets the filter sheet offers. */
+enum class FilterCategory {
+    BRAND,
+    CONDITION,
+    SIZE,
+}
+
+/**
+ * One applied filter chip. [value] is what goes on the wire (a brand name, a
+ * `FragranceCondition` name, a volume in ml as a string); [label] is what the chip
+ * displays — the two differ for Condition/Size, where the value is a raw enum name
+ * or number and the label is the human-readable form the filter sheet showed.
+ */
 data class ActiveFilter(
-    val category: String,
+    val category: FilterCategory,
+    val value: String,
     val label: String,
 )
 
@@ -29,6 +42,9 @@ data class MarketplaceUiState(
     val isConnectionLost: Boolean = false,
 )
 
+private fun List<ActiveFilter>.valueFor(category: FilterCategory): String? =
+    firstOrNull { it.category == category }?.value
+
 class MarketplaceViewModel(
     private val getListingsUseCase: GetListingsUseCase,
 ) : BaseViewModel() {
@@ -37,24 +53,24 @@ class MarketplaceViewModel(
 
     fun loadListings(refresh: Boolean = false) {
         if (!refresh && _uiState.value is UiState.Success) return
-        viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            getListingsUseCase().handleResult(
-                onSuccess = { page ->
-                    _uiState.value =
-                        UiState.Success(
-                            MarketplaceUiState(
-                                listings = page.listings,
-                                nextCursor = page.nextCursor,
-                                totalCount = page.totalCount,
-                            ),
-                        )
-                },
-                onError = { error ->
-                    _uiState.value = UiState.Error(error)
-                },
-            )
-        }
+        fetchListings(currentFilters())
+    }
+
+    /** Replaces the whole applied-filter set with what the filter sheet last showed and re-queries. */
+    fun applyFilters(filters: List<ActiveFilter>) {
+        fetchListings(filters)
+    }
+
+    /** Drops one applied filter and re-queries with what's left. */
+    fun removeFilter(category: FilterCategory) {
+        val current = (_uiState.value as? UiState.Success)?.data ?: return
+        fetchListings(current.activeFilters.filterNot { it.category == category })
+    }
+
+    /** Drops every applied filter and re-queries unfiltered. */
+    fun clearAllFilters() {
+        if ((_uiState.value as? UiState.Success)?.data == null) return
+        fetchListings(emptyList())
     }
 
     fun loadNextPage() {
@@ -62,7 +78,12 @@ class MarketplaceViewModel(
         if (current.nextCursor == null || current.isLoadingMore) return
         viewModelScope.launch {
             _uiState.value = UiState.Success(current.copy(isLoadingMore = true))
-            getListingsUseCase(cursor = current.nextCursor).handleResult(
+            getListingsUseCase(
+                cursor = current.nextCursor,
+                brand = current.activeFilters.valueFor(FilterCategory.BRAND),
+                condition = current.activeFilters.valueFor(FilterCategory.CONDITION),
+                volume = current.activeFilters.valueFor(FilterCategory.SIZE)?.toIntOrNull(),
+            ).handleResult(
                 onSuccess = { page ->
                     _uiState.value =
                         UiState.Success(
@@ -87,29 +108,40 @@ class MarketplaceViewModel(
         }
     }
 
-    /**
-     * Drops one applied filter. Only the chip row reacts — [GetListingsUseCase] takes no
-     * filter arguments yet, so there is no query to re-run until it does.
-     */
-    fun removeFilter(category: String) {
-        val current = (_uiState.value as? UiState.Success)?.data ?: return
-        _uiState.value =
-            UiState.Success(
-                current.copy(activeFilters = current.activeFilters.filterNot { it.category == category }),
-            )
-    }
-
-    /** Drops every applied filter at once. Same caveat as [removeFilter]. */
-    fun clearAllFilters() {
-        val current = (_uiState.value as? UiState.Success)?.data ?: return
-        _uiState.value = UiState.Success(current.copy(activeFilters = emptyList()))
-    }
-
     /** Retries the page that failed to load when the connection was lost mid-scroll. */
     fun retryLoadMore() {
         val current = (_uiState.value as? UiState.Success)?.data ?: return
         if (!current.isConnectionLost) return
         _uiState.value = UiState.Success(current.copy(isConnectionLost = false))
         loadNextPage()
+    }
+
+    private fun currentFilters(): List<ActiveFilter> =
+        (_uiState.value as? UiState.Success)?.data?.activeFilters ?: emptyList()
+
+    private fun fetchListings(filters: List<ActiveFilter>) {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            getListingsUseCase(
+                brand = filters.valueFor(FilterCategory.BRAND),
+                condition = filters.valueFor(FilterCategory.CONDITION),
+                volume = filters.valueFor(FilterCategory.SIZE)?.toIntOrNull(),
+            ).handleResult(
+                onSuccess = { page ->
+                    _uiState.value =
+                        UiState.Success(
+                            MarketplaceUiState(
+                                listings = page.listings,
+                                nextCursor = page.nextCursor,
+                                totalCount = page.totalCount,
+                                activeFilters = filters,
+                            ),
+                        )
+                },
+                onError = { error ->
+                    _uiState.value = UiState.Error(error)
+                },
+            )
+        }
     }
 }

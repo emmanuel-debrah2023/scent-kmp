@@ -223,6 +223,61 @@ class ListingRoutesTest {
         }
 
     @Test
+    fun `GET listings filters by brand case-insensitively`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller6")
+            val diorId = seedFragrance(userId, brand = "Dior")
+            val chanelId = seedFragrance(userId, brand = "Chanel")
+            seedListing(userId, diorId)
+            seedListing(userId, chanelId)
+
+            val response = client.get("/api/v1/listings?brand=dior")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val listings = body["listings"]?.jsonArray
+            assertNotNull(listings)
+            assertEquals(1, listings.size)
+            assertEquals(
+                "Dior",
+                listings[0]
+                    .jsonObject["fragrance"]
+                    ?.jsonObject
+                    ?.get("brand")
+                    ?.jsonPrimitive
+                    ?.content,
+            )
+        }
+
+    @Test
+    fun `GET listings filters by volume`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller7")
+            val smallId = seedFragrance(userId, volume = 30)
+            val largeId = seedFragrance(userId, volume = 100)
+            seedListing(userId, smallId)
+            seedListing(userId, largeId)
+
+            val response = client.get("/api/v1/listings?volume=30")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertEquals(1, body["listings"]?.jsonArray?.size)
+        }
+
+    @Test
     fun `GET listings filters by price range`() =
         testApplication {
             application {
@@ -332,13 +387,18 @@ class ListingRoutesTest {
                 }.value
         }
 
-    private fun seedFragrance(sellerId: Int): Int =
+    private fun seedFragrance(
+        sellerId: Int,
+        brand: String = "Dior",
+        volume: Int? = null,
+    ): Int =
         transaction {
             FragrancesTable
                 .insertAndGetId {
                     it[FragrancesTable.sellerId] = sellerId
                     it[name] = "Sauvage"
-                    it[brand] = "Dior"
+                    it[FragrancesTable.brand] = brand
+                    it[FragrancesTable.volume] = volume
                     it[price] = java.math.BigDecimal("125.00")
                     it[condition] = FragranceCondition.NEW
                     it[createdAt] =
