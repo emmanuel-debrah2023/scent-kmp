@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
@@ -29,20 +28,17 @@ import ui.accessibility.accessibleClickable
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
-// No "full" pill radius token exists in ScentShapes — RoundedCornerShape(percent = 50)
-// is the one literal shape value in this file, used only for the chip pill silhouette.
-val ChipShape = RoundedCornerShape(percent = 50)
-
 /**
  * A chip representing a filter the user has applied. Applied is the only state a
  * chip has — unapplied facets are reached through the filter sheet, not the row.
  *
  * The two halves are separately tappable: the body ([onClick]) reopens the filter
  * sheet on this chip's facet, the trailing cross ([onRemove]) drops just this
- * filter. The cross draws at icon size but claims a full [touch target][touchTarget]
- * around itself, which is why the chip lays out taller than the pill it paints —
- * the pill is drawn behind at [chipHeight][ui.theme.ScentSpacing.chipHeight],
- * vertically centred, so the extra height costs nothing visually.
+ * filter. The cross draws at icon size but claims a full
+ * [ui.theme.ScentSpacing.touchTarget] around itself, which is why the chip lays out
+ * taller than the pill it paints — the pill is drawn behind at
+ * [ui.theme.ScentSpacing.chipHeight], vertically centred, so the extra height costs
+ * nothing visually.
  */
 @Composable
 fun AppliedFilterChip(
