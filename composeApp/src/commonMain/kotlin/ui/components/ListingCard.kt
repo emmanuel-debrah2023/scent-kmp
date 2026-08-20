@@ -31,6 +31,8 @@ import coil3.compose.AsyncImage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.Listing
 import ui.accessibility.clearedDescription
+import ui.components.buttons.ScentPrimaryButton
+import ui.components.buttons.ScentSecondaryButton
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 import kotlin.math.roundToInt
@@ -43,20 +45,57 @@ fun ListingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val spacing = ScentThemeExtras.spacing
+    ListingCardScaffold(listing = listing, onClick = onClick, modifier = modifier)
+}
 
+@Composable
+fun ListingCardWithOffer(
+    listing: Listing,
+    onClick: () -> Unit,
+    onBuyNow: () -> Unit,
+    onMakeOffer: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListingCardScaffold(listing = listing, onClick = onClick, modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
+        ) {
+            if (listing.isNegotiable) {
+                ScentSecondaryButton(
+                    text = "Offer",
+                    onClick = onMakeOffer,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            ScentPrimaryButton(
+                text = "Buy now",
+                onClick = onBuyNow,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ListingCardScaffold(
+    listing: Listing,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null,
+) {
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().clearedDescription(listingContentDescription(listing)),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = ScentThemeExtras.elevation.card),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         ListingHero(listing = listing)
 
         Column(
-            modifier = Modifier.padding(spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(spacing.xxs),
+            modifier = Modifier.padding(ScentThemeExtras.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xxs),
         ) {
             Text(
                 text = listing.fragrance.brand.uppercase(),
@@ -78,7 +117,7 @@ fun ListingCard(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xxs),
             ) {
                 Text(
                     text = "£${listing.price.roundToInt()}",
@@ -99,7 +138,7 @@ fun ListingCard(
                 )
             }
 
-            ScentDivider(modifier = Modifier.padding(vertical = spacing.xxs))
+            ScentDivider(modifier = Modifier.padding(vertical = ScentThemeExtras.spacing.xxs))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -114,12 +153,12 @@ fun ListingCard(
                 if (listing.fragrance.rating > 0f) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                        horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xxs),
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Star,
                             contentDescription = null,
-                            modifier = Modifier.size(spacing.iconSizeSmall),
+                            modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeSmall),
                             tint = ScentThemeExtras.accent,
                         )
                         Text(
@@ -130,6 +169,8 @@ fun ListingCard(
                     }
                 }
             }
+
+            footer?.invoke()
         }
     }
 }
@@ -154,10 +195,10 @@ private fun ListingHero(listing: Listing) {
                     Modifier
                         .fillMaxSize()
                         .background(
-                            Brush.linearGradient(
+                            Brush.radialGradient(
                                 listOf(
-                                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    ScentThemeExtras.listingPlaceholder,
+                                    ScentThemeExtras.listingPlaceholder.copy(alpha = 0.6f),
                                 ),
                             ),
                         ),
