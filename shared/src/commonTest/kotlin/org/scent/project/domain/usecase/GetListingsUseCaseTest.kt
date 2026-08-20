@@ -80,4 +80,46 @@ class GetListingsUseCaseTest {
             assertEquals("NEW", repository.lastListingsCondition)
             assertEquals(50, repository.lastListingsVolume)
         }
+
+    @Test
+    fun `forwards minPrice and maxPrice to the repository`() =
+        runTest {
+            repository.getListingsResult = ListingPage(listings = emptyList()).asRight()
+
+            useCase(minPrice = 50.0, maxPrice = 200.0)
+
+            assertEquals(50.0, repository.lastListingsMinPrice)
+            assertEquals(200.0, repository.lastListingsMaxPrice)
+        }
+
+    @Test
+    fun `returns ValidationError when minPrice exceeds maxPrice`() =
+        runTest {
+            val result = useCase(minPrice = 200.0, maxPrice = 50.0)
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.ValidationError.InvalidInput>(result.leftOrNull())
+            assertEquals(null, repository.lastListingsMinPrice)
+        }
+
+    @Test
+    fun `returns ValidationError when minPrice is negative`() =
+        runTest {
+            val result = useCase(minPrice = -10.0)
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.ValidationError.InvalidInput>(result.leftOrNull())
+            assertEquals(null, repository.lastListingsMinPrice)
+        }
+
+    @Test
+    fun `accepts a min-only range`() =
+        runTest {
+            repository.getListingsResult = ListingPage(listings = emptyList()).asRight()
+
+            useCase(minPrice = 50.0)
+
+            assertEquals(50.0, repository.lastListingsMinPrice)
+            assertEquals(null, repository.lastListingsMaxPrice)
+        }
 }

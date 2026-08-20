@@ -247,6 +247,8 @@ class FakeListingRepository : ListingRepository {
     var lastListingsBrand: String? = null
     var lastListingsCondition: String? = null
     var lastListingsVolume: Int? = null
+    var lastListingsMinPrice: Double? = null
+    var lastListingsMaxPrice: Double? = null
     var lastCreateParams: CreateListingParams? = null
 
     override suspend fun getListings(
@@ -255,12 +257,16 @@ class FakeListingRepository : ListingRepository {
         brand: String?,
         condition: String?,
         volume: Int?,
+        minPrice: Double?,
+        maxPrice: Double?,
     ): Result<ListingPage> {
         lastListingsCursor = cursor
         lastListingsLimit = limit
         lastListingsBrand = brand
         lastListingsCondition = condition
         lastListingsVolume = volume
+        lastListingsMinPrice = minPrice
+        lastListingsMaxPrice = maxPrice
         return getListingsResult
     }
 
@@ -350,6 +356,8 @@ class FakeListingApi : ListingApi {
     var lastListingsBrand: String? = null
     var lastListingsCondition: String? = null
     var lastListingsVolume: Int? = null
+    var lastListingsMinPrice: Double? = null
+    var lastListingsMaxPrice: Double? = null
 
     override suspend fun getListings(
         cursor: String?,
@@ -357,10 +365,14 @@ class FakeListingApi : ListingApi {
         brand: String?,
         condition: String?,
         volume: Int?,
+        minPrice: Double?,
+        maxPrice: Double?,
     ): ListingListResponseDto {
         lastListingsBrand = brand
         lastListingsCondition = condition
         lastListingsVolume = volume
+        lastListingsMinPrice = minPrice
+        lastListingsMaxPrice = maxPrice
         listingsException?.let { throw it }
         return listingsResponse ?: error("FakeListingApi.listingsResponse not set")
     }

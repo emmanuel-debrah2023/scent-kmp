@@ -296,7 +296,56 @@ class ListingRoutesTest {
             assertEquals(HttpStatusCode.OK, response.status)
 
             val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-            val listings = body["listings"]!!.jsonArray
+            val listings = body["listings"]?.jsonArray
+            assertNotNull(listings)
+            assertEquals(1, listings.size)
+        }
+
+    @Test
+    fun `GET listings filters by min_price only`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller8")
+            val fragranceId = seedFragrance(userId)
+            seedListing(userId, fragranceId, price = 50.0)
+            seedListing(userId, fragranceId, price = 150.0)
+            seedListing(userId, fragranceId, price = 300.0)
+
+            val response = client.get("/api/v1/listings?min_price=100")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val listings = body["listings"]?.jsonArray
+            assertNotNull(listings)
+            assertEquals(2, listings.size)
+        }
+
+    @Test
+    fun `GET listings filters by max_price only`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller9")
+            val fragranceId = seedFragrance(userId)
+            seedListing(userId, fragranceId, price = 50.0)
+            seedListing(userId, fragranceId, price = 150.0)
+            seedListing(userId, fragranceId, price = 300.0)
+
+            val response = client.get("/api/v1/listings?max_price=100")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val listings = body["listings"]?.jsonArray
+            assertNotNull(listings)
             assertEquals(1, listings.size)
         }
 

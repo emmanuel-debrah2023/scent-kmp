@@ -24,13 +24,15 @@ class ListingRepositoryImpl(
         brand: String?,
         condition: String?,
         volume: Int?,
+        minPrice: Double?,
+        maxPrice: Double?,
     ): Result<ListingPage> =
         safeApiCall(
             onHttpError = { status ->
                 AppError.NetworkError.ServerError(statusCode = status).asLeft()
             },
         ) {
-            api.getListings(cursor, limit, brand, condition, volume).toListingPage().asRight()
+            api.getListings(cursor, limit, brand, condition, volume, minPrice, maxPrice).toListingPage().asRight()
         }
 
     override suspend fun createListing(params: CreateListingParams): Result<Listing> {

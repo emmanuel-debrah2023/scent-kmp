@@ -21,6 +21,8 @@ interface ListingApi {
         brand: String? = null,
         condition: String? = null,
         volume: Int? = null,
+        minPrice: Double? = null,
+        maxPrice: Double? = null,
     ): ListingListResponseDto
 
     suspend fun createListing(
@@ -41,6 +43,8 @@ class ListingApiImpl(
         brand: String?,
         condition: String?,
         volume: Int?,
+        minPrice: Double?,
+        maxPrice: Double?,
     ): ListingListResponseDto =
         httpClient
             .get(listingsUrl) {
@@ -49,6 +53,8 @@ class ListingApiImpl(
                 brand?.let { parameter("brand", it) }
                 condition?.let { parameter("condition", it) }
                 volume?.let { parameter("volume", it) }
+                minPrice?.let { parameter("min_price", it) }
+                maxPrice?.let { parameter("max_price", it) }
             }.body()
 
     override suspend fun createListing(

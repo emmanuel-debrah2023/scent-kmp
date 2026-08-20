@@ -3,10 +3,12 @@ package ui.marketplace
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -18,7 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import ui.accessibility.accessibleHeading
+import ui.accessibility.accessibleLabel
 import ui.accessibility.accessiblePane
 import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
@@ -54,6 +59,13 @@ fun MarketplaceFilterSheet(
     var brand by remember { mutableStateOf(currentFilters.labelFor(FilterCategory.BRAND).orEmpty()) }
     var condition by remember { mutableStateOf(currentFilters.valueFor(FilterCategory.CONDITION)) }
     var size by remember { mutableStateOf(currentFilters.valueFor(FilterCategory.SIZE)) }
+    val priceFilter = remember(currentFilters) { currentFilters.firstOrNull { it.category == FilterCategory.PRICE } }
+    var minPrice by remember { mutableStateOf(priceFilter?.value.orEmpty()) }
+    var maxPrice by remember { mutableStateOf(priceFilter?.secondaryValue.orEmpty()) }
+    val rangeInvalid =
+        minPrice.isNotBlank() &&
+            maxPrice.isNotBlank() &&
+            (minPrice.toIntOrNull() ?: 0) > (maxPrice.toIntOrNull() ?: 0)
 
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Column(
@@ -94,9 +106,19 @@ fun MarketplaceFilterSheet(
                 onSelect = { value -> size = if (size == value) null else value },
             )
 
+            PriceSection(
+                minValue = minPrice,
+                maxValue = maxPrice,
+                onMinChange = { minPrice = it },
+                onMaxChange = { maxPrice = it },
+                highlighted = initialFocus == FilterCategory.PRICE,
+                rangeInvalid = rangeInvalid,
+            )
+
             Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
                 ScentPrimaryButton(
                     text = "Apply",
+                    enabled = !rangeInvalid,
                     onClick = {
                         onApply(
                             buildList {
@@ -106,6 +128,9 @@ fun MarketplaceFilterSheet(
                                     add(ActiveFilter(FilterCategory.CONDITION, value, label))
                                 }
                                 size?.let { value -> add(ActiveFilter(FilterCategory.SIZE, value, "${value}ml")) }
+                                PriceRange(min = minPrice.toDoubleOrNull(), max = maxPrice.toDoubleOrNull())
+                                    .toActiveFilter()
+                                    ?.let(::add)
                             },
                         )
                     },
@@ -121,6 +146,8 @@ fun MarketplaceFilterSheet(
                         brand = ""
                         condition = null
                         size = null
+                        minPrice = ""
+                        maxPrice = ""
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -163,6 +190,49 @@ private fun FacetSection(
     }
 }
 
+@Composable
+private fun PriceSection(
+    minValue: String,
+    maxValue: String,
+    onMinChange: (String) -> Unit,
+    onMaxChange: (String) -> Unit,
+    highlighted: Boolean,
+    rangeInvalid: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = ScentThemeExtras.spacing
+    Column(
+        modifier = modifier.highlightedIf(highlighted).padding(spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(spacing.xs),
+    ) {
+        Text(
+            text = "Price".uppercase(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.accessibleHeading(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), modifier = Modifier.fillMaxWidth()) {
+            ScentTextField(
+                value = minValue,
+                onValueChange = { onMinChange(it.filter(Char::isDigit)) },
+                label = "Min",
+                placeholder = "£ any",
+                modifier = Modifier.weight(1f).accessibleLabel("Minimum price in pounds"),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+            ScentTextField(
+                value = maxValue,
+                onValueChange = { onMaxChange(it.filter(Char::isDigit)) },
+                label = "Max",
+                placeholder = "£ any",
+                modifier = Modifier.weight(1f).accessibleLabel("Maximum price in pounds"),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                error = if (rangeInvalid) "Max must be at least min" else null,
+            )
+        }
+    }
+}
+
 /** Tints the section that [MarketplaceScreen] opened the sheet to focus, so tapping an
  * applied chip's body visibly lands on the right facet rather than a generic sheet. */
 @Composable
@@ -200,10 +270,27 @@ private fun MarketplaceFilterSheetWithSelectionsPreview() {
                 listOf(
                     ActiveFilter(FilterCategory.BRAND, "Dior", "Dior"),
                     ActiveFilter(FilterCategory.CONDITION, "NEW", "New"),
+                    ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", secondaryValue = "200"),
                 ),
             onApply = {},
             onDismiss = {},
             initialFocus = FilterCategory.CONDITION,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MarketplaceFilterSheetPriceFocusPreview() {
+    ScentTheme {
+        MarketplaceFilterSheet(
+            currentFilters =
+                listOf(
+                    ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", secondaryValue = "200"),
+                ),
+            onApply = {},
+            onDismiss = {},
+            initialFocus = FilterCategory.PRICE,
         )
     }
 }

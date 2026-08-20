@@ -12,6 +12,8 @@ interface ListingRepository {
         brand: String? = null,
         condition: String? = null,
         volume: Int? = null,
+        minPrice: Double? = null,
+        maxPrice: Double? = null,
     ): Result<ListingPage>
 
     suspend fun createListing(params: CreateListingParams): Result<Listing>
