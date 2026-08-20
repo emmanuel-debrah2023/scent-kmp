@@ -17,6 +17,10 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
+// Sweep distance for the shimmer highlight band — wide enough to clear any skeleton
+// card's width so the light band always crosses the full shape.
+private val ShimmerSweepDistance = 400.dp
+
 /**
  * A sweeping gradient placeholder for loading skeletons — animates a light band
  * across a base tone drawn from [surfaceContainer]/[surfaceContainerHigh].
@@ -40,7 +44,7 @@ fun Modifier.shimmerPlaceholder(shape: Shape = RectangleShape): Modifier {
         Brush.linearGradient(
             colors = listOf(base, highlight, base),
             start = Offset(translate, 0f),
-            end = Offset(translate + 400.dp.value, 400.dp.value),
+            end = Offset(translate + ShimmerSweepDistance.value, ShimmerSweepDistance.value),
         )
     return background(brush = brush, shape = shape)
 }

@@ -43,9 +43,27 @@ fun SkeletonListingCard(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(spacing.sm),
             verticalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
-            Box(Modifier.fillMaxWidth(0.4f).height(12.dp).shimmerPlaceholder(MaterialTheme.shapes.extraSmall))
-            Box(Modifier.fillMaxWidth(0.7f).height(20.dp).shimmerPlaceholder(MaterialTheme.shapes.extraSmall))
-            Box(Modifier.fillMaxWidth(0.35f).height(24.dp).shimmerPlaceholder(MaterialTheme.shapes.extraSmall))
+            Box(
+                Modifier
+                    .fillMaxWidth(
+                        0.4f,
+                    ).height(spacing.skeletonLineSmall)
+                    .shimmerPlaceholder(MaterialTheme.shapes.extraSmall),
+            )
+            Box(
+                Modifier
+                    .fillMaxWidth(
+                        0.7f,
+                    ).height(spacing.skeletonLineMedium)
+                    .shimmerPlaceholder(MaterialTheme.shapes.extraSmall),
+            )
+            Box(
+                Modifier
+                    .fillMaxWidth(
+                        0.35f,
+                    ).height(spacing.skeletonLineLarge)
+                    .shimmerPlaceholder(MaterialTheme.shapes.extraSmall),
+            )
 
             ScentDivider(modifier = Modifier.padding(vertical = spacing.xxs))
 
@@ -53,8 +71,20 @@ fun SkeletonListingCard(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Box(Modifier.width(80.dp).height(12.dp).shimmerPlaceholder(MaterialTheme.shapes.extraSmall))
-                Box(Modifier.width(32.dp).height(12.dp).shimmerPlaceholder(MaterialTheme.shapes.extraSmall))
+                Box(
+                    Modifier
+                        .width(
+                            spacing.skeletonMetaWidth,
+                        ).height(spacing.skeletonLineSmall)
+                        .shimmerPlaceholder(MaterialTheme.shapes.extraSmall),
+                )
+                Box(
+                    Modifier
+                        .width(
+                            spacing.skeletonBadgeWidth,
+                        ).height(spacing.skeletonLineSmall)
+                        .shimmerPlaceholder(MaterialTheme.shapes.extraSmall),
+                )
             }
         }
     }

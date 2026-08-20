@@ -35,7 +35,7 @@ import ui.theme.ScentThemeExtras
  * The two halves are separately tappable: the body ([onClick]) reopens the filter
  * sheet on this chip's facet, the trailing cross ([onRemove]) drops just this
  * filter. The cross draws at icon size but claims a full
- * [ui.theme.ScentSpacing.touchTarget] around itself, which is why the chip lays out
+ * [ui.theme.ScentSpacing.buttonHeight] target around itself, which is why the chip lays out
  * taller than the pill it paints — the pill is drawn behind at
  * [ui.theme.ScentSpacing.chipHeight], vertically centred, so the extra height costs
  * nothing visually.
@@ -53,7 +53,7 @@ fun AppliedFilterChip(
     Row(
         modifier =
             modifier
-                .height(spacing.touchTarget)
+                .height(spacing.buttonHeight)
                 .drawBehind {
                     val pillHeight = spacing.chipHeight.toPx()
                     drawRoundRect(
@@ -92,7 +92,7 @@ fun AppliedFilterChip(
             modifier =
                 Modifier
                     .fillMaxHeight()
-                    .width(spacing.touchTarget)
+                    .width(spacing.buttonHeight)
                     .accessibleClickable(label = "Remove $label filter", onClick = onRemove),
             contentAlignment = Alignment.Center,
         ) {

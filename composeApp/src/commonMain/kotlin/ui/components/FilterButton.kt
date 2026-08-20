@@ -32,11 +32,11 @@ fun FilterButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.size(ScentThemeExtras.spacing.searchBarHeight)) {
+    Box(modifier = modifier.size(ScentThemeExtras.spacing.buttonHeight)) {
         Box(
             modifier =
                 Modifier
-                    .size(ScentThemeExtras.spacing.searchBarHeight)
+                    .size(ScentThemeExtras.spacing.buttonHeight)
                     .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceContainerLowest)
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)

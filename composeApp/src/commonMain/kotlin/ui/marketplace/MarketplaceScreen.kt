@@ -224,7 +224,7 @@ private fun AppliedFilterRow(
                     Box(
                         modifier =
                             Modifier
-                                .height(spacing.touchTarget)
+                                .height(spacing.buttonHeight)
                                 .accessibleClickable(label = "Clear all filters", onClick = onClearAll)
                                 .padding(horizontal = spacing.sm),
                         contentAlignment = Alignment.Center,
