@@ -38,6 +38,7 @@ import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
+import org.scent.project.domain.validation.Validator
 import org.scent.project.domain.validation.ValidatorContract
 
 // -------------------------------------------------------------------------
@@ -160,6 +161,7 @@ class FakeValidator(
     private val passwordResult: Result<String>? = null,
     private val usernameResult: Result<String>? = null,
     private val displayNameResult: Result<String>? = null,
+    private val priceRangeResult: Result<ClosedRange<Double>>? = null,
 ) : ValidatorContract {
     override fun validateEmail(email: String): Result<String> = emailResult ?: email.asRight()
 
@@ -168,6 +170,11 @@ class FakeValidator(
     override fun validateUsername(username: String): Result<String> = usernameResult ?: username.asRight()
 
     override fun validateDisplayName(displayName: String): Result<String> = displayNameResult ?: displayName.asRight()
+
+    override fun validatePriceRange(
+        minRaw: String,
+        maxRaw: String,
+    ): Result<ClosedRange<Double>> = priceRangeResult ?: Validator.validatePriceRange(minRaw, maxRaw)
 }
 
 // -------------------------------------------------------------------------
@@ -247,6 +254,8 @@ class FakeListingRepository : ListingRepository {
     var lastListingsBrand: String? = null
     var lastListingsCondition: String? = null
     var lastListingsVolume: Int? = null
+    var lastListingsMinPrice: Double? = null
+    var lastListingsMaxPrice: Double? = null
     var lastCreateParams: CreateListingParams? = null
 
     override suspend fun getListings(
@@ -255,12 +264,16 @@ class FakeListingRepository : ListingRepository {
         brand: String?,
         condition: String?,
         volume: Int?,
+        minPrice: Double?,
+        maxPrice: Double?,
     ): Result<ListingPage> {
         lastListingsCursor = cursor
         lastListingsLimit = limit
         lastListingsBrand = brand
         lastListingsCondition = condition
         lastListingsVolume = volume
+        lastListingsMinPrice = minPrice
+        lastListingsMaxPrice = maxPrice
         return getListingsResult
     }
 
@@ -350,6 +363,8 @@ class FakeListingApi : ListingApi {
     var lastListingsBrand: String? = null
     var lastListingsCondition: String? = null
     var lastListingsVolume: Int? = null
+    var lastListingsMinPrice: Double? = null
+    var lastListingsMaxPrice: Double? = null
 
     override suspend fun getListings(
         cursor: String?,
@@ -357,10 +372,14 @@ class FakeListingApi : ListingApi {
         brand: String?,
         condition: String?,
         volume: Int?,
+        minPrice: Double?,
+        maxPrice: Double?,
     ): ListingListResponseDto {
         lastListingsBrand = brand
         lastListingsCondition = condition
         lastListingsVolume = volume
+        lastListingsMinPrice = minPrice
+        lastListingsMaxPrice = maxPrice
         listingsException?.let { throw it }
         return listingsResponse ?: error("FakeListingApi.listingsResponse not set")
     }

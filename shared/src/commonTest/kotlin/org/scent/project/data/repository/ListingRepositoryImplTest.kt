@@ -110,6 +110,20 @@ class ListingRepositoryImplTest {
         }
 
     @Test
+    fun `getListings forwards minPrice and maxPrice to the api`() =
+        runTest {
+            val api =
+                FakeListingApi().apply {
+                    listingsResponse = ListingListResponseDto(listings = listOf(validListingResponse))
+                }
+
+            repo(api).getListings(minPrice = 50.0, maxPrice = 200.0)
+
+            assertEquals(50.0, api.lastListingsMinPrice)
+            assertEquals(200.0, api.lastListingsMaxPrice)
+        }
+
+    @Test
     fun `getListings returns ParseError on SerializationException`() =
         runTest {
             val api =

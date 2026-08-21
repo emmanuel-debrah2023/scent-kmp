@@ -62,7 +62,7 @@ class MarketplaceViewModelTest {
                 )
             var stateWhenUseCaseCalled: UiState<MarketplaceUiState>? = null
 
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } coAnswers {
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
                 stateWhenUseCaseCalled = viewModel.uiState.value
                 page.asRight()
             }
@@ -85,7 +85,7 @@ class MarketplaceViewModelTest {
         runTest {
             val error = AppError.NetworkError.ServerError(statusCode = 500)
 
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns error.asLeft()
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns error.asLeft()
 
             viewModel.uiState.test {
                 assertEquals(UiState.Idle, awaitItem())
@@ -102,7 +102,7 @@ class MarketplaceViewModelTest {
         runTest {
             val error = AppError.NetworkError.NoConnection()
 
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns error.asLeft()
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns error.asLeft()
 
             viewModel.uiState.test {
                 assertEquals(UiState.Idle, awaitItem())
@@ -116,11 +116,11 @@ class MarketplaceViewModelTest {
     @Test
     fun `loadListings with refresh=false skips reload when already Success`() =
         runTest {
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1))).asRight()
             viewModel.loadListings()
 
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(2))).asRight()
             viewModel.loadListings(refresh = false)
 
@@ -132,23 +132,23 @@ class MarketplaceViewModelTest {
                     .first()
                     .id,
             )
-            coVerify(exactly = 1) { getListingsUseCase(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 1) { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
     fun `loadListings with refresh=true reloads even when already Success`() =
         runTest {
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1))).asRight()
             viewModel.loadListings()
 
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(2), makeListing(3))).asRight()
             viewModel.loadListings(refresh = true)
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(2, state.data.listings.size)
-            coVerify(exactly = 2) { getListingsUseCase(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 2) { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) }
         }
 
     // ─────────────────────────────────────────────
@@ -158,24 +158,24 @@ class MarketplaceViewModelTest {
     @Test
     fun `loadNextPage appends listings and updates nextCursor`() =
         runTest {
-            coEvery { getListingsUseCase(null, any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(null, any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
             viewModel.loadListings()
 
-            coEvery { getListingsUseCase("c1", any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase("c1", any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(2)), nextCursor = "c2").asRight()
             viewModel.loadNextPage()
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(listOf(1, 2), state.data.listings.map { it.id })
             assertEquals("c2", state.data.nextCursor)
-            coVerify { getListingsUseCase("c1", any(), any(), any(), any()) }
+            coVerify { getListingsUseCase("c1", any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
     fun `loadNextPage does nothing when nextCursor is null`() =
         runTest {
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = null).asRight()
             viewModel.loadListings()
 
@@ -183,17 +183,17 @@ class MarketplaceViewModelTest {
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(1, state.data.listings.size)
-            coVerify(exactly = 1) { getListingsUseCase(any(), any(), any(), any(), any()) }
+            coVerify(exactly = 1) { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
     fun `loadNextPage on connectivity failure sets isConnectionLost and keeps existing items`() =
         runTest {
-            coEvery { getListingsUseCase(null, any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(null, any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
             viewModel.loadListings()
 
-            coEvery { getListingsUseCase("c1", any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase("c1", any(), any(), any(), any(), any(), any()) } returns
                 AppError.NetworkError.NoConnection().asLeft()
             viewModel.loadNextPage()
 
@@ -212,13 +212,13 @@ class MarketplaceViewModelTest {
     @Test
     fun `loadNextPage does not start a second request while one is already in flight`() =
         runTest {
-            coEvery { getListingsUseCase(null, any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(null, any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
             viewModel.loadListings()
 
             // A real suspension point keeps the first call in flight so the second call's
             // guard check (isLoadingMore) actually has something to observe.
-            coEvery { getListingsUseCase("c1", any(), any(), any(), any()) } coAnswers {
+            coEvery { getListingsUseCase("c1", any(), any(), any(), any(), any(), any()) } coAnswers {
                 delay(100)
                 ListingPage(listings = listOf(makeListing(2)), nextCursor = "c2").asRight()
             }
@@ -226,22 +226,22 @@ class MarketplaceViewModelTest {
             viewModel.loadNextPage()
             advanceUntilIdle()
 
-            coVerify(exactly = 1) { getListingsUseCase("c1", any(), any(), any(), any()) }
+            coVerify(exactly = 1) { getListingsUseCase("c1", any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
     fun `retryLoadMore clears isConnectionLost and retries the failed page`() =
         runTest {
-            coEvery { getListingsUseCase(null, any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(null, any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
             viewModel.loadListings()
 
-            coEvery { getListingsUseCase("c1", any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase("c1", any(), any(), any(), any(), any(), any()) } returns
                 AppError.NetworkError.NoConnection().asLeft()
             viewModel.loadNextPage()
             assertTrue((viewModel.uiState.value as UiState.Success).data.isConnectionLost)
 
-            coEvery { getListingsUseCase("c1", any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase("c1", any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(2)), nextCursor = "c2").asRight()
             viewModel.retryLoadMore()
 
@@ -265,7 +265,7 @@ class MarketplaceViewModelTest {
     @Test
     fun `applyFilters re-queries with the selected facets and stores them as activeFilters`() =
         runTest {
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1))).asRight()
             viewModel.loadListings()
 
@@ -275,7 +275,7 @@ class MarketplaceViewModelTest {
                     ActiveFilter(FilterCategory.CONDITION, "NEW", "New"),
                     ActiveFilter(FilterCategory.SIZE, "50", "50ml"),
                 )
-            coEvery { getListingsUseCase(null, 20, "Dior", "NEW", 50) } returns
+            coEvery { getListingsUseCase(null, 20, "Dior", "NEW", 50, any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(2))).asRight()
 
             viewModel.applyFilters(filters)
@@ -283,7 +283,73 @@ class MarketplaceViewModelTest {
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(listOf(2), state.data.listings.map { it.id })
             assertEquals(filters, state.data.activeFilters)
-            coVerify { getListingsUseCase(null, 20, "Dior", "NEW", 50) }
+            coVerify { getListingsUseCase(null, 20, "Dior", "NEW", 50, any(), any()) }
+        }
+
+    @Test
+    fun `applyFilters forwards price range bounds to the use case`() =
+        runTest {
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                ListingPage(listings = listOf(makeListing(1))).asRight()
+            viewModel.loadListings()
+
+            val filters = listOf(ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", "200"))
+            coEvery { getListingsUseCase(null, 20, null, null, null, 50.0, 200.0) } returns
+                ListingPage(listings = listOf(makeListing(2))).asRight()
+
+            viewModel.applyFilters(filters)
+
+            val state = viewModel.uiState.value as UiState.Success
+            assertEquals(filters, state.data.activeFilters)
+            coVerify { getListingsUseCase(null, 20, null, null, null, 50.0, 200.0) }
+        }
+
+    @Test
+    fun `applyFilters forwards a min-only range with a null max`() =
+        runTest {
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                ListingPage(listings = listOf(makeListing(1))).asRight()
+            viewModel.loadListings()
+
+            val filters = listOf(ActiveFilter(FilterCategory.PRICE, "50", "Over £50", null))
+            coEvery { getListingsUseCase(null, 20, null, null, null, 50.0, null) } returns
+                ListingPage(listings = listOf(makeListing(2))).asRight()
+
+            viewModel.applyFilters(filters)
+
+            coVerify { getListingsUseCase(null, 20, null, null, null, 50.0, null) }
+        }
+
+    @Test
+    fun `applyFilters forwards a max-only range with a null min`() =
+        runTest {
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                ListingPage(listings = listOf(makeListing(1))).asRight()
+            viewModel.loadListings()
+
+            val filters = listOf(ActiveFilter(FilterCategory.PRICE, "", "Under £200", "200"))
+            coEvery { getListingsUseCase(null, 20, null, null, null, null, 200.0) } returns
+                ListingPage(listings = listOf(makeListing(2))).asRight()
+
+            viewModel.applyFilters(filters)
+
+            coVerify { getListingsUseCase(null, 20, null, null, null, null, 200.0) }
+        }
+
+    @Test
+    fun `removeFilter PRICE drops both bounds`() =
+        runTest {
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
+            viewModel.applyFilters(listOf(ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", "200")))
+
+            coEvery { getListingsUseCase(null, 20, null, null, null, null, null) } returns
+                ListingPage(listings = listOf(makeListing(2))).asRight()
+            viewModel.removeFilter(FilterCategory.PRICE)
+
+            val state = viewModel.uiState.value as UiState.Success
+            assertEquals(emptyList(), state.data.activeFilters)
+            coVerify { getListingsUseCase(null, 20, null, null, null, null, null) }
         }
 
     @Test
@@ -294,50 +360,66 @@ class MarketplaceViewModelTest {
                     ActiveFilter(FilterCategory.BRAND, "Dior", "Dior"),
                     ActiveFilter(FilterCategory.CONDITION, "NEW", "New"),
                 )
-            coEvery { getListingsUseCase(null, 20, "Dior", "NEW", null) } returns
+            coEvery { getListingsUseCase(null, 20, "Dior", "NEW", null, any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1))).asRight()
             viewModel.applyFilters(filters)
 
-            coEvery { getListingsUseCase(null, 20, null, "NEW", null) } returns
+            coEvery { getListingsUseCase(null, 20, null, "NEW", null, any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(2))).asRight()
             viewModel.removeFilter(FilterCategory.BRAND)
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(listOf(ActiveFilter(FilterCategory.CONDITION, "NEW", "New")), state.data.activeFilters)
-            coVerify { getListingsUseCase(null, 20, null, "NEW", null) }
+            coVerify { getListingsUseCase(null, 20, null, "NEW", null, any(), any()) }
         }
 
     @Test
     fun `clearAllFilters drops every facet and re-queries unfiltered`() =
         runTest {
-            coEvery { getListingsUseCase(null, 20, "Dior", null, null) } returns
+            coEvery { getListingsUseCase(null, 20, "Dior", null, null, any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
             viewModel.applyFilters(listOf(ActiveFilter(FilterCategory.BRAND, "Dior", "Dior")))
 
-            coEvery { getListingsUseCase(any(), any(), any(), any(), any()) } returns
+            coEvery { getListingsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
                 ListingPage(listings = listOf(makeListing(2)), nextCursor = "c1").asRight()
             viewModel.clearAllFilters()
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(listOf(2), state.data.listings.map { it.id })
             assertTrue(state.data.activeFilters.isEmpty())
-            coVerify { getListingsUseCase(null, 20, null, null, null) }
+            coVerify { getListingsUseCase(null, 20, null, null, null, null, null) }
         }
 
     @Test
-    fun `loadNextPage preserves the current filters across pagination`() =
+    fun `loadNextPage preserves the applied price range`() =
         runTest {
-            coEvery { getListingsUseCase(null, 20, "Dior", null, null) } returns
+            coEvery { getListingsUseCase(null, 20, null, null, null, 50.0, 200.0) } returns
                 ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
-            viewModel.applyFilters(listOf(ActiveFilter(FilterCategory.BRAND, "Dior", "Dior")))
+            viewModel.applyFilters(listOf(ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", "200")))
 
-            coEvery { getListingsUseCase("c1", 20, "Dior", null, null) } returns
+            coEvery { getListingsUseCase("c1", 20, null, null, null, 50.0, 200.0) } returns
                 ListingPage(listings = listOf(makeListing(2)), nextCursor = "c2").asRight()
             viewModel.loadNextPage()
 
             val state = viewModel.uiState.value as UiState.Success
             assertEquals(listOf(1, 2), state.data.listings.map { it.id })
-            coVerify { getListingsUseCase("c1", 20, "Dior", null, null) }
+            coVerify { getListingsUseCase("c1", 20, null, null, null, 50.0, 200.0) }
+        }
+
+    @Test
+    fun `loadNextPage preserves the current filters across pagination`() =
+        runTest {
+            coEvery { getListingsUseCase(null, 20, "Dior", null, null, any(), any()) } returns
+                ListingPage(listings = listOf(makeListing(1)), nextCursor = "c1").asRight()
+            viewModel.applyFilters(listOf(ActiveFilter(FilterCategory.BRAND, "Dior", "Dior")))
+
+            coEvery { getListingsUseCase("c1", 20, "Dior", null, null, any(), any()) } returns
+                ListingPage(listings = listOf(makeListing(2)), nextCursor = "c2").asRight()
+            viewModel.loadNextPage()
+
+            val state = viewModel.uiState.value as UiState.Success
+            assertEquals(listOf(1, 2), state.data.listings.map { it.id })
+            coVerify { getListingsUseCase("c1", 20, "Dior", null, null, any(), any()) }
         }
 
     // ─────────────────────────────────────────────

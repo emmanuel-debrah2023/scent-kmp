@@ -3,22 +3,30 @@ package ui.marketplace
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import org.scent.project.domain.error.AppError
+import org.scent.project.domain.validation.Validator
+import ui.accessibility.accessibleHeading
+import ui.accessibility.accessibleLabel
 import ui.accessibility.accessiblePane
 import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
@@ -54,6 +62,34 @@ fun MarketplaceFilterSheet(
     var brand by remember { mutableStateOf(currentFilters.labelFor(FilterCategory.BRAND).orEmpty()) }
     var condition by remember { mutableStateOf(currentFilters.valueFor(FilterCategory.CONDITION)) }
     var size by remember { mutableStateOf(currentFilters.valueFor(FilterCategory.SIZE)) }
+    val priceFilter = remember(currentFilters) { currentFilters.firstOrNull { it.category == FilterCategory.PRICE } }
+    var minPrice by remember { mutableStateOf(priceFilter?.value.orEmpty()) }
+    var maxPrice by remember { mutableStateOf(priceFilter?.secondaryValue.orEmpty()) }
+    val priceValidation by remember { derivedStateOf { Validator.validatePriceRange(minPrice, maxPrice) } }
+    val minPriceError by remember {
+        derivedStateOf {
+            when (val error = priceValidation.leftOrNull()) {
+                is AppError.ValidationError.InvalidMinPrice -> error.message
+                else -> null
+            }
+        }
+    }
+    val maxPriceError by remember {
+        derivedStateOf {
+            when (val error = priceValidation.leftOrNull()) {
+                is AppError.ValidationError.InvalidMaxPrice -> error.message
+                else -> null
+            }
+        }
+    }
+    val rangeError by remember {
+        derivedStateOf {
+            when (val error = priceValidation.leftOrNull()) {
+                is AppError.ValidationError.MinPriceExceedsMax -> error.message
+                else -> null
+            }
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Column(
@@ -94,9 +130,21 @@ fun MarketplaceFilterSheet(
                 onSelect = { value -> size = if (size == value) null else value },
             )
 
+            PriceSection(
+                minValue = minPrice,
+                maxValue = maxPrice,
+                onMinChange = { minPrice = it },
+                onMaxChange = { maxPrice = it },
+                highlighted = initialFocus == FilterCategory.PRICE,
+                minPriceError = minPriceError,
+                maxPriceError = maxPriceError,
+                rangeError = rangeError,
+            )
+
             Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
                 ScentPrimaryButton(
                     text = "Apply",
+                    enabled = priceValidation.isRight,
                     onClick = {
                         onApply(
                             buildList {
@@ -106,6 +154,9 @@ fun MarketplaceFilterSheet(
                                     add(ActiveFilter(FilterCategory.CONDITION, value, label))
                                 }
                                 size?.let { value -> add(ActiveFilter(FilterCategory.SIZE, value, "${value}ml")) }
+                                PriceRange(min = minPrice.toDoubleOrNull(), max = maxPrice.toDoubleOrNull())
+                                    .toActiveFilter()
+                                    ?.let(::add)
                             },
                         )
                     },
@@ -121,6 +172,8 @@ fun MarketplaceFilterSheet(
                         brand = ""
                         condition = null
                         size = null
+                        minPrice = ""
+                        maxPrice = ""
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -146,6 +199,7 @@ private fun FacetSection(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.accessibleHeading(),
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(spacing.xs),
@@ -159,6 +213,52 @@ private fun FacetSection(
                     modifier = Modifier.collectionItem(rowIndex = index),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun PriceSection(
+    minValue: String,
+    maxValue: String,
+    onMinChange: (String) -> Unit,
+    onMaxChange: (String) -> Unit,
+    highlighted: Boolean,
+    minPriceError: String?,
+    maxPriceError: String?,
+    rangeError: String?,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = ScentThemeExtras.spacing
+    Column(
+        modifier = modifier.highlightedIf(highlighted).padding(spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(spacing.xs),
+    ) {
+        Text(
+            text = "Price".uppercase(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.accessibleHeading(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), modifier = Modifier.fillMaxWidth()) {
+            ScentTextField(
+                value = minValue,
+                onValueChange = { onMinChange(it.filter(Char::isDigit)) },
+                label = "Min",
+                placeholder = "£ any",
+                modifier = Modifier.weight(1f).accessibleLabel("Minimum price in pounds"),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                error = minPriceError,
+            )
+            ScentTextField(
+                value = maxValue,
+                onValueChange = { onMaxChange(it.filter(Char::isDigit)) },
+                label = "Max",
+                placeholder = "£ any",
+                modifier = Modifier.weight(1f).accessibleLabel("Maximum price in pounds"),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                error = maxPriceError ?: rangeError,
+            )
         }
     }
 }
@@ -200,10 +300,27 @@ private fun MarketplaceFilterSheetWithSelectionsPreview() {
                 listOf(
                     ActiveFilter(FilterCategory.BRAND, "Dior", "Dior"),
                     ActiveFilter(FilterCategory.CONDITION, "NEW", "New"),
+                    ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", secondaryValue = "200"),
                 ),
             onApply = {},
             onDismiss = {},
             initialFocus = FilterCategory.CONDITION,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MarketplaceFilterSheetPriceFocusPreview() {
+    ScentTheme {
+        MarketplaceFilterSheet(
+            currentFilters =
+                listOf(
+                    ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", secondaryValue = "200"),
+                ),
+            onApply = {},
+            onDismiss = {},
+            initialFocus = FilterCategory.PRICE,
         )
     }
 }

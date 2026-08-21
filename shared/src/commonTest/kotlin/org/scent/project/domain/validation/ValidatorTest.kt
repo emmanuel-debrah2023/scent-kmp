@@ -178,4 +178,81 @@ class ValidatorTest {
         assertEquals(first.isRight, second.isRight)
         assertEquals(first.getOrNull(), second.getOrNull())
     }
+
+    // -------------------------------------------------------------------------
+    // validatePriceRange
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `validatePriceRange returns Right for valid numeric range`() {
+        val result = Validator.validatePriceRange("50.0", "200.0")
+        assertTrue(result.isRight)
+        val range = result.getOrNull()
+        assertEquals(50.0, range?.start)
+        assertEquals(200.0, range?.endInclusive)
+    }
+
+    @Test
+    fun `validatePriceRange treats blank min as 0`() {
+        val result = Validator.validatePriceRange("", "100.0")
+        assertTrue(result.isRight)
+        val range = result.getOrNull()
+        assertEquals(0.0, range?.start)
+        assertEquals(100.0, range?.endInclusive)
+    }
+
+    @Test
+    fun `validatePriceRange treats blank max as unbounded`() {
+        val result = Validator.validatePriceRange("50.0", "")
+        assertTrue(result.isRight)
+        val range = result.getOrNull()
+        assertEquals(50.0, range?.start)
+        assertEquals(Double.MAX_VALUE, range?.endInclusive)
+    }
+
+    @Test
+    fun `validatePriceRange accepts both blanks as fully unbounded`() {
+        val result = Validator.validatePriceRange("", "")
+        assertTrue(result.isRight)
+        val range = result.getOrNull()
+        assertEquals(0.0, range?.start)
+        assertEquals(Double.MAX_VALUE, range?.endInclusive)
+    }
+
+    @Test
+    fun `validatePriceRange returns InvalidMinPrice for non-numeric min`() {
+        val result = Validator.validatePriceRange("abc", "100.0")
+        assertTrue(result.isLeft)
+        val error = result.leftOrNull()
+        assertIs<AppError.ValidationError.InvalidMinPrice>(error)
+        assertEquals("abc", error.rawValue)
+    }
+
+    @Test
+    fun `validatePriceRange returns InvalidMaxPrice for non-numeric max`() {
+        val result = Validator.validatePriceRange("50.0", "xyz")
+        assertTrue(result.isLeft)
+        val error = result.leftOrNull()
+        assertIs<AppError.ValidationError.InvalidMaxPrice>(error)
+        assertEquals("xyz", error.rawValue)
+    }
+
+    @Test
+    fun `validatePriceRange returns MinPriceExceedsMax when min is greater than max`() {
+        val result = Validator.validatePriceRange("200.0", "50.0")
+        assertTrue(result.isLeft)
+        val error = result.leftOrNull()
+        assertIs<AppError.ValidationError.MinPriceExceedsMax>(error)
+        assertEquals(200.0, error.min)
+        assertEquals(50.0, error.max)
+    }
+
+    @Test
+    fun `validatePriceRange accepts min equals max as valid`() {
+        val result = Validator.validatePriceRange("100.0", "100.0")
+        assertTrue(result.isRight)
+        val range = result.getOrNull()
+        assertEquals(100.0, range?.start)
+        assertEquals(100.0, range?.endInclusive)
+    }
 }
