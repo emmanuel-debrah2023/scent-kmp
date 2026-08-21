@@ -10,6 +10,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.CreateListingRequest
 import org.scent.project.data.remote.dto.ListingListResponseDto
 import org.scent.project.data.remote.dto.ListingResponse
@@ -24,6 +25,11 @@ interface ListingApi {
         minPrice: Double? = null,
         maxPrice: Double? = null,
     ): ListingListResponseDto
+
+    suspend fun getBrandSuggestions(
+        query: String,
+        limit: Int = 8,
+    ): BrandListResponseDto
 
     suspend fun createListing(
         request: CreateListingRequest,
@@ -55,6 +61,16 @@ class ListingApiImpl(
                 volume?.let { parameter("volume", it) }
                 minPrice?.let { parameter("min_price", it) }
                 maxPrice?.let { parameter("max_price", it) }
+            }.body()
+
+    override suspend fun getBrandSuggestions(
+        query: String,
+        limit: Int,
+    ): BrandListResponseDto =
+        httpClient
+            .get("$listingsUrl/brands") {
+                parameter("query", query)
+                parameter("limit", limit)
             }.body()
 
     override suspend fun createListing(

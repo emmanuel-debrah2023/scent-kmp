@@ -3,6 +3,7 @@ package org.scent.project.data.repository
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
 import kotlinx.serialization.SerializationException
+import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.FragranceResponse
 import org.scent.project.data.remote.dto.ListingListResponseDto
 import org.scent.project.data.remote.dto.ListingResponse
@@ -133,6 +134,59 @@ class ListingRepositoryImplTest {
 
             assertTrue(result.isLeft)
             assertIs<AppError.NetworkError.ParseError>(result.leftOrNull())
+        }
+
+    // -------------------------------------------------------------------------
+    // getBrandSuggestions
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `getBrandSuggestions forwards query and limit to the api`() =
+        runTest {
+            val api =
+                FakeListingApi().apply { brandsResponse = BrandListResponseDto(brands = listOf("Dior")) }
+
+            repo(api).getBrandSuggestions("dio", limit = 5)
+
+            assertEquals("dio", api.lastBrandQuery)
+            assertEquals(5, api.lastBrandLimit)
+        }
+
+    @Test
+    fun `getBrandSuggestions maps a null brands list to an empty list`() =
+        runTest {
+            val api =
+                FakeListingApi().apply { brandsResponse = BrandListResponseDto(brands = null) }
+
+            val result = repo(api).getBrandSuggestions("dio")
+
+            assertTrue(result.isRight)
+            assertEquals(emptyList(), result.getOrNull())
+        }
+
+    @Test
+    fun `getBrandSuggestions drops blank brand entries`() =
+        runTest {
+            val api =
+                FakeListingApi().apply {
+                    brandsResponse = BrandListResponseDto(brands = listOf("Dior", "", " "))
+                }
+
+            val result = repo(api).getBrandSuggestions("dio")
+
+            assertTrue(result.isRight)
+            assertEquals(listOf("Dior"), result.getOrNull())
+        }
+
+    @Test
+    fun `getBrandSuggestions returns NoConnection on IOException`() =
+        runTest {
+            val api = FakeListingApi().apply { brandsException = IOException("offline") }
+
+            val result = repo(api).getBrandSuggestions("dio")
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
         }
 
     // -------------------------------------------------------------------------

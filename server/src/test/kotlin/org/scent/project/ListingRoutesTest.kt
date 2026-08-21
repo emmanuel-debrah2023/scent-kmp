@@ -405,6 +405,132 @@ class ListingRoutesTest {
             assertEquals(false, body["is_active"]?.jsonPrimitive?.content?.toBoolean())
         }
 
+    @Test
+    fun `GET listings brands returns matching brands case-insensitively`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller8")
+            val diorId = seedFragrance(userId, brand = "Dior")
+            val chanelId = seedFragrance(userId, brand = "Chanel")
+            seedListing(userId, diorId)
+            seedListing(userId, chanelId)
+
+            val response = client.get("/api/v1/listings/brands?query=DIO")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val brands = body["brands"]?.jsonArray
+            assertNotNull(brands)
+            assertEquals(1, brands.size)
+            assertEquals("Dior", brands[0].jsonPrimitive.content)
+        }
+
+    @Test
+    fun `GET listings brands excludes brands with no active listing`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller9")
+            seedFragrance(userId, brand = "Creed")
+            val diorId = seedFragrance(userId, brand = "Dior")
+            seedListing(userId, diorId)
+            // Creed has no listing
+
+            val response = client.get("/api/v1/listings/brands?query=e")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val brands = body["brands"]?.jsonArray
+            assertNotNull(brands)
+            assertEquals(1, brands.size)
+            assertEquals("Dior", brands[0].jsonPrimitive.content)
+        }
+
+    @Test
+    fun `GET listings brands dedupes case variants of the same brand`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller10")
+            val diorId1 = seedFragrance(userId, brand = "Dior")
+            val diorId2 = seedFragrance(userId, brand = "dior")
+            seedListing(userId, diorId1)
+            seedListing(userId, diorId2)
+
+            val response = client.get("/api/v1/listings/brands?query=dior")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val brands = body["brands"]?.jsonArray
+            assertNotNull(brands)
+            assertEquals(1, brands.size)
+        }
+
+    @Test
+    fun `GET listings brands respects the limit parameter`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller11")
+            val brand1 = seedFragrance(userId, brand = "Chanel")
+            val brand2 = seedFragrance(userId, brand = "Channelle")
+            val brand3 = seedFragrance(userId, brand = "Chance")
+            val brand4 = seedFragrance(userId, brand = "Channel")
+            val brand5 = seedFragrance(userId, brand = "Channelz")
+            seedListing(userId, brand1)
+            seedListing(userId, brand2)
+            seedListing(userId, brand3)
+            seedListing(userId, brand4)
+            seedListing(userId, brand5)
+
+            val response = client.get("/api/v1/listings/brands?query=chan&limit=2")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val brands = body["brands"]?.jsonArray
+            assertNotNull(brands)
+            assertEquals(2, brands.size)
+        }
+
+    @Test
+    fun `GET listings brands returns empty for a blank query`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { listingRoutes() }
+            }
+
+            val userId = seedUser("seller12")
+            val diorId = seedFragrance(userId, brand = "Dior")
+            seedListing(userId, diorId)
+
+            val response = client.get("/api/v1/listings/brands")
+            assertEquals(HttpStatusCode.OK, response.status)
+
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val brands = body["brands"]?.jsonArray
+            assertNotNull(brands)
+            assertEquals(0, brands.size)
+        }
+
     private fun initTestDatabase() {
         org.jetbrains.exposed.v1.jdbc.Database.connect(
             "jdbc:h2:mem:listing_test_${System.nanoTime()};DB_CLOSE_DELAY=-1",

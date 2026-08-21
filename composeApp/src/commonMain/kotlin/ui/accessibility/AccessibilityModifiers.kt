@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.collectionInfo
@@ -15,6 +16,7 @@ import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -112,6 +114,15 @@ fun Modifier.accessiblePane(title: String): Modifier = semantics { paneTitle = t
 
 /** Announces a dynamic state beyond checked/unchecked (e.g. "3 of 5 selected"). */
 fun Modifier.accessibleState(description: String): Modifier = semantics { stateDescription = description }
+
+/**
+ * Marks a region whose content changes should be announced without the user moving
+ * focus — e.g. a typeahead's suggestion list appearing under the field being typed in.
+ * Polite queues behind whatever is currently being spoken; assertive interrupts, which
+ * is almost never right for content the user did not explicitly request.
+ */
+fun Modifier.accessibleLiveRegion(polite: Boolean = true): Modifier =
+    semantics { liveRegion = if (polite) LiveRegionMode.Polite else LiveRegionMode.Assertive }
 
 /** Hides a purely decorative container (background shape, divider, gradient) from a11y services. */
 fun Modifier.decorative(): Modifier = clearAndSetSemantics {}

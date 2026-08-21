@@ -1,6 +1,7 @@
 package org.scent.project.data.repository
 
 import org.scent.project.data.local.TokenStorage
+import org.scent.project.data.mapper.ListingMapper.toBrandNames
 import org.scent.project.data.mapper.ListingMapper.toListing
 import org.scent.project.data.mapper.ListingMapper.toListingPage
 import org.scent.project.data.remote.api.ListingApi
@@ -33,6 +34,18 @@ class ListingRepositoryImpl(
             },
         ) {
             api.getListings(cursor, limit, brand, condition, volume, minPrice, maxPrice).toListingPage().asRight()
+        }
+
+    override suspend fun getBrandSuggestions(
+        query: String,
+        limit: Int,
+    ): Result<List<String>> =
+        safeApiCall(
+            onHttpError = { status ->
+                AppError.NetworkError.ServerError(statusCode = status).asLeft()
+            },
+        ) {
+            api.getBrandSuggestions(query, limit).toBrandNames().asRight()
         }
 
     override suspend fun createListing(params: CreateListingParams): Result<Listing> {

@@ -1,6 +1,7 @@
 package org.scent.project.data.mapper
 
 import org.scent.project.data.mapper.FragranceMapper.toFragrance
+import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.ListingListResponseDto
 import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.domain.error.AppError
@@ -17,6 +18,10 @@ object ListingMapper {
             nextCursor = nextCursor,
             totalCount = totalCount,
         )
+
+    /** Suggestions are advisory: a missing or partly-blank list is 'no suggestions',
+     *  not a parse failure, so this returns a plain List rather than Result. */
+    fun BrandListResponseDto.toBrandNames(): List<String> = brands?.filter { it.isNotBlank() } ?: emptyList()
 
     fun ListingResponse.toListing(): Result<Listing> {
         val id =

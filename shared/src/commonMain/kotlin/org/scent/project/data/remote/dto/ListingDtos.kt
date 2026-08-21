@@ -25,6 +25,11 @@ data class ListingListResponseDto(
 )
 
 @Serializable
+data class BrandListResponseDto(
+    val brands: List<String>? = null,
+)
+
+@Serializable
 data class CreateListingRequest(
     val name: String,
     val brand: String,
