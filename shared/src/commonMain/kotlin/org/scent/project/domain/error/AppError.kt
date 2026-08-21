@@ -75,6 +75,25 @@ sealed class AppError {
             override val message: String = "Invalid $fieldName",
             override val cause: Throwable? = null,
         ) : ValidationError()
+
+        data class InvalidMinPrice(
+            val rawValue: String,
+            override val message: String = "Enter a valid minimum price",
+            override val cause: Throwable? = null,
+        ) : ValidationError()
+
+        data class InvalidMaxPrice(
+            val rawValue: String,
+            override val message: String = "Enter a valid maximum price",
+            override val cause: Throwable? = null,
+        ) : ValidationError()
+
+        data class MinPriceExceedsMax(
+            val min: Double,
+            val max: Double,
+            override val message: String = "Minimum price cannot exceed maximum price",
+            override val cause: Throwable? = null,
+        ) : ValidationError()
     }
 
     sealed class ContentError : AppError() {

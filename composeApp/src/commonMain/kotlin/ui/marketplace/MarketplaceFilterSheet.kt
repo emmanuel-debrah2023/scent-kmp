@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import org.scent.project.domain.error.AppError
+import org.scent.project.domain.validation.Validator
 import ui.accessibility.accessibleHeading
 import ui.accessibility.accessibleLabel
 import ui.accessibility.accessiblePane
@@ -62,10 +65,31 @@ fun MarketplaceFilterSheet(
     val priceFilter = remember(currentFilters) { currentFilters.firstOrNull { it.category == FilterCategory.PRICE } }
     var minPrice by remember { mutableStateOf(priceFilter?.value.orEmpty()) }
     var maxPrice by remember { mutableStateOf(priceFilter?.secondaryValue.orEmpty()) }
-    val rangeInvalid =
-        minPrice.isNotBlank() &&
-            maxPrice.isNotBlank() &&
-            (minPrice.toIntOrNull() ?: 0) > (maxPrice.toIntOrNull() ?: 0)
+    val priceValidation by remember { derivedStateOf { Validator.validatePriceRange(minPrice, maxPrice) } }
+    val minPriceError by remember {
+        derivedStateOf {
+            when (val error = priceValidation.leftOrNull()) {
+                is AppError.ValidationError.InvalidMinPrice -> error.message
+                else -> null
+            }
+        }
+    }
+    val maxPriceError by remember {
+        derivedStateOf {
+            when (val error = priceValidation.leftOrNull()) {
+                is AppError.ValidationError.InvalidMaxPrice -> error.message
+                else -> null
+            }
+        }
+    }
+    val rangeError by remember {
+        derivedStateOf {
+            when (val error = priceValidation.leftOrNull()) {
+                is AppError.ValidationError.MinPriceExceedsMax -> error.message
+                else -> null
+            }
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Column(
@@ -112,13 +136,15 @@ fun MarketplaceFilterSheet(
                 onMinChange = { minPrice = it },
                 onMaxChange = { maxPrice = it },
                 highlighted = initialFocus == FilterCategory.PRICE,
-                rangeInvalid = rangeInvalid,
+                minPriceError = minPriceError,
+                maxPriceError = maxPriceError,
+                rangeError = rangeError,
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
                 ScentPrimaryButton(
                     text = "Apply",
-                    enabled = !rangeInvalid,
+                    enabled = priceValidation.isRight,
                     onClick = {
                         onApply(
                             buildList {
@@ -198,7 +224,9 @@ private fun PriceSection(
     onMinChange: (String) -> Unit,
     onMaxChange: (String) -> Unit,
     highlighted: Boolean,
-    rangeInvalid: Boolean,
+    minPriceError: String?,
+    maxPriceError: String?,
+    rangeError: String?,
     modifier: Modifier = Modifier,
 ) {
     val spacing = ScentThemeExtras.spacing
@@ -220,6 +248,7 @@ private fun PriceSection(
                 placeholder = "£ any",
                 modifier = Modifier.weight(1f).accessibleLabel("Minimum price in pounds"),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                error = minPriceError,
             )
             ScentTextField(
                 value = maxValue,
@@ -228,7 +257,7 @@ private fun PriceSection(
                 placeholder = "£ any",
                 modifier = Modifier.weight(1f).accessibleLabel("Maximum price in pounds"),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                error = if (rangeInvalid) "Max must be at least min" else null,
+                error = maxPriceError ?: rangeError,
             )
         }
     }

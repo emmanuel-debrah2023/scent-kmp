@@ -13,6 +13,11 @@ interface ValidatorContract {
     fun validateUsername(username: String): Result<String>
 
     fun validateDisplayName(displayName: String): Result<String>
+
+    fun validatePriceRange(
+        minRaw: String,
+        maxRaw: String,
+    ): Result<ClosedRange<Double>>
 }
 
 object Validator : ValidatorContract {
@@ -46,4 +51,31 @@ object Validator : ValidatorContract {
             displayName.length > 100 -> AppError.ValidationError.InvalidInput(fieldName = "displayName").asLeft()
             else -> displayName.asRight()
         }
+
+    override fun validatePriceRange(
+        minRaw: String,
+        maxRaw: String,
+    ): Result<ClosedRange<Double>> {
+        val min =
+            if (minRaw.isBlank()) {
+                0.0
+            } else {
+                minRaw.toDoubleOrNull()
+                    ?: return AppError.ValidationError.InvalidMinPrice(rawValue = minRaw).asLeft()
+            }
+
+        val max =
+            if (maxRaw.isBlank()) {
+                Double.MAX_VALUE
+            } else {
+                maxRaw.toDoubleOrNull()
+                    ?: return AppError.ValidationError.InvalidMaxPrice(rawValue = maxRaw).asLeft()
+            }
+
+        if (min > max) {
+            return AppError.ValidationError.MinPriceExceedsMax(min = min, max = max).asLeft()
+        }
+
+        return (min..max).asRight()
+    }
 }

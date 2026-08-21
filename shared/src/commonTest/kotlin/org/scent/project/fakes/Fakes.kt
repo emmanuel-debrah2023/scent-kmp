@@ -38,6 +38,7 @@ import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
+import org.scent.project.domain.validation.Validator
 import org.scent.project.domain.validation.ValidatorContract
 
 // -------------------------------------------------------------------------
@@ -160,6 +161,7 @@ class FakeValidator(
     private val passwordResult: Result<String>? = null,
     private val usernameResult: Result<String>? = null,
     private val displayNameResult: Result<String>? = null,
+    private val priceRangeResult: Result<ClosedRange<Double>>? = null,
 ) : ValidatorContract {
     override fun validateEmail(email: String): Result<String> = emailResult ?: email.asRight()
 
@@ -168,6 +170,11 @@ class FakeValidator(
     override fun validateUsername(username: String): Result<String> = usernameResult ?: username.asRight()
 
     override fun validateDisplayName(displayName: String): Result<String> = displayNameResult ?: displayName.asRight()
+
+    override fun validatePriceRange(
+        minRaw: String,
+        maxRaw: String,
+    ): Result<ClosedRange<Double>> = priceRangeResult ?: Validator.validatePriceRange(minRaw, maxRaw)
 }
 
 // -------------------------------------------------------------------------
