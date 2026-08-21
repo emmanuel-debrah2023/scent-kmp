@@ -113,6 +113,16 @@ class GetListingsUseCaseTest {
         }
 
     @Test
+    fun `returns ValidationError when maxPrice is negative`() =
+        runTest {
+            val result = useCase(maxPrice = -50.0)
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.ValidationError.InvalidInput>(result.leftOrNull())
+            assertEquals(null, repository.lastListingsMaxPrice)
+        }
+
+    @Test
     fun `accepts a min-only range`() =
         runTest {
             repository.getListingsResult = ListingPage(listings = emptyList()).asRight()
