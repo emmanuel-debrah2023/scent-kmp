@@ -173,6 +173,7 @@ private fun FacetSection(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.accessibleHeading(),
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(spacing.xs),
