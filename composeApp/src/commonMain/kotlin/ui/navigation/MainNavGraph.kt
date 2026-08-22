@@ -67,8 +67,17 @@ private fun ProfileNavHost(
     onLogout: () -> Unit,
 ) {
     val current by nav.current
-    when (current) {
-        is ProfileRoute.Profile -> ProfileScreen(authUser = user, onLogout = onLogout)
+    when (val route = current) {
+        is ProfileRoute.Profile ->
+            ProfileScreen(
+                authUser = user,
+                onLogout = onLogout,
+                onCreateListing = { nav.navigateTo(ProfileRoute.CreateListing) },
+                onEditListing = { listingId -> nav.navigateTo(ProfileRoute.EditListing(listingId)) },
+            )
+
+        is ProfileRoute.CreateListing -> PlaceholderScreen("Create Listing")
+        is ProfileRoute.EditListing -> PlaceholderScreen("Edit Listing ${route.listingId}")
     }
 }
 

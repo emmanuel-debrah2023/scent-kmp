@@ -24,13 +24,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.Listing
+import org.scent.project.domain.model.ListingKind
 import ui.accessibility.clearedDescription
+import ui.accessibility.withCustomActions
 import ui.components.buttons.ScentPrimaryButton
 import ui.components.buttons.ScentSecondaryButton
 import ui.theme.ScentTheme
@@ -78,15 +81,72 @@ fun ListingCardWithOffer(
 }
 
 @Composable
+fun OwnerListingCard(
+    listing: Listing,
+    onClick: () -> Unit,
+    onToggleActive: () -> Unit,
+    onDeleteRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    isActionInFlight: Boolean = false,
+) {
+    val toggleLabel = if (listing.isActive) "Unlist" else "Relist"
+    ListingCardScaffold(
+        listing = listing,
+        onClick = onClick,
+        modifier = modifier,
+        // Empty while an action is in flight — mirrors the visible buttons' disabled
+        // state so a TalkBack user can't re-trigger unlist/delete mid-request either.
+        customActions =
+            if (isActionInFlight) {
+                emptyList()
+            } else {
+                listOf(
+                    CustomAccessibilityAction(toggleLabel) {
+                        onToggleActive()
+                        true
+                    },
+                    CustomAccessibilityAction("Delete") {
+                        onDeleteRequest()
+                        true
+                    },
+                )
+            },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
+        ) {
+            ScentSecondaryButton(
+                text = toggleLabel.uppercase(),
+                onClick = onToggleActive,
+                modifier = Modifier.weight(1f),
+                enabled = !isActionInFlight,
+            )
+            ScentSecondaryButton(
+                text = "DELETE",
+                onClick = onDeleteRequest,
+                modifier = Modifier.weight(1f),
+                enabled = !isActionInFlight,
+            )
+        }
+    }
+}
+
+@Composable
 private fun ListingCardScaffold(
     listing: Listing,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    customActions: List<CustomAccessibilityAction> = emptyList(),
     footer: (@Composable () -> Unit)? = null,
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().clearedDescription(listingContentDescription(listing)),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clearedDescription(listingContentDescription(listing))
+                .withCustomActions(*customActions.toTypedArray()),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = ScentThemeExtras.elevation.card),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -262,7 +322,18 @@ private fun listingContentDescription(listing: Listing): String {
     val priceTerms = if (listing.isNegotiable) "or offer" else "firm price"
     return "${listing.fragrance.name} by ${listing.fragrance.brand}, " +
         "${listing.condition} condition, £${listing.price.roundToInt()}, $priceTerms, " +
-        "sold by ${listing.sellerUsername}"
+        "sold by ${listing.sellerUsername}, ${fillDescription(listing)}"
+}
+
+private fun fillDescription(listing: Listing): String {
+    val nominal = listing.nominalSizeMl ?: return "fill not stated"
+    return when (listing.kind) {
+        ListingKind.SEALED -> "sealed, ${nominal}ml"
+        ListingKind.DECANT -> "${nominal}ml decant"
+        ListingKind.OPENED, ListingKind.TESTER ->
+            listing.remainingMl?.let { remaining -> "$remaining of ${nominal}ml remaining" }
+                ?: "fill not stated"
+    }
 }
 
 @Preview(showBackground = true)
@@ -311,6 +382,64 @@ private fun ListingCardFirmPreview() {
                     isNegotiable = false,
                 ),
             onClick = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OwnerListingCardActivePreview() {
+    ScentTheme {
+        OwnerListingCard(
+            listing =
+                Listing(
+                    id = 1,
+                    fragrance =
+                        Fragrance(
+                            id = 1,
+                            name = "Aventus",
+                            brand = "Creed",
+                            volume = 100,
+                            concentration = "EDP",
+                        ),
+                    sellerId = 1,
+                    sellerUsername = "scent_collector",
+                    price = 185.0,
+                    condition = "90% full",
+                    isActive = true,
+                    kind = ListingKind.OPENED,
+                    nominalSizeMl = 100,
+                    remainingMl = 90,
+                ),
+            onClick = {},
+            onToggleActive = {},
+            onDeleteRequest = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OwnerListingCardUnlistedPreview() {
+    ScentTheme {
+        OwnerListingCard(
+            listing =
+                Listing(
+                    id = 2,
+                    fragrance = Fragrance(id = 2, name = "Santal 33", brand = "Le Labo"),
+                    sellerId = 2,
+                    sellerUsername = "notes_and_musk",
+                    price = 120.0,
+                    condition = "Unused, sealed box",
+                    isActive = false,
+                    kind = ListingKind.SEALED,
+                    nominalSizeMl = 50,
+                ),
+            onClick = {},
+            onToggleActive = {},
+            onDeleteRequest = {},
             modifier = Modifier.padding(16.dp),
         )
     }
