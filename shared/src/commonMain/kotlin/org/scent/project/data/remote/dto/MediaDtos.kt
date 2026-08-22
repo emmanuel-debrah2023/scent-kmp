@@ -8,3 +8,8 @@ data class UploadUrlResponseDto(
     @SerialName("upload_url") val uploadUrl: String? = null,
     val uid: String? = null,
 )
+
+@Serializable
+data class CompleteUploadResponseDto(
+    val id: Int? = null,
+)

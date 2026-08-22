@@ -19,11 +19,13 @@ import org.scent.project.data.remote.createHttpClient
 import org.scent.project.data.repository.AuthRepositoryImpl
 import org.scent.project.data.repository.FragranceRepositoryImpl
 import org.scent.project.data.repository.ListingRepositoryImpl
+import org.scent.project.data.repository.MediaRepositoryImpl
 import org.scent.project.data.repository.PostRepositoryImpl
 import org.scent.project.data.repository.ProfileRepositoryImpl
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.repository.FragranceRepository
 import org.scent.project.domain.repository.ListingRepository
+import org.scent.project.domain.repository.MediaRepository
 import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.repository.ProfileRepository
 import org.scent.project.domain.usecase.CreateListingUseCase
@@ -49,6 +51,7 @@ import org.scent.project.domain.usecase.SearchFragrancesUseCase
 import org.scent.project.domain.usecase.SetListingActiveUseCase
 import org.scent.project.domain.usecase.ToggleFollowUseCase
 import org.scent.project.domain.usecase.UpdateListingUseCase
+import org.scent.project.domain.usecase.UploadListingPhotoUseCase
 import org.scent.project.domain.validation.Validator
 import org.scent.project.domain.validation.ValidatorContract
 
@@ -85,6 +88,8 @@ fun sharedModule(
     single { FragranceRepositoryImpl(api = get()) } bind FragranceRepository::class
 
     single { ListingRepositoryImpl(api = get(), tokenStorage = get()) } bind ListingRepository::class
+
+    single { MediaRepositoryImpl(api = get(), tokenStorage = get()) } bind MediaRepository::class
 
     single { ProfileApiImpl(httpClient = get(), baseUrl = baseUrl) } bind ProfileApi::class
 
@@ -131,6 +136,8 @@ fun sharedModule(
     factory { DeleteListingUseCase(repository = get()) }
 
     factory { GetMyListingsUseCase(repository = get()) }
+
+    factory { UploadListingPhotoUseCase(repository = get()) }
 
     factory { ToggleFollowUseCase() }
 

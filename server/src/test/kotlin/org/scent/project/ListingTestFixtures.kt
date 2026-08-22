@@ -6,8 +6,10 @@ import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
 import data.schema.FragrancesTable
+import data.schema.ListingMediaTable
 import data.schema.ListingsTable
 import data.schema.MediaItemsTable
+import data.schema.MediaType
 import data.schema.ReviewsTable
 import data.schema.UsersTable
 import kotlinx.datetime.Clock
@@ -54,6 +56,7 @@ internal fun initListingTestDatabase() {
             MediaItemsTable,
             ReviewsTable,
             ListingsTable,
+            ListingMediaTable,
         )
     }
 }
@@ -110,5 +113,42 @@ internal fun seedListing(
                 it[stockQuantity] = 1
                 it[createdAt] =
                     Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            }.value
+    }
+
+/** Seeds [count] READY image rows owned by [sellerId] — the fixture equivalent of a
+ *  seller having already finished the upload flow, for tests that only care about the
+ *  listing-level media_ids wiring and not the upload pipeline itself. */
+@OptIn(kotlin.time.ExperimentalTime::class)
+internal fun seedReadyMedia(
+    sellerId: Int,
+    count: Int = 1,
+): List<Int> =
+    (1..count).map { index ->
+        transaction {
+            MediaItemsTable
+                .insertAndGetId {
+                    it[uploaderId] = sellerId
+                    it[type] = MediaType.IMAGE
+                    it[url] = "https://example.test/listing-photo-$sellerId-$index.jpg"
+                    it[cfUploadStatus] = "READY"
+                    it[cloudflareUid] = "test-media-$sellerId-$index-${System.nanoTime()}"
+                    it[createdAt] = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                }.value
+        }
+    }
+
+/** A single PENDING image row — for tests asserting that not-yet-ready media is rejected. */
+@OptIn(kotlin.time.ExperimentalTime::class)
+internal fun seedPendingMedia(sellerId: Int): Int =
+    transaction {
+        MediaItemsTable
+            .insertAndGetId {
+                it[uploaderId] = sellerId
+                it[type] = MediaType.IMAGE
+                it[url] = ""
+                it[cfUploadStatus] = "PENDING"
+                it[cloudflareUid] = "test-pending-$sellerId-${System.nanoTime()}"
+                it[createdAt] = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             }.value
     }

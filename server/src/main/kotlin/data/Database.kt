@@ -7,6 +7,7 @@ import data.schema.FollowsTable
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
 import data.schema.FragrancesTable
+import data.schema.ListingMediaTable
 import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
@@ -99,6 +100,7 @@ fun initDatabase(config: ApplicationConfig) {
             PostLikesTable,
             PostListingsTable,
             ListingsTable,
+            ListingMediaTable,
         )
     }
 }

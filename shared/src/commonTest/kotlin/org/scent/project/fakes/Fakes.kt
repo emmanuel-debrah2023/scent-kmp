@@ -38,7 +38,9 @@ import org.scent.project.domain.model.UpdateListingParams
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.repository.FragranceRepository
 import org.scent.project.domain.repository.ListingRepository
+import org.scent.project.domain.repository.MediaRepository
 import org.scent.project.domain.repository.PostRepository
+import org.scent.project.domain.repository.UploadTarget
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
@@ -513,5 +515,44 @@ class FakeListingApi : ListingApi {
     override suspend fun getMyListings(token: String): ListingListResponseDto {
         myListingsException?.let { throw it }
         return myListingsResponse ?: error("FakeListingApi.myListingsResponse not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeMediaRepository
+// -------------------------------------------------------------------------
+
+class FakeMediaRepository : MediaRepository {
+    var getImageUploadUrlResult: Result<UploadTarget> = AppError.Unknown().asLeft()
+    var uploadBytesResult: Result<Unit> = AppError.Unknown().asLeft()
+    var completeUploadResult: Result<Int> = AppError.Unknown().asLeft()
+
+    var lastContentType: String? = null
+    var lastUploadedBytes: ByteArray? = null
+    var lastCompletedUid: String? = null
+    var lastProgress: Pair<Long, Long>? = null
+
+    override suspend fun getImageUploadUrl(contentType: String): Result<UploadTarget> {
+        lastContentType = contentType
+        return getImageUploadUrlResult
+    }
+
+    override suspend fun uploadBytes(
+        target: UploadTarget,
+        bytes: ByteArray,
+        contentType: String,
+        onProgress: (bytesSent: Long, totalBytes: Long) -> Unit,
+    ): Result<Unit> {
+        lastUploadedBytes = bytes
+        if (uploadBytesResult.isRight) {
+            onProgress(bytes.size.toLong(), bytes.size.toLong())
+            lastProgress = bytes.size.toLong() to bytes.size.toLong()
+        }
+        return uploadBytesResult
+    }
+
+    override suspend fun completeUpload(uid: String): Result<Int> {
+        lastCompletedUid = uid
+        return completeUploadResult
     }
 }
