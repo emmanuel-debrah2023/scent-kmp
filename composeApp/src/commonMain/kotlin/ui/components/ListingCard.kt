@@ -80,18 +80,6 @@ fun ListingCardWithOffer(
     }
 }
 
-/**
- * The seller's own card in Profile > My Listings — unlist/relist and delete instead of
- * a buy flow. [onClick] goes to edit, not the public listing detail; a seller looking at
- * their own listing wants to change it, not browse it.
- *
- * The visible buttons and the custom accessibility actions trigger the same callbacks:
- * the card's [clearedDescription] clears all descendant semantics (so a screen reader
- * doesn't stumble through raw layout), which is exactly why the actions are re-exposed
- * via [withCustomActions] rather than relying on the (now-invisible-to-TalkBack) buttons
- * to be independently reachable. Sighted users tap the visible button; TalkBack users
- * reach the same action from the card's action list.
- */
 @Composable
 fun OwnerListingCard(
     listing: Listing,
@@ -337,10 +325,6 @@ private fun listingContentDescription(listing: Listing): String {
         "sold by ${listing.sellerUsername}, ${fillDescription(listing)}"
 }
 
-/**
- * Never fabricates a figure: a listing created before fill tracking existed has no
- * nominal size, and defaulting it to zero or to "full" would misrepresent the bottle.
- */
 private fun fillDescription(listing: Listing): String {
     val nominal = listing.nominalSizeMl ?: return "fill not stated"
     return when (listing.kind) {
