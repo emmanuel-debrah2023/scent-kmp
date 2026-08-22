@@ -55,6 +55,14 @@ sealed interface SearchRoute {
 // Profile — authenticated user's own profile
 sealed interface ProfileRoute {
     data object Profile : ProfileRoute
+
+    // Placeholder destinations until the M2 listing form lands (Phase 4) — the route
+    // shape is settled now so Profile > My Listings has somewhere real to navigate to.
+    data object CreateListing : ProfileRoute
+
+    data class EditListing(
+        val listingId: Int,
+    ) : ProfileRoute
 }
 
 // Marketplace — browse and create listings

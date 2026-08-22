@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthUser
 import org.scent.project.domain.model.CollectionEntry
 import org.scent.project.domain.model.CollectionStatus
@@ -70,8 +71,10 @@ import ui.base.UiState
 import ui.components.BottleItem
 import ui.components.EmptyState
 import ui.components.ListingCard
+import ui.components.OwnerListingCard
 import ui.components.PostTile
 import ui.components.ReviewCard
+import ui.components.ScentConfirmDialog
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
@@ -79,6 +82,8 @@ import ui.theme.ScentThemeExtras
 fun ProfileScreen(
     authUser: AuthUser,
     onLogout: () -> Unit,
+    onCreateListing: () -> Unit,
+    onEditListing: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: ProfileViewModel = koinViewModel(parameters = { parametersOf(authUser) })
@@ -95,8 +100,23 @@ fun ProfileScreen(
         onNavigateToFollowers = { /* TODO: navigate to followers list when route exists */ },
         onNavigateToFollowing = { /* TODO: navigate to following list when route exists */ },
         onNavigateToFragrance = { /* TODO: navigate to fragrance detail when profile route exists */ },
+        onCreateListing = onCreateListing,
+        onEditListing = onEditListing,
         modifier = modifier,
     )
+
+    val pendingListing =
+        (state.profile as? UiState.Success)?.data?.listings?.firstOrNull { it.id == state.pendingDeleteId }
+    if (pendingListing != null) {
+        ScentConfirmDialog(
+            title = "Delete ${pendingListing.fragrance.name}?",
+            message = "This cannot be undone.",
+            confirmLabel = "DELETE",
+            onConfirm = { viewModel.onEvent(ProfileEvent.ConfirmDelete) },
+            onDismiss = { viewModel.onEvent(ProfileEvent.DismissConfirm) },
+            isDestructive = true,
+        )
+    }
 }
 
 @Composable
@@ -106,6 +126,8 @@ fun ProfileContent(
     onNavigateToFollowers: () -> Unit,
     onNavigateToFollowing: () -> Unit,
     onNavigateToFragrance: (Int) -> Unit,
+    onCreateListing: () -> Unit,
+    onEditListing: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (val profileState = state.profile) {
@@ -138,10 +160,14 @@ fun ProfileContent(
                 data = data,
                 isFollowing = state.isFollowing,
                 selectedTab = state.selectedTab,
+                actionInFlightId = state.actionInFlightId,
+                actionError = state.actionError,
                 onEvent = onEvent,
                 onNavigateToFollowers = onNavigateToFollowers,
                 onNavigateToFollowing = onNavigateToFollowing,
                 onNavigateToFragrance = onNavigateToFragrance,
+                onCreateListing = onCreateListing,
+                onEditListing = onEditListing,
                 modifier = modifier,
             )
         }
@@ -153,10 +179,14 @@ private fun ProfileLoaded(
     data: ProfileData,
     isFollowing: Boolean,
     selectedTab: ProfileTab,
+    actionInFlightId: Int?,
+    actionError: AppError?,
     onEvent: (ProfileEvent) -> Unit,
     onNavigateToFollowers: () -> Unit,
     onNavigateToFollowing: () -> Unit,
     onNavigateToFragrance: (Int) -> Unit,
+    onCreateListing: () -> Unit,
+    onEditListing: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -165,13 +195,16 @@ private fun ProfileLoaded(
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 150
         }
     }
+    // Seller status isn't in the session AuthUser yet (toProfileUser() stubs isSeller to
+    // false — see its TODO), so the owner's own tab must not depend on it: a seller with
+    // zero listings still needs to see the tab to create their first one.
     val tabs =
-        remember(data.user.isSeller) {
+        remember(data.user.isSeller, data.isOwnProfile) {
             buildList {
                 add(ProfileTab.Posts)
                 add(ProfileTab.Collection)
                 add(ProfileTab.Wishlist)
-                if (data.user.isSeller) add(ProfileTab.Listings)
+                if (data.isOwnProfile || data.user.isSeller) add(ProfileTab.Listings)
                 add(ProfileTab.Reviews)
                 add(ProfileTab.Likes)
             }
@@ -206,8 +239,12 @@ private fun ProfileLoaded(
             profileTabContent(
                 data = data,
                 selectedTab = selectedTab,
+                actionInFlightId = actionInFlightId,
+                actionError = actionError,
                 onEvent = onEvent,
                 onNavigateToFragrance = onNavigateToFragrance,
+                onCreateListing = onCreateListing,
+                onEditListing = onEditListing,
             )
         }
 
@@ -681,14 +718,27 @@ private fun ProfileTabRow(
 private fun LazyListScope.profileTabContent(
     data: ProfileData,
     selectedTab: ProfileTab,
+    actionInFlightId: Int?,
+    actionError: AppError?,
     onEvent: (ProfileEvent) -> Unit,
     onNavigateToFragrance: (Int) -> Unit,
+    onCreateListing: () -> Unit,
+    onEditListing: (Int) -> Unit,
 ) {
     when (selectedTab) {
         ProfileTab.Posts -> postsTabContent(data.posts, data.isOwnProfile)
         ProfileTab.Collection -> collectionTabContent(data.collection, data.isOwnProfile, onNavigateToFragrance)
         ProfileTab.Wishlist -> wishlistTabContent(data.wishlist, data.isOwnProfile, onNavigateToFragrance)
-        ProfileTab.Listings -> listingsTabContent(data.listings, data.isOwnProfile)
+        ProfileTab.Listings ->
+            listingsTabContent(
+                listings = data.listings,
+                isOwnProfile = data.isOwnProfile,
+                actionInFlightId = actionInFlightId,
+                actionError = actionError,
+                onEvent = onEvent,
+                onCreateListing = onCreateListing,
+                onEditListing = onEditListing,
+            )
         ProfileTab.Reviews -> reviewsTabContent(data.reviews, data.isOwnProfile)
         ProfileTab.Likes -> likesTabContent(data.likes)
     }
@@ -870,6 +920,11 @@ private fun CollectionSection(
 private fun LazyListScope.listingsTabContent(
     listings: List<Listing>,
     isOwnProfile: Boolean,
+    actionInFlightId: Int?,
+    actionError: AppError?,
+    onEvent: (ProfileEvent) -> Unit,
+    onCreateListing: () -> Unit,
+    onEditListing: (Int) -> Unit,
 ) {
     if (listings.isEmpty()) {
         item {
@@ -879,7 +934,7 @@ private fun LazyListScope.listingsTabContent(
                 actionLabel = if (isOwnProfile) "CREATE LISTING" else null,
                 onAction =
                     if (isOwnProfile) {
-                        {}
+                        onCreateListing
                     } else {
                         null
                     },
@@ -888,12 +943,45 @@ private fun LazyListScope.listingsTabContent(
         }
         return
     }
-    items(listings) { listing ->
-        ListingCard(
-            listing = listing,
-            onClick = {},
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-        )
+
+    if (isOwnProfile && actionError != null) {
+        item {
+            Text(
+                text = "Couldn't update that listing: ${actionError.message}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+    }
+
+    if (isOwnProfile) {
+        items(listings, key = { it.id }) { listing ->
+            OwnerListingCard(
+                listing = listing,
+                onClick = { onEditListing(listing.id) },
+                onToggleActive = {
+                    val event =
+                        if (listing.isActive) {
+                            ProfileEvent.UnlistListing(listing.id)
+                        } else {
+                            ProfileEvent.RelistListing(listing.id)
+                        }
+                    onEvent(event)
+                },
+                onDeleteRequest = { onEvent(ProfileEvent.RequestDelete(listing.id)) },
+                isActionInFlight = actionInFlightId == listing.id,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+        }
+    } else {
+        items(listings, key = { it.id }) { listing ->
+            ListingCard(
+                listing = listing,
+                onClick = {},
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+        }
     }
     item { Spacer(Modifier.height(20.dp)) }
 }
@@ -976,6 +1064,8 @@ private fun OwnProfilePreview() {
             onNavigateToFollowers = {},
             onNavigateToFollowing = {},
             onNavigateToFragrance = {},
+            onCreateListing = {},
+            onEditListing = {},
         )
     }
 }
@@ -1010,6 +1100,8 @@ private fun OtherProfilePreview() {
             onNavigateToFollowers = {},
             onNavigateToFollowing = {},
             onNavigateToFragrance = {},
+            onCreateListing = {},
+            onEditListing = {},
         )
     }
 }
@@ -1024,6 +1116,8 @@ private fun ProfileLoadingPreview() {
             onNavigateToFollowers = {},
             onNavigateToFollowing = {},
             onNavigateToFragrance = {},
+            onCreateListing = {},
+            onEditListing = {},
         )
     }
 }
