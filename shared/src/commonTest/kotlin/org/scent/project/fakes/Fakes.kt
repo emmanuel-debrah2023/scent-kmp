@@ -21,6 +21,7 @@ import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
+import org.scent.project.data.remote.dto.UpdateListingRequestDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthState
 import org.scent.project.domain.model.AuthUser
@@ -30,8 +31,10 @@ import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Listing
+import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.model.Post
+import org.scent.project.domain.model.UpdateListingParams
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.repository.FragranceRepository
 import org.scent.project.domain.repository.ListingRepository
@@ -163,6 +166,8 @@ class FakeValidator(
     private val usernameResult: Result<String>? = null,
     private val displayNameResult: Result<String>? = null,
     private val priceRangeResult: Result<ClosedRange<Double>>? = null,
+    private val priceResult: Result<Double>? = null,
+    private val fillResult: Result<Int>? = null,
 ) : ValidatorContract {
     override fun validateEmail(email: String): Result<String> = emailResult ?: email.asRight()
 
@@ -176,6 +181,14 @@ class FakeValidator(
         minRaw: String,
         maxRaw: String,
     ): Result<ClosedRange<Double>> = priceRangeResult ?: Validator.validatePriceRange(minRaw, maxRaw)
+
+    override fun validatePrice(raw: String): Result<Double> = priceResult ?: Validator.validatePrice(raw)
+
+    override fun validateFill(
+        kind: ListingKind,
+        nominalSizeMl: Int?,
+        remainingMl: Int?,
+    ): Result<Int> = fillResult ?: Validator.validateFill(kind, nominalSizeMl, remainingMl)
 }
 
 // -------------------------------------------------------------------------
@@ -294,6 +307,49 @@ class FakeListingRepository : ListingRepository {
         lastCreateParams = params
         return createListingResult
     }
+
+    var getListingResult: Result<Listing> = AppError.Unknown().asLeft()
+    var updateListingResult: Result<Listing> = AppError.Unknown().asLeft()
+    var setActiveResult: Result<Listing> = AppError.Unknown().asLeft()
+    var deleteListingResult: Result<Unit> = AppError.Unknown().asLeft()
+    var myListingsResult: Result<List<Listing>> = emptyList<Listing>().asRight()
+
+    var lastGetListingId: Int? = null
+    var lastUpdateListingId: Int? = null
+    var lastUpdateParams: UpdateListingParams? = null
+    var lastSetActiveId: Int? = null
+    var lastSetActiveValue: Boolean? = null
+    var lastDeleteListingId: Int? = null
+
+    override suspend fun getListing(id: Int): Result<Listing> {
+        lastGetListingId = id
+        return getListingResult
+    }
+
+    override suspend fun updateListing(
+        id: Int,
+        params: UpdateListingParams,
+    ): Result<Listing> {
+        lastUpdateListingId = id
+        lastUpdateParams = params
+        return updateListingResult
+    }
+
+    override suspend fun setListingActive(
+        id: Int,
+        active: Boolean,
+    ): Result<Listing> {
+        lastSetActiveId = id
+        lastSetActiveValue = active
+        return setActiveResult
+    }
+
+    override suspend fun deleteListing(id: Int): Result<Unit> {
+        lastDeleteListingId = id
+        return deleteListingResult
+    }
+
+    override suspend fun getMyListings(): Result<List<Listing>> = myListingsResult
 }
 
 // -------------------------------------------------------------------------
@@ -418,5 +474,44 @@ class FakeListingApi : ListingApi {
     ): ListingResponse {
         createException?.let { throw it }
         return createResponse ?: error("FakeListingApi.createResponse not set")
+    }
+
+    var getListingResponse: ListingResponse? = null
+    var getListingException: Exception? = null
+    var updateResponse: ListingResponse? = null
+    var updateException: Exception? = null
+    var deleteException: Exception? = null
+    var myListingsResponse: ListingListResponseDto? = null
+    var myListingsException: Exception? = null
+
+    var lastUpdateListingId: Int? = null
+    var lastDeleteListingId: Int? = null
+
+    override suspend fun getListing(id: Int): ListingResponse {
+        getListingException?.let { throw it }
+        return getListingResponse ?: error("FakeListingApi.getListingResponse not set")
+    }
+
+    override suspend fun updateListing(
+        id: Int,
+        request: UpdateListingRequestDto,
+        token: String,
+    ): ListingResponse {
+        lastUpdateListingId = id
+        updateException?.let { throw it }
+        return updateResponse ?: error("FakeListingApi.updateResponse not set")
+    }
+
+    override suspend fun deleteListing(
+        id: Int,
+        token: String,
+    ) {
+        lastDeleteListingId = id
+        deleteException?.let { throw it }
+    }
+
+    override suspend fun getMyListings(token: String): ListingListResponseDto {
+        myListingsException?.let { throw it }
+        return myListingsResponse ?: error("FakeListingApi.myListingsResponse not set")
     }
 }

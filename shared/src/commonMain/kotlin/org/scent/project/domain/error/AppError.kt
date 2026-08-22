@@ -28,6 +28,11 @@ sealed class AppError {
                     (if (fieldName != null) ": $fieldName" else ""),
             override val cause: Throwable? = null,
         ) : NetworkError()
+
+        data class NotFound(
+            override val message: String = "This item could not be found",
+            override val cause: Throwable? = null,
+        ) : NetworkError()
     }
 
     sealed class AuthError : AppError() {
@@ -48,6 +53,12 @@ sealed class AppError {
 
         data class Unauthorized(
             override val message: String = "You are not authorized to perform this action",
+            override val cause: Throwable? = null,
+        ) : AuthError()
+
+        /** 403 — authenticated, but not the owner of the resource being acted on. */
+        data class Forbidden(
+            override val message: String = "You don't have permission to do that",
             override val cause: Throwable? = null,
         ) : AuthError()
     }
@@ -92,6 +103,32 @@ sealed class AppError {
             val min: Double,
             val max: Double,
             override val message: String = "Minimum price cannot exceed maximum price",
+            override val cause: Throwable? = null,
+        ) : ValidationError()
+
+        /** A listing's own price, as opposed to a filter bound. Blank is invalid here. */
+        data class InvalidPrice(
+            val rawValue: String,
+            override val message: String = "Enter a valid price",
+            override val cause: Throwable? = null,
+        ) : ValidationError()
+
+        /** Every listing kind needs a nominal size before fill means anything. */
+        data class MissingNominalSize(
+            override val message: String = "Select a bottle size",
+            override val cause: Throwable? = null,
+        ) : ValidationError()
+
+        /** OPENED and TESTER require a declared fill level; SEALED and DECANT do not. */
+        data class MissingFillLevel(
+            override val message: String = "Select how full the bottle is",
+            override val cause: Throwable? = null,
+        ) : ValidationError()
+
+        data class FillExceedsNominal(
+            val remainingMl: Int,
+            val nominalSizeMl: Int,
+            override val message: String = "Fill cannot exceed the bottle size",
             override val cause: Throwable? = null,
         ) : ValidationError()
     }

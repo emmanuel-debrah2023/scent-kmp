@@ -9,12 +9,14 @@ import data.schema.MediaItemsTable
 import data.schema.ReviewsTable
 import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
@@ -28,7 +30,6 @@ import models.CreateListingServerRequest
 import models.ErrorResponse
 import models.FragranceNoteResponseDto
 import models.FragranceResponseDto
-import models.ListingCreatedResponse
 import models.ListingListResponse
 import models.ListingResponseDto
 import models.UpdateListingRequest
@@ -37,6 +38,7 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
@@ -46,6 +48,8 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import org.scent.project.domain.model.FillSource
+import org.scent.project.domain.model.ListingKind
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @OptIn(kotlin.time.ExperimentalTime::class)
@@ -85,6 +89,7 @@ fun Route.listingRoutes() {
                     val filterOp: Op<Boolean> =
                         run {
                             val activeFilter: Op<Boolean> = ListingsTable.isActive eq true
+                            val deletedFilter: Op<Boolean> = ListingsTable.deletedAt.isNull()
                             val fragranceFilter: Op<Boolean> =
                                 if (fragranceId != null) {
                                     ListingsTable.fragranceId eq fragranceId
@@ -123,7 +128,7 @@ fun Route.listingRoutes() {
                                 } else {
                                     Op.TRUE
                                 }
-                            activeFilter and fragranceFilter and conditionFilter and
+                            activeFilter and deletedFilter and fragranceFilter and conditionFilter and
                                 minPriceFilter and maxPriceFilter and brandFilter and volumeFilter
                         }
 
@@ -191,6 +196,7 @@ fun Route.listingRoutes() {
                         .select(FragrancesTable.brand)
                         .where {
                             ListingsTable.isActive eq true and
+                                ListingsTable.deletedAt.isNull() and
                                 (FragrancesTable.isActive eq true) and
                                 (FragrancesTable.brand.lowerCase() like "%$query%")
                         }.withDistinct()
@@ -202,6 +208,31 @@ fun Route.listingRoutes() {
                     .take(limit)
 
             this.call.respond(HttpStatusCode.OK, BrandListResponse(brands))
+        }
+
+        authenticate("auth-jwt") {
+            // Declared before GET /{id} — a literal "mine" would otherwise be swallowed
+            // by the {id} path param and fail the toIntOrNull() parse as a 400.
+            get("/mine") {
+                val userId =
+                    this.call.requireUserId()
+                        ?: return@get this.call.respond(
+                            HttpStatusCode.Unauthorized,
+                            ErrorResponse("Invalid token"),
+                        )
+
+                val listings =
+                    transaction {
+                        ListingsTable
+                            .selectAll()
+                            .where {
+                                ListingsTable.sellerId eq userId and ListingsTable.deletedAt.isNull()
+                            }.orderBy(ListingsTable.id, SortOrder.DESC)
+                            .mapNotNull { row -> buildListingDto(row[ListingsTable.id].value, row) }
+                    }
+
+                this.call.respond(HttpStatusCode.OK, ListingListResponse(listings, null, listings.size))
+            }
         }
 
         get("/{id}") {
@@ -217,7 +248,7 @@ fun Route.listingRoutes() {
                     val row =
                         ListingsTable
                             .selectAll()
-                            .where { ListingsTable.id eq listingId }
+                            .where { ListingsTable.id eq listingId and ListingsTable.deletedAt.isNull() }
                             .singleOrNull()
                             ?: return@transaction null
                     buildListingDto(listingId, row)
@@ -232,9 +263,8 @@ fun Route.listingRoutes() {
 
         authenticate("auth-jwt") {
             post {
-                val principal = this.call.principal<JWTPrincipal>()
                 val userId =
-                    principal?.payload?.getClaim("userId")?.asInt()
+                    this.call.requireUserId()
                         ?: return@post this.call.respond(
                             HttpStatusCode.Unauthorized,
                             ErrorResponse("Invalid token"),
@@ -277,6 +307,14 @@ fun Route.listingRoutes() {
                     )
                 }
 
+                val kind = ListingKind.fromString(request.kind)
+                val normalizedFill =
+                    normalizeFill(kind, request.nominalSizeMl, request.remainingMl)
+                        ?: return@post this.call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Fill level cannot exceed the bottle size"),
+                        )
+
                 val listingId =
                     transaction {
                         ListingsTable
@@ -291,16 +329,36 @@ fun Route.listingRoutes() {
                                     Clock.System
                                         .now()
                                         .toLocalDateTime(TimeZone.currentSystemDefault())
+                                it[ListingsTable.kind] = kind.name
+                                it[nominalSizeMl] = normalizedFill.nominal
+                                it[remainingMl] = normalizedFill.remaining
+                                it[fillSource] = FillSource.DECLARED.name
                             }.value
                     }
 
-                this.call.respond(HttpStatusCode.Created, ListingCreatedResponse(listingId))
+                val created =
+                    transaction {
+                        val row =
+                            ListingsTable
+                                .selectAll()
+                                .where { ListingsTable.id eq listingId }
+                                .single()
+                        buildListingDto(listingId, row)
+                    }
+
+                if (created == null) {
+                    this.call.respond(
+                        HttpStatusCode.InternalServerError,
+                        ErrorResponse("Failed to load created listing"),
+                    )
+                } else {
+                    this.call.respond(HttpStatusCode.Created, created)
+                }
             }
 
             patch("/{id}") {
-                val principal = this.call.principal<JWTPrincipal>()
                 val userId =
-                    principal?.payload?.getClaim("userId")?.asInt()
+                    this.call.requireUserId()
                         ?: return@patch this.call.respond(
                             HttpStatusCode.Unauthorized,
                             ErrorResponse("Invalid token"),
@@ -330,7 +388,7 @@ fun Route.listingRoutes() {
                             .singleOrNull()
                     }
 
-                if (listing == null) {
+                if (listing == null || listing[ListingsTable.deletedAt] != null) {
                     return@patch this.call.respond(
                         HttpStatusCode.NotFound,
                         ErrorResponse("Listing not found"),
@@ -360,6 +418,22 @@ fun Route.listingRoutes() {
                         }
                     }
 
+                // Fill is only re-normalised when the caller touches a fill field —
+                // a price-only edit shouldn't need kind/nominal resupplied.
+                val touchesFill = request.kind != null || request.nominalSizeMl != null || request.remainingMl != null
+                var normalizedFill: NormalizedFill? = null
+                if (touchesFill) {
+                    val effectiveKind = ListingKind.fromString(request.kind ?: listing[ListingsTable.kind])
+                    val effectiveNominal = request.nominalSizeMl ?: listing[ListingsTable.nominalSizeMl]
+                    val effectiveRemaining = request.remainingMl ?: listing[ListingsTable.remainingMl]
+                    normalizedFill =
+                        normalizeFill(effectiveKind, effectiveNominal, effectiveRemaining)
+                            ?: return@patch this.call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse("Fill level cannot exceed the bottle size"),
+                            )
+                }
+
                 transaction {
                     ListingsTable.update({ ListingsTable.id eq listingId }) {
                         request.price?.let { p -> it[price] = p.toBigDecimal() }
@@ -367,6 +441,11 @@ fun Route.listingRoutes() {
                         request.isNegotiable?.let { n -> it[isNegotiable] = n }
                         request.stockQuantity?.let { q -> it[stockQuantity] = q }
                         request.isActive?.let { a -> it[isActive] = a }
+                        request.kind?.let { k -> it[ListingsTable.kind] = ListingKind.fromString(k).name }
+                        normalizedFill?.let { fill ->
+                            it[nominalSizeMl] = fill.nominal
+                            it[remainingMl] = fill.remaining
+                        }
                     }
                 }
 
@@ -381,8 +460,109 @@ fun Route.listingRoutes() {
                         buildListingDto(listingId, row)
                     }
 
-                this.call.respond(HttpStatusCode.OK, updated!!)
+                if (updated == null) {
+                    this.call.respond(
+                        HttpStatusCode.InternalServerError,
+                        ErrorResponse("Failed to load updated listing"),
+                    )
+                } else {
+                    this.call.respond(HttpStatusCode.OK, updated)
+                }
             }
+
+            delete("/{id}") {
+                val userId =
+                    this.call.requireUserId()
+                        ?: return@delete this.call.respond(
+                            HttpStatusCode.Unauthorized,
+                            ErrorResponse("Invalid token"),
+                        )
+
+                val listingId =
+                    this.call.parameters["id"]?.toIntOrNull()
+                        ?: return@delete this.call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid listing ID"),
+                        )
+
+                val listing =
+                    transaction {
+                        ListingsTable
+                            .selectAll()
+                            .where { ListingsTable.id eq listingId }
+                            .singleOrNull()
+                    }
+
+                if (listing == null || listing[ListingsTable.deletedAt] != null) {
+                    return@delete this.call.respond(
+                        HttpStatusCode.NotFound,
+                        ErrorResponse("Listing not found"),
+                    )
+                }
+
+                if (listing[ListingsTable.sellerId].value != userId) {
+                    return@delete this.call.respond(
+                        HttpStatusCode.Forbidden,
+                        ErrorResponse("You can only delete your own listings"),
+                    )
+                }
+
+                // Soft delete only — there is no permanent delete. Order history (once
+                // orders reference listing_id — see chore/listing-versioning-order-snapshot)
+                // stays intact because the row is never removed.
+                transaction {
+                    ListingsTable.update({ ListingsTable.id eq listingId }) {
+                        it[deletedAt] =
+                            Clock.System
+                                .now()
+                                .toLocalDateTime(TimeZone.currentSystemDefault())
+                    }
+                }
+
+                this.call.respond(HttpStatusCode.NoContent)
+            }
+        }
+    }
+}
+
+/** Extracts the JWT subject's user id, deduplicating what was previously copy-pasted
+ *  across every authenticated route in this file. Returns null on a missing/malformed
+ *  token; callers decide how to respond. */
+private fun ApplicationCall.requireUserId(): Int? =
+    this
+        .principal<JWTPrincipal>()
+        ?.payload
+        ?.getClaim("userId")
+        ?.asInt()
+
+private data class NormalizedFill(
+    val nominal: Int?,
+    val remaining: Int?,
+)
+
+/**
+ * Server-side counterpart to `Validator.validateFill` (shared module) — but deliberately
+ * more lenient. The client-side use case is the actual gate that makes fill mandatory for
+ * new listings built through the app's form; this function exists to normalise SEALED/
+ * DECANT and to reject a genuine contradiction, not to enforce presence. A request with no
+ * nominal size at all is legitimate (pre-amendment data, or any caller that doesn't supply
+ * fill) and is stored as null rather than rejected — the columns are nullable for exactly
+ * this reason.
+ *
+ * Returns null ONLY for a genuine contradiction: an OPENED/TESTER remaining that exceeds
+ * the supplied nominal.
+ */
+private fun normalizeFill(
+    kind: ListingKind,
+    nominalSizeMl: Int?,
+    remainingMl: Int?,
+): NormalizedFill? {
+    val nominal = nominalSizeMl?.takeIf { it > 0 } ?: return NormalizedFill(null, null)
+    return when (kind) {
+        ListingKind.SEALED, ListingKind.DECANT -> NormalizedFill(nominal, nominal)
+        ListingKind.OPENED, ListingKind.TESTER -> {
+            val remaining = remainingMl?.takeIf { it > 0 }
+            if (remaining != null && remaining > nominal) null else NormalizedFill(nominal, remaining)
         }
     }
 }
@@ -477,6 +657,13 @@ private fun buildListingDto(
             row[ListingsTable.createdAt]
                 .toInstant(TimeZone.currentSystemDefault())
                 .toEpochMilliseconds(),
+        // Photo pipeline lands in Phase 3 (ListingMediaTable) — empty until then.
+        photoUrls = emptyList(),
+        kind = row[ListingsTable.kind],
+        nominalSizeMl = row[ListingsTable.nominalSizeMl],
+        remainingMl = row[ListingsTable.remainingMl],
+        fillSource = row[ListingsTable.fillSource],
+        fillConfidence = row[ListingsTable.fillConfidence],
     )
 }
 

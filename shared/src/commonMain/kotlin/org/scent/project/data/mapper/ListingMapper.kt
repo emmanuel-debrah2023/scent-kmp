@@ -5,7 +5,9 @@ import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.ListingListResponseDto
 import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.domain.error.AppError
+import org.scent.project.domain.model.FillSource
 import org.scent.project.domain.model.Listing
+import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
@@ -44,10 +46,11 @@ object ListingMapper {
             fragrance
                 ?: return AppError.NetworkError.ParseError(fieldName = "fragrance").asLeft()
 
-        val fragranceResult = fragranceDto.toFragrance()
         val domainFragrance =
-            fragranceResult.getOrNull()
-                ?: return fragranceResult.leftOrNull()!!.asLeft()
+            fragranceDto.toFragrance().fold(
+                ifLeft = { return it.asLeft() },
+                ifRight = { it },
+            )
 
         return Listing(
             id = id,
@@ -60,6 +63,14 @@ object ListingMapper {
             stockQuantity = stockQuantity ?: 1,
             isActive = isActive ?: true,
             createdAt = createdAt ?: 0L,
+            photoUrls = photoUrls?.filter { it.isNotBlank() } ?: emptyList(),
+            kind = ListingKind.fromString(kind),
+            // Genuinely nullable: a pre-fill-fields listing has neither, and defaulting
+            // either here would put a fabricated figure in front of a buyer.
+            nominalSizeMl = nominalSizeMl,
+            remainingMl = remainingMl,
+            fillSource = FillSource.fromString(fillSource),
+            fillConfidence = fillConfidence,
         ).asRight()
     }
 

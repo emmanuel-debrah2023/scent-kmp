@@ -15,6 +15,12 @@ data class ListingResponse(
     @SerialName("stock_quantity") val stockQuantity: Int? = null,
     @SerialName("is_active") val isActive: Boolean? = null,
     @SerialName("created_at") val createdAt: Long? = null, // TODO: server-guaranteed invariant — make non-nullable
+    @SerialName("photo_urls") val photoUrls: List<String>? = null,
+    val kind: String? = null,
+    @SerialName("nominal_size_ml") val nominalSizeMl: Int? = null,
+    @SerialName("remaining_ml") val remainingMl: Int? = null,
+    @SerialName("fill_source") val fillSource: String? = null,
+    @SerialName("fill_confidence") val fillConfidence: Double? = null,
 )
 
 @Serializable
@@ -29,15 +35,34 @@ data class BrandListResponseDto(
     val brands: List<String>? = null,
 )
 
+/**
+ * Mirrors the server's `CreateListingServerRequest`. The fragrance is chosen from the
+ * catalogue, so this carries a `fragrance_id` rather than name/brand — the seller's own
+ * photos of the bottle travel separately as `media_ids`.
+ */
 @Serializable
 data class CreateListingRequest(
-    val name: String,
-    val brand: String,
-    val description: String? = null,
+    @SerialName("fragrance_id") val fragranceId: Int,
     val price: Double,
-    @SerialName("volume_ml") val volume: Int? = null,
-    val concentration: String? = null,
     val condition: String,
+    @SerialName("is_negotiable") val isNegotiable: Boolean = false,
     @SerialName("stock_quantity") val stockQuantity: Int = 1,
-    @SerialName("media_urls") val mediaUrls: List<String> = emptyList(),
+    @SerialName("media_ids") val mediaIds: List<Int> = emptyList(),
+    val kind: String? = null,
+    @SerialName("nominal_size_ml") val nominalSizeMl: Int? = null,
+    @SerialName("remaining_ml") val remainingMl: Int? = null,
+)
+
+/** Partial update — an omitted field is left unchanged rather than cleared. */
+@Serializable
+data class UpdateListingRequestDto(
+    val price: Double? = null,
+    val condition: String? = null,
+    @SerialName("is_negotiable") val isNegotiable: Boolean? = null,
+    @SerialName("stock_quantity") val stockQuantity: Int? = null,
+    @SerialName("is_active") val isActive: Boolean? = null,
+    @SerialName("media_ids") val mediaIds: List<Int>? = null,
+    val kind: String? = null,
+    @SerialName("nominal_size_ml") val nominalSizeMl: Int? = null,
+    @SerialName("remaining_ml") val remainingMl: Int? = null,
 )
