@@ -227,4 +227,31 @@ object ListingsTable : IntIdTable("listings") {
     val stockQuantity = integer("stock_quantity").default(1)
     val isActive = bool("is_active").default(true)
     val createdAt = datetime("created_at")
+
+    /** Soft-delete marker. Null means live; every public query filters on this. */
+    val deletedAt = datetime("deleted_at").nullable()
+
+    // ── Fill fields ───────────────────────────────────────────────────────────
+    // Four of the five below are logically required. They are nullable ONLY
+    // because SchemaUtils.createMissingTablesAndColumns cannot add NOT NULL
+    // columns or create Postgres enum types. Tracked by
+    // chore/tighten-listing-fill-columns — this is not the intended end state.
+
+    /** [ListingKind] as a string; SchemaUtils will not create a Postgres ENUM type. */
+    val kind = varchar("kind", 16).nullable()
+
+    /**
+     * For SEALED/OPENED/TESTER this is the bottle size. For DECANT it is the
+     * **vial** size, not the size of the bottle the decant was drawn from.
+     */
+    val nominalSizeMl = integer("nominal_size_ml").nullable()
+
+    /** Equals [nominalSizeMl] for SEALED and DECANT; a band midpoint otherwise. */
+    val remainingMl = integer("remaining_ml").nullable()
+
+    /** [FillSource] as a string, for the same reason as [kind]. */
+    val fillSource = varchar("fill_source", 16).nullable()
+
+    /** Reserved for ESTIMATED/VERIFIED fill; nothing writes it while fill is DECLARED-only. */
+    val fillConfidence = double("fill_confidence").nullable()
 }

@@ -2,9 +2,11 @@ package org.scent.project.data.remote.api
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -14,6 +16,7 @@ import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.CreateListingRequest
 import org.scent.project.data.remote.dto.ListingListResponseDto
 import org.scent.project.data.remote.dto.ListingResponse
+import org.scent.project.data.remote.dto.UpdateListingRequestDto
 
 interface ListingApi {
     suspend fun getListings(
@@ -35,6 +38,21 @@ interface ListingApi {
         request: CreateListingRequest,
         token: String,
     ): ListingResponse
+
+    suspend fun getListing(id: Int): ListingResponse
+
+    suspend fun updateListing(
+        id: Int,
+        request: UpdateListingRequestDto,
+        token: String,
+    ): ListingResponse
+
+    suspend fun deleteListing(
+        id: Int,
+        token: String,
+    )
+
+    suspend fun getMyListings(token: String): ListingListResponseDto
 }
 
 class ListingApiImpl(
@@ -82,5 +100,34 @@ class ListingApiImpl(
                 contentType(ContentType.Application.Json)
                 header(HttpHeaders.Authorization, "Bearer $token")
                 setBody(request)
+            }.body()
+
+    override suspend fun getListing(id: Int): ListingResponse = httpClient.get("$listingsUrl/$id").body()
+
+    override suspend fun updateListing(
+        id: Int,
+        request: UpdateListingRequestDto,
+        token: String,
+    ): ListingResponse =
+        httpClient
+            .patch("$listingsUrl/$id") {
+                contentType(ContentType.Application.Json)
+                header(HttpHeaders.Authorization, "Bearer $token")
+                setBody(request)
+            }.body()
+
+    override suspend fun deleteListing(
+        id: Int,
+        token: String,
+    ) {
+        httpClient.delete("$listingsUrl/$id") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+    }
+
+    override suspend fun getMyListings(token: String): ListingListResponseDto =
+        httpClient
+            .get("$listingsUrl/mine") {
+                header(HttpHeaders.Authorization, "Bearer $token")
             }.body()
 }

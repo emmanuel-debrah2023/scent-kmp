@@ -1,6 +1,7 @@
 package org.scent.project.domain.validation
 
 import org.scent.project.domain.error.AppError
+import org.scent.project.domain.model.ListingKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -254,5 +255,125 @@ class ValidatorTest {
         val range = result.getOrNull()
         assertEquals(100.0, range?.start)
         assertEquals(100.0, range?.endInclusive)
+    }
+
+    // -------------------------------------------------------------------------
+    // validatePrice
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `validatePrice returns Right for a valid positive price`() {
+        val result = Validator.validatePrice("19.99")
+        assertTrue(result.isRight)
+        assertEquals(19.99, result.getOrNull())
+    }
+
+    @Test
+    fun `validatePrice returns RequiredFieldEmpty for blank input`() {
+        val result = Validator.validatePrice("")
+        assertTrue(result.isLeft)
+        val error = result.leftOrNull()
+        assertIs<AppError.ValidationError.RequiredFieldEmpty>(error)
+        assertEquals("price", error.fieldName)
+    }
+
+    @Test
+    fun `validatePrice returns RequiredFieldEmpty for whitespace-only input`() {
+        val result = Validator.validatePrice("   ")
+        assertTrue(result.isLeft)
+        assertIs<AppError.ValidationError.RequiredFieldEmpty>(result.leftOrNull())
+    }
+
+    @Test
+    fun `validatePrice returns InvalidPrice for non-numeric input`() {
+        val result = Validator.validatePrice("abc")
+        assertTrue(result.isLeft)
+        val error = result.leftOrNull()
+        assertIs<AppError.ValidationError.InvalidPrice>(error)
+        assertEquals("abc", error.rawValue)
+    }
+
+    @Test
+    fun `validatePrice returns InvalidPrice for zero`() {
+        val result = Validator.validatePrice("0")
+        assertTrue(result.isLeft)
+        assertIs<AppError.ValidationError.InvalidPrice>(result.leftOrNull())
+    }
+
+    @Test
+    fun `validatePrice returns InvalidPrice for negative values`() {
+        val result = Validator.validatePrice("-5.00")
+        assertTrue(result.isLeft)
+        assertIs<AppError.ValidationError.InvalidPrice>(result.leftOrNull())
+    }
+
+    // -------------------------------------------------------------------------
+    // validateFill
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `validateFill returns MissingNominalSize when nominal is null`() {
+        val result = Validator.validateFill(ListingKind.SEALED, null, null)
+        assertTrue(result.isLeft)
+        assertIs<AppError.ValidationError.MissingNominalSize>(result.leftOrNull())
+    }
+
+    @Test
+    fun `validateFill returns MissingNominalSize when nominal is zero or negative`() {
+        val result = Validator.validateFill(ListingKind.SEALED, 0, null)
+        assertTrue(result.isLeft)
+        assertIs<AppError.ValidationError.MissingNominalSize>(result.leftOrNull())
+    }
+
+    @Test
+    fun `validateFill normalises SEALED remaining to nominal ignoring a supplied value`() {
+        val result = Validator.validateFill(ListingKind.SEALED, 100, 40)
+        assertTrue(result.isRight)
+        assertEquals(100, result.getOrNull())
+    }
+
+    @Test
+    fun `validateFill normalises DECANT remaining to the vial nominal`() {
+        val result = Validator.validateFill(ListingKind.DECANT, 5, null)
+        assertTrue(result.isRight)
+        assertEquals(5, result.getOrNull())
+    }
+
+    @Test
+    fun `validateFill returns MissingFillLevel for OPENED with no remaining supplied`() {
+        val result = Validator.validateFill(ListingKind.OPENED, 100, null)
+        assertTrue(result.isLeft)
+        assertIs<AppError.ValidationError.MissingFillLevel>(result.leftOrNull())
+    }
+
+    @Test
+    fun `validateFill returns MissingFillLevel for TESTER with zero remaining`() {
+        val result = Validator.validateFill(ListingKind.TESTER, 100, 0)
+        assertTrue(result.isLeft)
+        assertIs<AppError.ValidationError.MissingFillLevel>(result.leftOrNull())
+    }
+
+    @Test
+    fun `validateFill returns FillExceedsNominal when remaining exceeds nominal for OPENED`() {
+        val result = Validator.validateFill(ListingKind.OPENED, 50, 75)
+        assertTrue(result.isLeft)
+        val error = result.leftOrNull()
+        assertIs<AppError.ValidationError.FillExceedsNominal>(error)
+        assertEquals(75, error.remainingMl)
+        assertEquals(50, error.nominalSizeMl)
+    }
+
+    @Test
+    fun `validateFill returns Right with the declared remaining for a valid OPENED band`() {
+        val result = Validator.validateFill(ListingKind.OPENED, 100, 60)
+        assertTrue(result.isRight)
+        assertEquals(60, result.getOrNull())
+    }
+
+    @Test
+    fun `validateFill returns Right when TESTER remaining exactly equals nominal`() {
+        val result = Validator.validateFill(ListingKind.TESTER, 30, 30)
+        assertTrue(result.isRight)
+        assertEquals(30, result.getOrNull())
     }
 }

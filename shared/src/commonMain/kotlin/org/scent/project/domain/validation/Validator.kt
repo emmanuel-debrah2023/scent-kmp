@@ -1,6 +1,7 @@
 package org.scent.project.domain.validation
 
 import org.scent.project.domain.error.AppError
+import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
@@ -18,6 +19,14 @@ interface ValidatorContract {
         minRaw: String,
         maxRaw: String,
     ): Result<ClosedRange<Double>>
+
+    fun validatePrice(raw: String): Result<Double>
+
+    fun validateFill(
+        kind: ListingKind,
+        nominalSizeMl: Int?,
+        remainingMl: Int?,
+    ): Result<Int>
 }
 
 object Validator : ValidatorContract {
@@ -77,5 +86,59 @@ object Validator : ValidatorContract {
         }
 
         return (min..max).asRight()
+    }
+
+    /**
+     * A listing's own price. Deliberately NOT [validatePriceRange] — that treats a blank
+     * bound as unbounded, which is right for a filter and would publish a free listing here.
+     */
+    override fun validatePrice(raw: String): Result<Double> {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) {
+            return AppError.ValidationError.RequiredFieldEmpty(fieldName = "price").asLeft()
+        }
+        val parsed =
+            trimmed.toDoubleOrNull()
+                ?: return AppError.ValidationError.InvalidPrice(rawValue = raw).asLeft()
+        return if (parsed <= 0.0) {
+            AppError.ValidationError.InvalidPrice(rawValue = raw).asLeft()
+        } else {
+            parsed.asRight()
+        }
+    }
+
+    /**
+     * Returns the normalised [remainingMl] to persist. SEALED and DECANT are forced to
+     * [nominalSizeMl] rather than trusting the caller — for a decant the vial size *is*
+     * the fill, and a sealed bottle is full by definition.
+     */
+    override fun validateFill(
+        kind: ListingKind,
+        nominalSizeMl: Int?,
+        remainingMl: Int?,
+    ): Result<Int> {
+        val nominal =
+            nominalSizeMl
+                ?: return AppError.ValidationError.MissingNominalSize().asLeft()
+        if (nominal <= 0) {
+            return AppError.ValidationError.MissingNominalSize().asLeft()
+        }
+
+        return when (kind) {
+            ListingKind.SEALED, ListingKind.DECANT -> nominal.asRight()
+            ListingKind.OPENED, ListingKind.TESTER -> {
+                val remaining =
+                    remainingMl
+                        ?: return AppError.ValidationError.MissingFillLevel().asLeft()
+                when {
+                    remaining <= 0 -> AppError.ValidationError.MissingFillLevel().asLeft()
+                    remaining > nominal ->
+                        AppError.ValidationError
+                            .FillExceedsNominal(remainingMl = remaining, nominalSizeMl = nominal)
+                            .asLeft()
+                    else -> remaining.asRight()
+                }
+            }
+        }
     }
 }

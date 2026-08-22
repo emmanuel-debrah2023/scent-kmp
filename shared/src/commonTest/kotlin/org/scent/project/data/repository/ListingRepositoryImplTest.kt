@@ -9,6 +9,7 @@ import org.scent.project.data.remote.dto.ListingListResponseDto
 import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.CreateListingParams
+import org.scent.project.domain.model.UpdateListingParams
 import org.scent.project.fakes.FakeListingApi
 import org.scent.project.fakes.FakeTokenStorage
 import kotlin.test.Test
@@ -201,8 +202,7 @@ class ListingRepositoryImplTest {
             val result =
                 repo(storage = storage).createListing(
                     CreateListingParams(
-                        name = "Test",
-                        brand = "Brand",
+                        fragranceId = 10,
                         price = 50.0,
                         condition = "NEW",
                     ),
@@ -221,8 +221,7 @@ class ListingRepositoryImplTest {
             val result =
                 repo(api = api, storage = storage).createListing(
                     CreateListingParams(
-                        name = "Sauvage",
-                        brand = "Dior",
+                        fragranceId = 10,
                         price = 80.0,
                         condition = "NEW",
                     ),
@@ -241,8 +240,7 @@ class ListingRepositoryImplTest {
             val result =
                 repo(api = api, storage = storage).createListing(
                     CreateListingParams(
-                        name = "Test",
-                        brand = "Brand",
+                        fragranceId = 10,
                         price = 50.0,
                         condition = "NEW",
                     ),
@@ -250,5 +248,105 @@ class ListingRepositoryImplTest {
 
             assertTrue(result.isLeft)
             assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
+        }
+
+    // -------------------------------------------------------------------------
+    // getListing
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `getListing returns Right on success`() =
+        runTest {
+            val api = FakeListingApi().apply { getListingResponse = validListingResponse }
+
+            val result = repo(api).getListing(1)
+
+            assertTrue(result.isRight)
+            assertEquals(1, result.getOrNull()!!.id)
+        }
+
+    // -------------------------------------------------------------------------
+    // updateListing / setListingActive
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `updateListing returns Unauthorized when no token`() =
+        runTest {
+            val storage = FakeTokenStorage()
+
+            val result = repo(storage = storage).updateListing(1, UpdateListingParams(price = 50.0))
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.AuthError.Unauthorized>(result.leftOrNull())
+        }
+
+    @Test
+    fun `setListingActive delegates to updateListing with isActive set`() =
+        runTest {
+            val storage = FakeTokenStorage().apply { storedToken = "tok" }
+            val api = FakeListingApi().apply { updateResponse = validListingResponse.copy(isActive = false) }
+
+            val result = repo(api = api, storage = storage).setListingActive(1, active = false)
+
+            assertTrue(result.isRight)
+            assertEquals(1, api.lastUpdateListingId)
+        }
+
+    // -------------------------------------------------------------------------
+    // deleteListing
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `deleteListing returns Right on success`() =
+        runTest {
+            val storage = FakeTokenStorage().apply { storedToken = "tok" }
+            val api = FakeListingApi()
+
+            val result = repo(api = api, storage = storage).deleteListing(1)
+
+            assertTrue(result.isRight)
+            assertEquals(1, api.lastDeleteListingId)
+        }
+
+    @Test
+    fun `deleteListing returns Unauthorized when no token`() =
+        runTest {
+            val storage = FakeTokenStorage()
+
+            val result = repo(storage = storage).deleteListing(1)
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.AuthError.Unauthorized>(result.leftOrNull())
+        }
+
+    // -------------------------------------------------------------------------
+    // getMyListings
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `getMyListings returns Right with listings on success`() =
+        runTest {
+            val storage = FakeTokenStorage().apply { storedToken = "tok" }
+            val api =
+                FakeListingApi().apply {
+                    myListingsResponse =
+                        ListingListResponseDto(listings = listOf(validListingResponse))
+                }
+
+            val result = repo(api = api, storage = storage).getMyListings()
+
+            assertTrue(result.isRight)
+            assertEquals(1, result.getOrNull()!!.size)
+        }
+
+    @Test
+    fun `getMyListings returns Unauthorized when no token`() =
+        runTest {
+            val storage = FakeTokenStorage()
+
+            val result = repo(storage = storage).getMyListings()
+
+            assertTrue(result.isLeft)
+            assertIs<AppError.AuthError.Unauthorized>(result.leftOrNull())
         }
 }

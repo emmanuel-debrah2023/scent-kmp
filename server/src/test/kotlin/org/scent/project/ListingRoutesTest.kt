@@ -1,15 +1,6 @@
 package org.scent.project
 
-import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
 import data.schema.FragranceCondition
-import data.schema.FragranceMediaTable
-import data.schema.FragranceNotesTable
-import data.schema.FragrancesTable
-import data.schema.ListingsTable
-import data.schema.MediaItemsTable
-import data.schema.ReviewsTable
-import data.schema.UsersTable
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
@@ -24,42 +15,22 @@ import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.jetbrains.exposed.v1.jdbc.SchemaUtils
-import org.jetbrains.exposed.v1.jdbc.insertAndGetId
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mindrot.jbcrypt.BCrypt
 import plugins.configureSecurity
 import routing.listingRoutes
-import java.util.Date
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-@OptIn(kotlin.time.ExperimentalTime::class)
 class ListingRoutesTest {
-    private val jwtSecret = "secret"
-
-    private fun generateTestToken(userId: Int): String =
-        JWT
-            .create()
-            .withAudience("fragrances-users")
-            .withIssuer("fragrances-app")
-            .withClaim("userId", userId)
-            .withExpiresAt(Date(System.currentTimeMillis() + 86400000))
-            .sign(Algorithm.HMAC256(jwtSecret))
-
     @BeforeTest
     fun setup() {
-        initTestDatabase()
+        initListingTestDatabase()
     }
 
     @Test
@@ -443,7 +414,7 @@ class ListingRoutesTest {
             seedFragrance(userId, brand = "Creed")
             val diorId = seedFragrance(userId, brand = "Dior")
             seedListing(userId, diorId)
-            // Creed has no listing
+            // Creed has no listing — it matches the query below but must not appear.
 
             val response = client.get("/api/v1/listings/brands?query=e")
             assertEquals(HttpStatusCode.OK, response.status)
@@ -451,8 +422,9 @@ class ListingRoutesTest {
             val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
             val brands = body["brands"]?.jsonArray
             assertNotNull(brands)
-            assertEquals(1, brands.size)
-            assertEquals("Dior", brands[0].jsonPrimitive.content)
+            // "Dior" has no 'e' and was never going to match this query — "Creed" is the
+            // only candidate, and it's excluded for having no active listing.
+            assertEquals(0, brands.size)
         }
 
     @Test
@@ -529,75 +501,5 @@ class ListingRoutesTest {
             val brands = body["brands"]?.jsonArray
             assertNotNull(brands)
             assertEquals(0, brands.size)
-        }
-
-    private fun initTestDatabase() {
-        org.jetbrains.exposed.v1.jdbc.Database.connect(
-            "jdbc:h2:mem:listing_test_${System.nanoTime()};DB_CLOSE_DELAY=-1",
-            driver = "org.h2.Driver",
-        )
-        transaction {
-            SchemaUtils.create(
-                UsersTable,
-                FragrancesTable,
-                FragranceNotesTable,
-                FragranceMediaTable,
-                MediaItemsTable,
-                ReviewsTable,
-                ListingsTable,
-            )
-        }
-    }
-
-    private fun seedUser(username: String): Int =
-        transaction {
-            UsersTable
-                .insertAndGetId {
-                    it[UsersTable.username] = username
-                    it[email] = "$username@test.com"
-                    it[passwordHash] = BCrypt.hashpw("password", BCrypt.gensalt())
-                    it[displayName] = "Test $username"
-                    it[createdAt] =
-                        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                }.value
-        }
-
-    private fun seedFragrance(
-        sellerId: Int,
-        brand: String = "Dior",
-        volume: Int? = null,
-    ): Int =
-        transaction {
-            FragrancesTable
-                .insertAndGetId {
-                    it[FragrancesTable.sellerId] = sellerId
-                    it[name] = "Sauvage"
-                    it[FragrancesTable.brand] = brand
-                    it[FragrancesTable.volume] = volume
-                    it[price] = java.math.BigDecimal("125.00")
-                    it[condition] = FragranceCondition.NEW
-                    it[createdAt] =
-                        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                }.value
-        }
-
-    private fun seedListing(
-        sellerId: Int,
-        fragranceId: Int,
-        condition: FragranceCondition = FragranceCondition.NEW,
-        price: Double = 99.99,
-    ): Int =
-        transaction {
-            ListingsTable
-                .insertAndGetId {
-                    it[ListingsTable.sellerId] = sellerId
-                    it[ListingsTable.fragranceId] = fragranceId
-                    it[ListingsTable.price] = price.toBigDecimal()
-                    it[ListingsTable.condition] = condition
-                    it[isNegotiable] = false
-                    it[stockQuantity] = 1
-                    it[createdAt] =
-                        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                }.value
         }
 }

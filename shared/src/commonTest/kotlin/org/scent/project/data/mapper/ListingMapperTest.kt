@@ -5,6 +5,8 @@ import org.scent.project.data.mapper.ListingMapper.toListing
 import org.scent.project.data.remote.dto.FragranceResponse
 import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.domain.error.AppError
+import org.scent.project.domain.model.FillSource
+import org.scent.project.domain.model.ListingKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -171,5 +173,46 @@ class ListingMapperTest {
         assertEquals(2, result.size)
         assertEquals(10, result[0].id)
         assertEquals(20, result[1].id)
+    }
+
+    // -------------------------------------------------------------------------
+    // Fill fields
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `toListing leaves nominalSizeMl and remainingMl null when the DTO has neither`() {
+        // A listing created before the fill fields existed. Defaulting either to zero
+        // or to a fabricated figure would misrepresent the bottle to a buyer — null
+        // must survive the mapping unchanged.
+        val dto = validListingDto.copy(kind = null, nominalSizeMl = null, remainingMl = null, fillSource = null)
+        val result = dto.toListing()
+
+        assertTrue(result.isRight)
+        val listing = result.getOrNull()!!
+        assertEquals(null, listing.nominalSizeMl)
+        assertEquals(null, listing.remainingMl)
+        assertEquals(ListingKind.OPENED, listing.kind)
+        assertEquals(FillSource.DECLARED, listing.fillSource)
+    }
+
+    @Test
+    fun `toListing maps kind nominalSizeMl and remainingMl when present`() {
+        val dto = validListingDto.copy(kind = "DECANT", nominalSizeMl = 5, remainingMl = 5, fillSource = "DECLARED")
+        val result = dto.toListing()
+
+        assertTrue(result.isRight)
+        val listing = result.getOrNull()!!
+        assertEquals(ListingKind.DECANT, listing.kind)
+        assertEquals(5, listing.nominalSizeMl)
+        assertEquals(5, listing.remainingMl)
+    }
+
+    @Test
+    fun `toListing defaults photoUrls to empty list when null`() {
+        val dto = validListingDto.copy(photoUrls = null)
+        val result = dto.toListing()
+
+        assertTrue(result.isRight)
+        assertEquals(emptyList(), result.getOrNull()!!.photoUrls)
     }
 }

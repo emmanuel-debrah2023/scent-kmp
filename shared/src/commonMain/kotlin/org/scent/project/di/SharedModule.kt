@@ -27,11 +27,14 @@ import org.scent.project.domain.repository.ListingRepository
 import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.repository.ProfileRepository
 import org.scent.project.domain.usecase.CreateListingUseCase
+import org.scent.project.domain.usecase.DeleteListingUseCase
 import org.scent.project.domain.usecase.GetBrandSuggestionsUseCase
 import org.scent.project.domain.usecase.GetCurrentUserUseCase
 import org.scent.project.domain.usecase.GetFeedUseCase
 import org.scent.project.domain.usecase.GetFragranceDetailUseCase
+import org.scent.project.domain.usecase.GetListingUseCase
 import org.scent.project.domain.usecase.GetListingsUseCase
+import org.scent.project.domain.usecase.GetMyListingsUseCase
 import org.scent.project.domain.usecase.GetUserCollectionUseCase
 import org.scent.project.domain.usecase.GetUserLikesUseCase
 import org.scent.project.domain.usecase.GetUserPostsUseCase
@@ -43,7 +46,9 @@ import org.scent.project.domain.usecase.LogoutUseCase
 import org.scent.project.domain.usecase.ObserveAuthStateUseCase
 import org.scent.project.domain.usecase.RegisterUseCase
 import org.scent.project.domain.usecase.SearchFragrancesUseCase
+import org.scent.project.domain.usecase.SetListingActiveUseCase
 import org.scent.project.domain.usecase.ToggleFollowUseCase
+import org.scent.project.domain.usecase.UpdateListingUseCase
 import org.scent.project.domain.validation.Validator
 import org.scent.project.domain.validation.ValidatorContract
 
@@ -115,7 +120,17 @@ fun sharedModule(
 
     factory { GetBrandSuggestionsUseCase(repository = get()) }
 
-    factory { CreateListingUseCase(repository = get()) }
+    factory { CreateListingUseCase(repository = get(), validator = get()) }
+
+    factory { GetListingUseCase(repository = get()) }
+
+    factory { UpdateListingUseCase(repository = get(), validator = get()) }
+
+    factory { SetListingActiveUseCase(repository = get()) }
+
+    factory { DeleteListingUseCase(repository = get()) }
+
+    factory { GetMyListingsUseCase(repository = get()) }
 
     factory { ToggleFollowUseCase() }
 
