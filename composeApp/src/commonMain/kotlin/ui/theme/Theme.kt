@@ -139,4 +139,27 @@ object ScentThemeExtras {
         @Composable
         @ReadOnlyComposable
         get() = LocalScentWordmark.current
+
+    // Profile listing row — the two spots Playfair Display appears outside display/
+    // headline copy. W400 requested per design intent; the bundled font asset only
+    // registers a Bold cut (see PlayfairDisplayFamily), so this renders at the same
+    // weight as headlineSmall's identical W400-on-Bold-only-family precedent.
+    val listingRowFragranceName: TextStyle
+        @Composable
+        get() =
+            TextStyle(
+                fontFamily = PlayfairDisplayFamily,
+                fontWeight = FontWeight.Normal,
+                fontSize = 19.sp,
+                lineHeight = 23.sp,
+            )
+
+    val listingRowPrice: TextStyle
+        @Composable
+        get() =
+            TextStyle(
+                fontFamily = PlayfairDisplayFamily,
+                fontWeight = FontWeight.Normal,
+                fontSize = 20.sp,
+            )
 }
