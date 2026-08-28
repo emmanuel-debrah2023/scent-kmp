@@ -17,9 +17,14 @@ import scent.composeapp.generated.resources.playfair_display
 // Colour is always colorScheme.primary — callers set it via the Text color param.
 val LocalScentWordmark = staticCompositionLocalOf { TextStyle.Default }
 
+// The bundled asset is a variable font (wght axis, named instances Regular through
+// Black) — registering the same resource at multiple weights lets Compose/Skia select
+// the correct instance per request instead of always rendering the single weight a
+// naive one-entry registration would lock in.
 val PlayfairDisplayFamily: FontFamily
     @Composable get() =
         FontFamily(
+            Font(Res.font.playfair_display, weight = FontWeight.Normal),
             Font(Res.font.playfair_display, weight = FontWeight.Bold),
         )
 
