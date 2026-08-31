@@ -24,6 +24,16 @@ interface ImageProvider {
      * Returns [Result.success] with the URL the client PUTs bytes to, the storage path,
      * and the public URL that becomes valid once the PUT completes — or
      * [Result.failure] with a plain [Exception] on provider error.
+     *
+     * [requestBaseUrl] is the scheme://host:port the calling client actually used to reach
+     * this server (see `imageUploadUrlRoute` in `MediaRoutes.kt`). Real providers ignore it —
+     * a Supabase/Cloudflare URL is absolute and provider-owned. [providers.FakeImageProvider]
+     * is the one implementation that needs it: its upload/public URLs point back at *this*
+     * server, and hardcoding `localhost` breaks the moment the caller isn't on the same host
+     * (an Android emulator reaches the dev machine via `10.0.2.2`, not `localhost`).
      */
-    fun createSignedUpload(contentType: String): Result<SignedUploadResult>
+    fun createSignedUpload(
+        contentType: String,
+        requestBaseUrl: String? = null,
+    ): Result<SignedUploadResult>
 }

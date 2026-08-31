@@ -14,9 +14,15 @@ import java.util.UUID
  *   3. Client calls POST /api/v1/media/{uid}/complete, same as the real flow
  */
 class FakeImageProvider(
-    private val baseUrl: String = "http://localhost:8080",
+    /** Used only when a route calls [createSignedUpload] without [requestBaseUrl] —
+     *  direct unit-test construction, not the real request path. */
+    private val fallbackBaseUrl: String = "http://localhost:8080",
 ) : ImageProvider {
-    override fun createSignedUpload(contentType: String): Result<SignedUploadResult> {
+    override fun createSignedUpload(
+        contentType: String,
+        requestBaseUrl: String?,
+    ): Result<SignedUploadResult> {
+        val baseUrl = requestBaseUrl ?: fallbackBaseUrl
         val uid = UUID.randomUUID().toString()
         val path = "fake/$uid.jpg"
         return Result.success(

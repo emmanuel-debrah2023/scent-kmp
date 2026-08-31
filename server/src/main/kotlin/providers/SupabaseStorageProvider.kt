@@ -23,7 +23,12 @@ class SupabaseStorageProvider(
 ) : ImageProvider {
     private val lenientJson = Json { ignoreUnknownKeys = true }
 
-    override fun createSignedUpload(contentType: String): Result<SignedUploadResult> =
+    // requestBaseUrl unused — every URL here is an absolute Supabase Storage URL, not a
+    // path back into this server. See the interface doc for why FakeImageProvider differs.
+    override fun createSignedUpload(
+        contentType: String,
+        requestBaseUrl: String?,
+    ): Result<SignedUploadResult> =
         runCatching {
             val uid = UUID.randomUUID().toString()
             val path = "listings/$uid.${extensionFor(contentType)}"
