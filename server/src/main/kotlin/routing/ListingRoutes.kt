@@ -713,13 +713,15 @@ private fun buildListingDto(
     // The seller's own photos of this specific bottle, in seller-chosen order. Falls back
     // to the catalogue fragrance's stock imagery only when the listing has none of its own
     // — e.g. a listing created before the photo pipeline existed.
-    val listingPhotoUrls =
+    val listingMedia =
         ListingMediaTable
             .innerJoin(MediaItemsTable)
             .selectAll()
             .where { ListingMediaTable.listingId eq id }
             .orderBy(ListingMediaTable.position, SortOrder.ASC)
-            .map { it[MediaItemsTable.url] }
+            .map { it[MediaItemsTable.id].value to it[MediaItemsTable.url] }
+    val listingPhotoUrls = listingMedia.map { it.second }
+    val listingMediaIds = listingMedia.map { it.first }
 
     val reviewRows =
         ReviewsTable
@@ -773,6 +775,7 @@ private fun buildListingDto(
                 .toInstant(TimeZone.currentSystemDefault())
                 .toEpochMilliseconds(),
         photoUrls = listingPhotoUrls.ifEmpty { imageUrls },
+        mediaIds = listingMediaIds,
         kind = row[ListingsTable.kind],
         nominalSizeMl = row[ListingsTable.nominalSizeMl],
         remainingMl = row[ListingsTable.remainingMl],

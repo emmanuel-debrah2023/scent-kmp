@@ -45,6 +45,9 @@ data class ListingResponseDto(
     @SerialName("is_active") val isActive: Boolean,
     @SerialName("created_at") val createdAt: Long,
     @SerialName("photo_urls") val photoUrls: List<String> = emptyList(),
+    // Empty when photoUrls fell back to catalogue stock imagery — those aren't this
+    // listing's own media, so there's nothing here for an edit screen to reorder/replace.
+    @SerialName("media_ids") val mediaIds: List<Int> = emptyList(),
     val kind: String? = null,
     @SerialName("nominal_size_ml") val nominalSizeMl: Int? = null,
     @SerialName("remaining_ml") val remainingMl: Int? = null,
