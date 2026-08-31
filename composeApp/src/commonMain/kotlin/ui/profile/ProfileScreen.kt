@@ -67,6 +67,7 @@ import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.Review
 import org.scent.project.domain.model.User
+import ui.accessibility.accessibleClickable
 import ui.base.UiState
 import ui.components.BottleItem
 import ui.components.EmptyState
@@ -969,11 +970,21 @@ private fun LazyListScope.listingsTabContent(
                     ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                text = "$activeCount active",
-                style = MaterialTheme.typography.bodySmall,
-                color = ScentThemeExtras.gray400,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "$activeCount active",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ScentThemeExtras.gray400,
+                )
+                if (isOwnProfile) {
+                    Text(
+                        text = "+ ADD",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
+                        color = ScentThemeExtras.interactive,
+                        modifier = Modifier.accessibleClickable(label = "Create listing", onClick = onCreateListing),
+                    )
+                }
+            }
         }
     }
 

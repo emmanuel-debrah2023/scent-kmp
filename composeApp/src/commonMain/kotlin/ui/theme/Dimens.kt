@@ -41,6 +41,7 @@ data class ScentSpacing(
     val profileRowPillPaddingV: Dp = 3.dp,
     val profileRowPillTopOffset: Dp = 2.dp,
     val profileRowHorizontalPadding: Dp = 22.dp,
+    val thumbnailGridMinSize: Dp = 96.dp,
     // Skeleton placeholder line heights, mirroring the text styles they stand in for.
     val skeletonLineSmall: Dp = 12.dp,
     val skeletonLineMedium: Dp = 20.dp,
