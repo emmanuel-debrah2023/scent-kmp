@@ -330,17 +330,17 @@ private fun CreateListingFilledWithPhotosPreview() {
         listOf(
             ListingPhoto(
                 id = 0,
-                picked = PickedImage(bytes = ByteArray(0), contentType = "image/jpeg"),
+                source = PhotoSource.Local(PickedImage(bytes = ByteArray(0), contentType = "image/jpeg")),
                 status = PhotoUploadStatus.Uploaded(mediaId = 1),
             ),
             ListingPhoto(
                 id = 1,
-                picked = PickedImage(bytes = ByteArray(0), contentType = "image/jpeg"),
+                source = PhotoSource.Local(PickedImage(bytes = ByteArray(0), contentType = "image/jpeg")),
                 status = PhotoUploadStatus.Uploading,
             ),
             ListingPhoto(
                 id = 2,
-                picked = PickedImage(bytes = ByteArray(0), contentType = "image/jpeg"),
+                source = PhotoSource.Local(PickedImage(bytes = ByteArray(0), contentType = "image/jpeg")),
                 status = PhotoUploadStatus.Failed(error = AppError.ContentError.UploadFailed()),
             ),
         )

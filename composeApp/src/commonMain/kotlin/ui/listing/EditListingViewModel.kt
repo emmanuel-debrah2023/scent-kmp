@@ -7,62 +7,85 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.scent.project.domain.error.AppError
-import org.scent.project.domain.model.CreateListingParams
-import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.ListingKind
-import org.scent.project.domain.usecase.CreateListingUseCase
+import org.scent.project.domain.model.UpdateListingParams
+import org.scent.project.domain.usecase.GetListingUseCase
 import org.scent.project.domain.usecase.MAX_LISTING_PHOTOS
-import org.scent.project.domain.usecase.SearchFragrancesUseCase
+import org.scent.project.domain.usecase.UpdateListingUseCase
 import org.scent.project.domain.usecase.UploadListingPhotoUseCase
 import ui.base.BaseViewModel
-import ui.base.TypeaheadEngine
 import ui.base.UiState
 import ui.media.PickedImage
 
-private const val MIN_FRAGRANCE_QUERY_LENGTH = 2
-private const val FRAGRANCE_SUGGESTION_LIMIT = 8
-
 /**
- * Drives the Create Listing form. Two independent [StateFlow]s rather than one combined
- * state, matching [ui.auth.AuthViewModel]'s login/register split: [formState] is "always
- * there" (not a [UiState]) while the user edits, [submitState] tracks only the create
- * round-trip. Fragrance typeahead is embedded directly via [TypeaheadEngine] rather than a
- * second ViewModel — see [ui.marketplace.BrandSuggestionViewModel]'s doc comment for why
- * that split exists there (independent grid lifecycle) and doesn't apply here.
+ * Drives the Edit Listing form. Three independent [StateFlow]s: [loadState] gates the
+ * screen on the initial [GetListingUseCase] fetch (loading/error/loaded), [formState] is
+ * "always there" once loaded, [submitState] tracks only the update round-trip — same split
+ * as [CreateListingViewModel], with an extra load phase since there's something to fetch.
  */
-class CreateListingViewModel(
-    private val createListingUseCase: CreateListingUseCase,
+class EditListingViewModel(
+    private val listingId: Int,
+    private val getListingUseCase: GetListingUseCase,
+    private val updateListingUseCase: UpdateListingUseCase,
     private val uploadListingPhotoUseCase: UploadListingPhotoUseCase,
-    searchFragrancesUseCase: SearchFragrancesUseCase,
 ) : BaseViewModel() {
-    private val _formState = MutableStateFlow(CreateListingFormState())
-    val formState: StateFlow<CreateListingFormState> = _formState.asStateFlow()
+    private val _loadState = MutableStateFlow<UiState<Listing>>(UiState.Loading)
+    val loadState: StateFlow<UiState<Listing>> = _loadState.asStateFlow()
+
+    private val _formState = MutableStateFlow(EditListingFormState())
+    val formState: StateFlow<EditListingFormState> = _formState.asStateFlow()
 
     private val _submitState = MutableStateFlow<UiState<Listing>>(UiState.Idle)
     val submitState: StateFlow<UiState<Listing>> = _submitState.asStateFlow()
 
-    private var nextPhotoId = 0
+    /** Negative and decreasing so a locally-added photo's id can never collide with a real
+     *  (positive) media item id from [Listing.mediaIds]. */
+    private var nextLocalPhotoId = -1
 
-    private val fragranceEngine =
-        TypeaheadEngine<Fragrance>(
-            scope = viewModelScope,
-            minQueryLength = MIN_FRAGRANCE_QUERY_LENGTH,
-        ) { query -> searchFragrancesUseCase(query = query, limit = FRAGRANCE_SUGGESTION_LIMIT) }
-
-    val fragranceSuggestions: StateFlow<UiState<List<Fragrance>>> = fragranceEngine.uiState
-
-    fun onFragranceQueryChange(query: String) {
-        _formState.update { it.copy(fragranceQuery = query, selectedFragrance = null) }
-        fragranceEngine.onQueryChange(query)
+    init {
+        load()
     }
 
-    fun onFragranceSelected(fragrance: Fragrance) {
-        _formState.update { it.copy(fragranceQuery = fragrance.name, selectedFragrance = fragrance) }
-        fragranceEngine.onSuggestionAccepted(fragrance.name)
+    private fun load() {
+        viewModelScope.launch {
+            _loadState.value = UiState.Loading
+            getListingUseCase(listingId).handleResult(
+                onSuccess = { listing ->
+                    _loadState.value = UiState.Success(listing)
+                    _formState.value = listing.toFormState()
+                },
+                onError = { error -> _loadState.value = UiState.Error(error) },
+            )
+        }
     }
 
-    fun onFragranceSuggestionRetry() = fragranceEngine.onRetry()
+    private fun Listing.toFormState(): EditListingFormState =
+        EditListingFormState(
+            fragranceDisplayName = "${fragrance.brand} ${fragrance.name}",
+            price = price.toString(),
+            condition = condition,
+            kind = kind,
+            nominalSizeMl = nominalSizeMl?.toString() ?: "",
+            remainingMl = remainingMl?.toString() ?: "",
+            isNegotiable = isNegotiable,
+            stockQuantity = stockQuantity.toString(),
+            isActive = isActive,
+            // Empty mediaIds means photoUrls fell back to catalogue stock imagery — nothing
+            // listing-owned to show as editable here (see Listing.mediaIds's doc comment).
+            photos =
+                if (mediaIds.isEmpty()) {
+                    emptyList()
+                } else {
+                    mediaIds.zip(photoUrls) { mediaId, url ->
+                        ListingPhoto(
+                            id = mediaId,
+                            source = PhotoSource.Remote(url),
+                            status = PhotoUploadStatus.Uploaded(mediaId),
+                        )
+                    }
+                },
+        )
 
     fun onPriceChange(price: String) = _formState.update { it.copy(price = price) }
 
@@ -78,13 +101,15 @@ class CreateListingViewModel(
 
     fun onStockQuantityChange(value: String) = _formState.update { it.copy(stockQuantity = value) }
 
+    fun onActiveChange(value: Boolean) = _formState.update { it.copy(isActive = value) }
+
     fun onPhotosPicked(picked: List<PickedImage>) {
         val remainingSlots = MAX_LISTING_PHOTOS - _formState.value.photos.size
         val accepted = picked.take(remainingSlots)
         val newPhotos =
             accepted.map { image ->
                 ListingPhoto(
-                    id = nextPhotoId++,
+                    id = nextLocalPhotoId--,
                     source = PhotoSource.Local(image),
                     status = PhotoUploadStatus.Uploading,
                 )
@@ -148,12 +173,6 @@ class CreateListingViewModel(
 
     fun submit() {
         val state = _formState.value
-        val fragrance =
-            state.selectedFragrance ?: run {
-                _submitState.value = UiState.Error(AppError.ValidationError.RequiredFieldEmpty(fieldName = "fragrance"))
-                return
-            }
-
         val mediaIds = state.photos.mapNotNull { (it.status as? PhotoUploadStatus.Uploaded)?.mediaId }
         if (mediaIds.size != state.photos.size) {
             // canSubmit already gates the button on this; guarded again since submit()
@@ -164,18 +183,20 @@ class CreateListingViewModel(
 
         viewModelScope.launch {
             _submitState.value = UiState.Loading
-            createListingUseCase(
-                CreateListingParams(
-                    fragranceId = fragrance.id,
-                    price = state.price.toDoubleOrNull() ?: 0.0,
-                    condition = state.condition,
-                    isNegotiable = state.isNegotiable,
-                    stockQuantity = state.stockQuantity.toIntOrNull() ?: 1,
-                    mediaIds = mediaIds,
-                    kind = state.kind,
-                    nominalSizeMl = state.nominalSizeMl.toIntOrNull(),
-                    remainingMl = state.remainingMl.toIntOrNull(),
-                ),
+            updateListingUseCase(
+                id = listingId,
+                params =
+                    UpdateListingParams(
+                        price = state.price.toDoubleOrNull() ?: 0.0,
+                        condition = state.condition,
+                        isNegotiable = state.isNegotiable,
+                        stockQuantity = state.stockQuantity.toIntOrNull() ?: 1,
+                        isActive = state.isActive,
+                        mediaIds = mediaIds,
+                        kind = state.kind,
+                        nominalSizeMl = state.nominalSizeMl.toIntOrNull(),
+                        remainingMl = state.remainingMl.toIntOrNull(),
+                    ),
             ).handleResult(
                 onSuccess = { listing -> _submitState.value = UiState.Success(listing) },
                 onError = { error -> _submitState.value = UiState.Error(error) },
@@ -183,25 +204,20 @@ class CreateListingViewModel(
         }
     }
 
-    fun resetSubmitState() {
-        _submitState.value = UiState.Idle
-    }
-
-    fun onEvent(event: CreateListingEvent) {
+    fun onEvent(event: EditListingEvent) {
         when (event) {
-            is CreateListingEvent.FragranceQueryChange -> onFragranceQueryChange(event.query)
-            is CreateListingEvent.FragranceSelected -> onFragranceSelected(event.fragrance)
-            CreateListingEvent.FragranceSuggestionRetry -> onFragranceSuggestionRetry()
-            is CreateListingEvent.PriceChange -> onPriceChange(event.value)
-            is CreateListingEvent.ConditionChange -> onConditionChange(event.value)
-            is CreateListingEvent.KindChange -> onKindChange(event.kind)
-            is CreateListingEvent.NominalSizeChange -> onNominalSizeChange(event.value)
-            is CreateListingEvent.RemainingMlChange -> onRemainingMlChange(event.value)
-            is CreateListingEvent.NegotiableChange -> onNegotiableChange(event.value)
-            is CreateListingEvent.StockQuantityChange -> onStockQuantityChange(event.value)
-            is CreateListingEvent.PhotoRemoved -> onPhotoRemoved(event.id)
-            is CreateListingEvent.PhotoMoved -> onPhotoMoved(event.id, event.delta)
-            CreateListingEvent.Submit -> submit()
+            is EditListingEvent.PriceChange -> onPriceChange(event.value)
+            is EditListingEvent.ConditionChange -> onConditionChange(event.value)
+            is EditListingEvent.KindChange -> onKindChange(event.kind)
+            is EditListingEvent.NominalSizeChange -> onNominalSizeChange(event.value)
+            is EditListingEvent.RemainingMlChange -> onRemainingMlChange(event.value)
+            is EditListingEvent.NegotiableChange -> onNegotiableChange(event.value)
+            is EditListingEvent.StockQuantityChange -> onStockQuantityChange(event.value)
+            is EditListingEvent.ActiveChange -> onActiveChange(event.value)
+            is EditListingEvent.PhotoRemoved -> onPhotoRemoved(event.id)
+            is EditListingEvent.PhotoMoved -> onPhotoMoved(event.id, event.delta)
+            EditListingEvent.Submit -> submit()
+            EditListingEvent.Retry -> load()
         }
     }
 }

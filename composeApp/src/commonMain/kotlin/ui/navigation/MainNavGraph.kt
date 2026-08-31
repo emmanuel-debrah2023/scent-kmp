@@ -13,6 +13,7 @@ import org.scent.project.domain.model.AuthUser
 import ui.components.BlendedScaffold
 import ui.home.ScentHomeHost
 import ui.listing.CreateListingScreen
+import ui.listing.EditListingScreen
 import ui.marketplace.MarketplaceScreen
 import ui.profile.ProfileScreen
 
@@ -82,7 +83,12 @@ private fun ProfileNavHost(
                 onBack = { nav.goBack() },
                 onCreated = { nav.goBack() },
             )
-        is ProfileRoute.EditListing -> PlaceholderScreen("Edit Listing ${route.listingId}")
+        is ProfileRoute.EditListing ->
+            EditListingScreen(
+                listingId = route.listingId,
+                onBack = { nav.goBack() },
+                onSaved = { nav.goBack() },
+            )
     }
 }
 

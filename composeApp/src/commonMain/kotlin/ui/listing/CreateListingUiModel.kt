@@ -1,12 +1,10 @@
 package ui.listing
 
-import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.usecase.CreateListingUseCase
 import org.scent.project.domain.usecase.MAX_LISTING_PHOTOS
 import org.scent.project.domain.usecase.MIN_LISTING_PHOTOS
-import ui.media.PickedImage
 
 /** Mirrors [ui.profile.ProfileEvent]: one sealed type per user action, routed through
  *  [CreateListingViewModel.onEvent] so [CreateListingContent][ui.listing.CreateListingScreen]
@@ -61,29 +59,6 @@ sealed interface CreateListingEvent {
 
     data object Submit : CreateListingEvent
 }
-
-/** Per-photo upload outcome. [ListingPhoto.bytesSent]/[ListingPhoto.totalBytes] carry
- *  progress while [Uploading]; [Uploaded.mediaId] is what goes in `CreateListingParams.mediaIds`. */
-sealed interface PhotoUploadStatus {
-    data object Uploading : PhotoUploadStatus
-
-    data class Uploaded(
-        val mediaId: Int,
-    ) : PhotoUploadStatus
-
-    data class Failed(
-        val error: AppError,
-    ) : PhotoUploadStatus
-}
-
-data class ListingPhoto(
-    /** Stable across reorder/remove — [PickedImage] carries no identity of its own. */
-    val id: Int,
-    val picked: PickedImage,
-    val status: PhotoUploadStatus,
-    val bytesSent: Long = 0L,
-    val totalBytes: Long = 0L,
-)
 
 data class CreateListingFormState(
     val fragranceQuery: String = "",

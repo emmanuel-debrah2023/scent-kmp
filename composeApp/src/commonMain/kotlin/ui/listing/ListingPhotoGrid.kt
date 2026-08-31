@@ -132,7 +132,7 @@ private fun ListingPhotoTile(
                 .withCustomActions(*actions),
     ) {
         AsyncImage(
-            model = photo.picked.bytes,
+            model = photo.imageModel,
             contentDescription = null,
             modifier = Modifier.fillMaxWidth().aspectRatio(1f),
             contentScale = ContentScale.Crop,
