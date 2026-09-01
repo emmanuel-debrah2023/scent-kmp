@@ -204,6 +204,15 @@ class EditListingViewModel(
         }
     }
 
+    /** [koinViewModel][ui.listing.EditListingScreen] caches this instance for the life of
+     *  the ViewModelStore, keyed only by [listingId] — reopening the same listing after a
+     *  successful save would otherwise find [submitState] still [UiState.Success] and
+     *  immediately re-navigate away. The screen calls this right after consuming that
+     *  success so a later reopen starts clean. */
+    fun resetSubmitState() {
+        _submitState.value = UiState.Idle
+    }
+
     fun onEvent(event: EditListingEvent) {
         when (event) {
             is EditListingEvent.PriceChange -> onPriceChange(event.value)

@@ -62,6 +62,10 @@ fun CreateListingScreen(
 
     LaunchedEffect(submitState) {
         val success = submitState as? UiState.Success<Listing> ?: return@LaunchedEffect
+        // Reset before navigating: koinViewModel() caches this instance by class alone, so
+        // creating a second listing later in the same session would reuse this one — a
+        // leftover Success would instantly re-fire this effect and bounce straight back out.
+        viewModel.resetSubmitState()
         onCreated(success.data.id)
     }
 

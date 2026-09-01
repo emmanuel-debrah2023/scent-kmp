@@ -41,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -91,6 +92,14 @@ fun ProfileScreen(
 ) {
     val viewModel: ProfileViewModel = koinViewModel(parameters = { parametersOf(authUser) })
     val state by viewModel.uiState.collectAsState()
+
+    // ProfileScreen's composition is disposed and rebuilt fresh each time this route
+    // reappears (e.g. back from Create/Edit Listing), but koinViewModel caches this
+    // instance for the ViewModelStore's lifetime — its data doesn't refresh on its own.
+    // Retry here re-fetches so an edit's changes actually show up on return.
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(ProfileEvent.Retry)
+    }
 
     ProfileContent(
         state = state,

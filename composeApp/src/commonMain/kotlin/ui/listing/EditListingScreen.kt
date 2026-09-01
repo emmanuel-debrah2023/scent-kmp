@@ -54,13 +54,23 @@ fun EditListingScreen(
     onSaved: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: EditListingViewModel = koinViewModel(parameters = { parametersOf(listingId) })
+    // Keyed by listingId: koinViewModel caches by class alone otherwise, so editing a
+    // different listing (or reopening this one) would reuse a stale cached instance —
+    // wrong listing's data, or a submitState left over from a prior successful save.
+    val viewModel: EditListingViewModel =
+        koinViewModel(key = "EditListing-$listingId", parameters = { parametersOf(listingId) })
     val loadState by viewModel.loadState.collectAsState()
     val formState by viewModel.formState.collectAsState()
     val submitState by viewModel.submitState.collectAsState()
 
     LaunchedEffect(submitState) {
-        if (submitState is UiState.Success<Listing>) onSaved()
+        if (submitState is UiState.Success<Listing>) {
+            // Reset before navigating: a cached instance whose submitState is still
+            // Success would otherwise re-fire this effect the instant this screen (or
+            // another edit of the same listing) reopens, bouncing straight back out.
+            viewModel.resetSubmitState()
+            onSaved()
+        }
     }
 
     // See CreateListingScreen's identical comment: MAX_LISTING_PHOTOS, not the remaining
