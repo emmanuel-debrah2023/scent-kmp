@@ -184,7 +184,7 @@ private fun EditListingContent(
             Row(horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs)) {
                 ListingKind.entries.forEach { kind ->
                     SelectableChip(
-                        label = kind.name,
+                        label = kind.displayLabel(),
                         selected = formState.kind == kind,
                         onClick = { onEvent(EditListingEvent.KindChange(kind)) },
                     )

@@ -24,12 +24,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.tooling.preview.Preview
 import coil3.compose.AsyncImage
+import org.scent.project.domain.error.AppError
 import ui.accessibility.accessibleLabel
 import ui.accessibility.accessibleLiveRegion
 import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
 import ui.accessibility.withCustomActions
+import ui.media.PickedImage
+import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
 private const val GRID_COLUMNS = 3
@@ -209,5 +213,34 @@ private fun ListingPhotoTile(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ListingPhotoGridPreview() {
+    ScentTheme {
+        ListingPhotoGrid(
+            photos =
+                listOf(
+                    ListingPhoto(
+                        id = 1,
+                        source = PhotoSource.Remote("https://example.com/photo-1.jpg"),
+                        status = PhotoUploadStatus.Uploaded(mediaId = 1),
+                    ),
+                    ListingPhoto(
+                        id = 2,
+                        source = PhotoSource.Local(PickedImage(bytes = ByteArray(0), contentType = "image/jpeg")),
+                        status = PhotoUploadStatus.Uploading,
+                    ),
+                    ListingPhoto(
+                        id = 3,
+                        source = PhotoSource.Local(PickedImage(bytes = ByteArray(0), contentType = "image/jpeg")),
+                        status = PhotoUploadStatus.Failed(error = AppError.ContentError.UploadFailed()),
+                    ),
+                ),
+            onRemove = {},
+            onMove = { _, _ -> },
+        )
     }
 }
