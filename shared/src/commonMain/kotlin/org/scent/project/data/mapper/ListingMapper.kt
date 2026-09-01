@@ -64,6 +64,7 @@ object ListingMapper {
             isActive = isActive ?: true,
             createdAt = createdAt ?: 0L,
             photoUrls = photoUrls?.filter { it.isNotBlank() } ?: emptyList(),
+            mediaIds = mediaIds ?: emptyList(),
             kind = ListingKind.fromString(kind),
             // Genuinely nullable: a pre-fill-fields listing has neither, and defaulting
             // either here would put a fabricated figure in front of a buyer.

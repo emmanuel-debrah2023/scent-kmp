@@ -1,6 +1,7 @@
 package org.scent.project.data.remote.api
 
 import kotlinx.coroutines.test.runTest
+import org.scent.project.data.remote.dto.CompleteUploadResponseDto
 import org.scent.project.data.remote.dto.UploadUrlResponseDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.util.Result
@@ -18,10 +19,47 @@ import kotlin.test.assertTrue
 class FakeMediaApi : MediaApi {
     var uploadUrlResponse: UploadUrlResponseDto? = null
     var uploadUrlException: Exception? = null
+    var imageUploadUrlResponse: UploadUrlResponseDto? = null
+    var imageUploadUrlException: Exception? = null
+    var uploadImageException: Exception? = null
+    var completeUploadException: Exception? = null
+
+    var lastUploadedBytes: ByteArray? = null
+    var lastCompletedUid: String? = null
 
     override suspend fun getUploadUrl(token: String): UploadUrlResponseDto {
         uploadUrlException?.let { throw it }
         return uploadUrlResponse ?: error("FakeMediaApi.uploadUrlResponse not set")
+    }
+
+    override suspend fun getImageUploadUrl(
+        token: String,
+        contentType: String,
+    ): UploadUrlResponseDto {
+        imageUploadUrlException?.let { throw it }
+        return imageUploadUrlResponse ?: error("FakeMediaApi.imageUploadUrlResponse not set")
+    }
+
+    override suspend fun uploadImage(
+        uploadUrl: String,
+        bytes: ByteArray,
+        contentType: String,
+        onProgress: (bytesSent: Long, totalBytes: Long) -> Unit,
+    ) {
+        uploadImageException?.let { throw it }
+        lastUploadedBytes = bytes
+        onProgress(bytes.size.toLong(), bytes.size.toLong())
+    }
+
+    var completeUploadResponse: CompleteUploadResponseDto = CompleteUploadResponseDto(id = 1)
+
+    override suspend fun completeUpload(
+        uid: String,
+        token: String,
+    ): CompleteUploadResponseDto {
+        completeUploadException?.let { throw it }
+        lastCompletedUid = uid
+        return completeUploadResponse
     }
 }
 

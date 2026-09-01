@@ -38,6 +38,7 @@ import ui.accessibility.accessibleState
 import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
 import ui.base.UiState
+import ui.components.CONDITION_OPTIONS
 import ui.components.ScentTextField
 import ui.components.SelectableChip
 import ui.components.buttons.ScentPrimaryButton
@@ -45,7 +46,6 @@ import ui.components.buttons.ScentSecondaryButton
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
-private val CONDITION_OPTIONS = listOf("NEW" to "New", "USED" to "Used", "DECANT" to "Decant", "SAMPLE" to "Sample")
 private val SIZE_OPTIONS_ML = listOf(5, 10, 30, 50, 100)
 
 /**

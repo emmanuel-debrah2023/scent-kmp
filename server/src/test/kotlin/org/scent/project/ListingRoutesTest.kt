@@ -62,6 +62,7 @@ class ListingRoutesTest {
 
             val userId = seedUser("seller1")
             val fragranceId = seedFragrance(userId)
+            val mediaId = seedReadyMedia(userId).single()
             val token = generateTestToken(userId)
 
             val response =
@@ -75,7 +76,8 @@ class ListingRoutesTest {
                             "price": 89.99,
                             "condition": "NEW",
                             "is_negotiable": true,
-                            "stock_quantity": 3
+                            "stock_quantity": 3,
+                            "media_ids": [$mediaId]
                         }
                         """.trimIndent(),
                     )

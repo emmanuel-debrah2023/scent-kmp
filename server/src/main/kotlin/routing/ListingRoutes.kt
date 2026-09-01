@@ -4,6 +4,7 @@ import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
 import data.schema.FragrancesTable
+import data.schema.ListingMediaTable
 import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.ReviewsTable
@@ -38,11 +39,14 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -50,6 +54,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.scent.project.domain.model.FillSource
 import org.scent.project.domain.model.ListingKind
+import org.scent.project.domain.usecase.MAX_LISTING_PHOTOS
+import org.scent.project.domain.usecase.MIN_LISTING_PHOTOS
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @OptIn(kotlin.time.ExperimentalTime::class)
@@ -315,25 +321,43 @@ fun Route.listingRoutes() {
                             ErrorResponse("Fill level cannot exceed the bottle size"),
                         )
 
+                if (request.mediaIds.size !in MIN_LISTING_PHOTOS..MAX_LISTING_PHOTOS) {
+                    return@post this.call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(
+                            "A listing needs $MIN_LISTING_PHOTOS to $MAX_LISTING_PHOTOS photos of the actual bottle",
+                        ),
+                    )
+                }
+                if (!mediaIdsOwnedAndReady(request.mediaIds, userId)) {
+                    return@post this.call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("One or more photos are not yours or haven't finished uploading"),
+                    )
+                }
+
                 val listingId =
                     transaction {
-                        ListingsTable
-                            .insertAndGetId {
-                                it[sellerId] = userId
-                                it[ListingsTable.fragranceId] = request.fragranceId
-                                it[price] = request.price.toBigDecimal()
-                                it[ListingsTable.condition] = condition
-                                it[isNegotiable] = request.isNegotiable
-                                it[stockQuantity] = request.stockQuantity
-                                it[createdAt] =
-                                    Clock.System
-                                        .now()
-                                        .toLocalDateTime(TimeZone.currentSystemDefault())
-                                it[ListingsTable.kind] = kind.name
-                                it[nominalSizeMl] = normalizedFill.nominal
-                                it[remainingMl] = normalizedFill.remaining
-                                it[fillSource] = FillSource.DECLARED.name
-                            }.value
+                        val id =
+                            ListingsTable
+                                .insertAndGetId {
+                                    it[sellerId] = userId
+                                    it[ListingsTable.fragranceId] = request.fragranceId
+                                    it[price] = request.price.toBigDecimal()
+                                    it[ListingsTable.condition] = condition
+                                    it[isNegotiable] = request.isNegotiable
+                                    it[stockQuantity] = request.stockQuantity
+                                    it[createdAt] =
+                                        Clock.System
+                                            .now()
+                                            .toLocalDateTime(TimeZone.currentSystemDefault())
+                                    it[ListingsTable.kind] = kind.name
+                                    it[nominalSizeMl] = normalizedFill.nominal
+                                    it[remainingMl] = normalizedFill.remaining
+                                    it[fillSource] = FillSource.DECLARED.name
+                                }.value
+                        replaceListingMedia(id, request.mediaIds)
+                        id
                     }
 
                 val created =
@@ -434,19 +458,53 @@ fun Route.listingRoutes() {
                             )
                 }
 
+                if (request.mediaIds != null) {
+                    if (request.mediaIds.size !in MIN_LISTING_PHOTOS..MAX_LISTING_PHOTOS) {
+                        return@patch this.call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse(
+                                "A listing needs $MIN_LISTING_PHOTOS to $MAX_LISTING_PHOTOS photos of the actual bottle",
+                            ),
+                        )
+                    }
+                    if (!mediaIdsOwnedAndReady(request.mediaIds, userId)) {
+                        return@patch this.call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("One or more photos are not yours or haven't finished uploading"),
+                        )
+                    }
+                }
+
+                // Exposed's update() throws if the block sets zero columns — a real case
+                // now that a caller can PATCH media_ids alone (e.g. reordering photos)
+                // without touching any scalar field.
+                val touchesScalarField =
+                    request.price != null ||
+                        newCondition != null ||
+                        request.isNegotiable != null ||
+                        request.stockQuantity != null ||
+                        request.isActive != null ||
+                        request.kind != null ||
+                        normalizedFill != null
+
                 transaction {
-                    ListingsTable.update({ ListingsTable.id eq listingId }) {
-                        request.price?.let { p -> it[price] = p.toBigDecimal() }
-                        newCondition?.let { c -> it[condition] = c }
-                        request.isNegotiable?.let { n -> it[isNegotiable] = n }
-                        request.stockQuantity?.let { q -> it[stockQuantity] = q }
-                        request.isActive?.let { a -> it[isActive] = a }
-                        request.kind?.let { k -> it[ListingsTable.kind] = ListingKind.fromString(k).name }
-                        normalizedFill?.let { fill ->
-                            it[nominalSizeMl] = fill.nominal
-                            it[remainingMl] = fill.remaining
+                    if (touchesScalarField) {
+                        ListingsTable.update({ ListingsTable.id eq listingId }) {
+                            request.price?.let { p -> it[price] = p.toBigDecimal() }
+                            newCondition?.let { c -> it[condition] = c }
+                            request.isNegotiable?.let { n -> it[isNegotiable] = n }
+                            request.stockQuantity?.let { q -> it[stockQuantity] = q }
+                            request.isActive?.let { a -> it[isActive] = a }
+                            request.kind?.let { k -> it[ListingsTable.kind] = ListingKind.fromString(k).name }
+                            normalizedFill?.let { fill ->
+                                it[nominalSizeMl] = fill.nominal
+                                it[remainingMl] = fill.remaining
+                            }
                         }
                     }
+                    // Sending the full ordered id list is what lets a caller reorder or
+                    // remove a photo without re-uploading anything untouched.
+                    request.mediaIds?.let { ids -> replaceListingMedia(listingId, ids) }
                 }
 
                 // Return updated listing
@@ -535,6 +593,52 @@ private fun ApplicationCall.requireUserId(): Int? =
         ?.getClaim("userId")
         ?.asInt()
 
+/**
+ * True when every id in [mediaIds] is a READY row uploaded by [userId]. An empty list
+ * is trivially true — the 1..6 count check happens separately at the call site, so this
+ * function only needs to answer "are these specific ids usable".
+ */
+private fun mediaIdsOwnedAndReady(
+    mediaIds: List<Int>,
+    userId: Int,
+): Boolean {
+    val distinctIds = mediaIds.distinct()
+    if (distinctIds.isEmpty()) return true
+    val readyOwnedCount =
+        transaction {
+            MediaItemsTable
+                .selectAll()
+                .where {
+                    MediaItemsTable.id inList distinctIds and
+                        (MediaItemsTable.uploaderId eq userId) and
+                        (MediaItemsTable.cfUploadStatus eq "READY")
+                }.count()
+        }
+    return readyOwnedCount.toInt() == distinctIds.size
+}
+
+/**
+ * Replaces every [ListingMediaTable] row for [listingId] with [mediaIds] in order.
+ * Called from inside an existing transaction (POST/PATCH), not its own — Exposed reuses
+ * the enclosing transaction rather than requiring a nested one. Sending the full ordered
+ * list on every write, rather than incremental add/remove calls, is what lets a caller
+ * reorder or drop a photo without re-uploading anything untouched.
+ */
+private fun replaceListingMedia(
+    listingId: Int,
+    mediaIds: List<Int>,
+) {
+    val distinctIds = mediaIds.distinct()
+    ListingMediaTable.deleteWhere { ListingMediaTable.listingId eq listingId }
+    distinctIds.forEachIndexed { index, mediaItemId ->
+        ListingMediaTable.insert {
+            it[ListingMediaTable.listingId] = listingId
+            it[ListingMediaTable.mediaItemId] = mediaItemId
+            it[position] = index
+        }
+    }
+}
+
 private data class NormalizedFill(
     val nominal: Int?,
     val remaining: Int?,
@@ -606,6 +710,19 @@ private fun buildListingDto(
             .where { FragranceMediaTable.fragranceId eq fragranceId }
             .map { it[MediaItemsTable.url] }
 
+    // The seller's own photos of this specific bottle, in seller-chosen order. Falls back
+    // to the catalogue fragrance's stock imagery only when the listing has none of its own
+    // — e.g. a listing created before the photo pipeline existed.
+    val listingMedia =
+        ListingMediaTable
+            .innerJoin(MediaItemsTable)
+            .selectAll()
+            .where { ListingMediaTable.listingId eq id }
+            .orderBy(ListingMediaTable.position, SortOrder.ASC)
+            .map { it[MediaItemsTable.id].value to it[MediaItemsTable.url] }
+    val listingPhotoUrls = listingMedia.map { it.second }
+    val listingMediaIds = listingMedia.map { it.first }
+
     val reviewRows =
         ReviewsTable
             .selectAll()
@@ -657,8 +774,8 @@ private fun buildListingDto(
             row[ListingsTable.createdAt]
                 .toInstant(TimeZone.currentSystemDefault())
                 .toEpochMilliseconds(),
-        // Photo pipeline lands in Phase 3 (ListingMediaTable) — empty until then.
-        photoUrls = emptyList(),
+        photoUrls = listingPhotoUrls.ifEmpty { imageUrls },
+        mediaIds = listingMediaIds,
         kind = row[ListingsTable.kind],
         nominalSizeMl = row[ListingsTable.nominalSizeMl],
         remainingMl = row[ListingsTable.remainingMl],

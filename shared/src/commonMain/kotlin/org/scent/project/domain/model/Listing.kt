@@ -68,6 +68,9 @@ data class Listing(
     val createdAt: Long = 0L,
     /** Photos of this specific bottle, distinct from the catalogue fragrance's stock imagery. */
     val photoUrls: List<String> = emptyList(),
+    /** Same order as [photoUrls], 1:1 by index. Empty when [photoUrls] fell back to
+     *  catalogue stock imagery — there is no listing-owned media to edit in that case. */
+    val mediaIds: List<Int> = emptyList(),
     val kind: ListingKind = ListingKind.OPENED,
     /**
      * Genuinely nullable: a listing created before fill existed has none, and

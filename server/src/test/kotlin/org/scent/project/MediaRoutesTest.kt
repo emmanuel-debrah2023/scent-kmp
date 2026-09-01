@@ -3,9 +3,11 @@ package org.scent.project
 import data.schema.MediaItemsTable
 import data.schema.MediaType
 import data.schema.UsersTable
+import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
@@ -17,6 +19,9 @@ import io.ktor.server.testing.testApplication
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
@@ -25,6 +30,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
 import plugins.configureSecurity
 import providers.CloudflareStreamProvider
+import providers.FakeImageProvider
 import routing.mediaRoutes
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -135,7 +141,7 @@ class MediaRoutesTest {
             application {
                 install(ContentNegotiation) { json() }
                 configureSecurity()
-                routing { mediaRoutes(testProvider()) }
+                routing { mediaRoutes(testProvider(), FakeImageProvider()) }
             }
             block()
         }
@@ -301,5 +307,149 @@ class MediaRoutesTest {
 
             assertEquals(HttpStatusCode.Unauthorized, response.status)
             assertEquals("PENDING", fetchStatus(uid))
+        }
+
+    // ── image-upload-url tests ──────────────────────────────────────────────
+
+    @Test
+    fun `POST image-upload-url returns an upload URL and creates a PENDING row`() =
+        withApp {
+            val userId = seedUser()
+            val token = generateTestToken(userId)
+
+            val response =
+                client.post("/api/v1/media/image-upload-url") {
+                    bearerAuth(token)
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+        }
+
+    @Test
+    fun `POST image-upload-url returns a uid with no path separator`() =
+        withApp {
+            // Regression: the uid becomes the {uid} segment on POST /{uid}/complete — a
+            // '/' in it splits the URL into extra segments and 404s the complete call.
+            val userId = seedUser()
+            val token = generateTestToken(userId)
+
+            val response = client.post("/api/v1/media/image-upload-url") { bearerAuth(token) }
+            val uid =
+                Json
+                    .parseToJsonElement(response.bodyAsText())
+                    .jsonObject["uid"]
+                    ?.jsonPrimitive
+                    ?.content
+
+            assertEquals(false, uid.isNullOrEmpty())
+            assertEquals(false, uid?.contains("/"))
+        }
+
+    @Test
+    fun `full flow — image-upload-url then complete with the real returned uid succeeds`() =
+        withApp {
+            val userId = seedUser()
+            val token = generateTestToken(userId)
+
+            val urlResponse = client.post("/api/v1/media/image-upload-url") { bearerAuth(token) }
+            val uid =
+                requireNotNull(
+                    Json
+                        .parseToJsonElement(urlResponse.bodyAsText())
+                        .jsonObject["uid"]
+                        ?.jsonPrimitive
+                        ?.content,
+                ) { "image-upload-url did not return a uid" }
+
+            val completeResponse =
+                client.post("/api/v1/media/$uid/complete") {
+                    bearerAuth(token)
+                }
+
+            assertEquals(HttpStatusCode.OK, completeResponse.status)
+            assertEquals("READY", fetchStatus(uid))
+        }
+
+    @Test
+    fun `POST image-upload-url returns 401 without auth`() =
+        withApp {
+            val response = client.post("/api/v1/media/image-upload-url")
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
+
+    @Test
+    fun `POST image-upload-url row starts PENDING`() =
+        withApp {
+            val userId = seedUser()
+            val token = generateTestToken(userId)
+
+            client.post("/api/v1/media/image-upload-url") { bearerAuth(token) }
+
+            val status =
+                transaction {
+                    MediaItemsTable
+                        .select(MediaItemsTable.cfUploadStatus)
+                        .where { MediaItemsTable.uploaderId eq userId }
+                        .single()[MediaItemsTable.cfUploadStatus]
+                }
+            assertEquals("PENDING", status)
+        }
+
+    // ── {uid}/complete tests ─────────────────────────────────────────────────
+
+    @Test
+    fun `POST complete flips status to READY`() =
+        withApp {
+            val userId = seedUser()
+            val token = generateTestToken(userId)
+            val uid = "img-uid-complete"
+            seedPendingMedia(userId, uid)
+
+            val response =
+                client.post("/api/v1/media/$uid/complete") {
+                    bearerAuth(token)
+                }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("READY", fetchStatus(uid))
+        }
+
+    @Test
+    fun `POST complete returns 403 for a non-owner`() =
+        withApp {
+            val owner = seedUser()
+            val otherUser = seedUser()
+            val uid = "img-uid-forbidden"
+            seedPendingMedia(owner, uid)
+
+            val response =
+                client.post("/api/v1/media/$uid/complete") {
+                    bearerAuth(generateTestToken(otherUser))
+                }
+
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+            assertEquals("PENDING", fetchStatus(uid))
+        }
+
+    @Test
+    fun `POST complete returns 404 for an unknown uid`() =
+        withApp {
+            val userId = seedUser()
+
+            val response =
+                client.post("/api/v1/media/does-not-exist/complete") {
+                    bearerAuth(generateTestToken(userId))
+                }
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+        }
+
+    @Test
+    fun `POST complete returns 401 without auth`() =
+        withApp {
+            val response = client.post("/api/v1/media/some-uid/complete")
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
 }

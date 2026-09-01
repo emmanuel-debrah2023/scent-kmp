@@ -309,13 +309,16 @@ class ListingLifecycleRoutesTest {
 
             val userId = seedUser("poster1")
             val fragranceId = seedFragrance(userId)
+            val mediaId = seedReadyMedia(userId).single()
             val token = generateTestToken(userId)
 
             val response =
                 client.post("/api/v1/listings") {
                     contentType(ContentType.Application.Json)
                     bearerAuth(token)
-                    setBody("""{"fragrance_id": $fragranceId, "price": 89.99, "condition": "NEW"}""")
+                    setBody(
+                        """{"fragrance_id": $fragranceId, "price": 89.99, "condition": "NEW", "media_ids": [$mediaId]}""",
+                    )
                 }
             assertEquals(HttpStatusCode.Created, response.status)
 
@@ -340,6 +343,7 @@ class ListingLifecycleRoutesTest {
 
             val userId = seedUser("fill1")
             val fragranceId = seedFragrance(userId)
+            val mediaId = seedReadyMedia(userId).single()
             val token = generateTestToken(userId)
 
             val response =
@@ -354,7 +358,8 @@ class ListingLifecycleRoutesTest {
                             "condition": "NEW",
                             "kind": "SEALED",
                             "nominal_size_ml": 100,
-                            "remaining_ml": 40
+                            "remaining_ml": 40,
+                            "media_ids": [$mediaId]
                         }
                         """.trimIndent(),
                     )
@@ -377,6 +382,7 @@ class ListingLifecycleRoutesTest {
 
             val userId = seedUser("fill2")
             val fragranceId = seedFragrance(userId)
+            val mediaId = seedReadyMedia(userId).single()
             val token = generateTestToken(userId)
 
             val response =
@@ -390,7 +396,8 @@ class ListingLifecycleRoutesTest {
                             "price": 15.0,
                             "condition": "DECANT",
                             "kind": "DECANT",
-                            "nominal_size_ml": 5
+                            "nominal_size_ml": 5,
+                            "media_ids": [$mediaId]
                         }
                         """.trimIndent(),
                     )
@@ -446,13 +453,16 @@ class ListingLifecycleRoutesTest {
 
             val userId = seedUser("fill4")
             val fragranceId = seedFragrance(userId)
+            val mediaId = seedReadyMedia(userId).single()
             val token = generateTestToken(userId)
 
             val response =
                 client.post("/api/v1/listings") {
                     contentType(ContentType.Application.Json)
                     bearerAuth(token)
-                    setBody("""{"fragrance_id": $fragranceId, "price": 89.99, "condition": "NEW"}""")
+                    setBody(
+                        """{"fragrance_id": $fragranceId, "price": 89.99, "condition": "NEW", "media_ids": [$mediaId]}""",
+                    )
                 }
             assertEquals(HttpStatusCode.Created, response.status)
 

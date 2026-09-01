@@ -41,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -67,16 +68,19 @@ import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.Review
 import org.scent.project.domain.model.User
+import ui.accessibility.accessibleClickable
 import ui.base.UiState
 import ui.components.BottleItem
 import ui.components.EmptyState
-import ui.components.ListingCard
-import ui.components.OwnerListingCard
+import ui.components.ListingRowPillStatus
 import ui.components.PostTile
+import ui.components.ProfileListingRow
+import ui.components.ProfileListingRowUiModel
 import ui.components.ReviewCard
 import ui.components.ScentConfirmDialog
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
+import kotlin.math.roundToInt
 
 @Composable
 fun ProfileScreen(
@@ -88,6 +92,14 @@ fun ProfileScreen(
 ) {
     val viewModel: ProfileViewModel = koinViewModel(parameters = { parametersOf(authUser) })
     val state by viewModel.uiState.collectAsState()
+
+    // ProfileScreen's composition is disposed and rebuilt fresh each time this route
+    // reappears (e.g. back from Create/Edit Listing), but koinViewModel caches this
+    // instance for the ViewModelStore's lifetime — its data doesn't refresh on its own.
+    // Retry here re-fetches so an edit's changes actually show up on return.
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(ProfileEvent.Retry)
+    }
 
     ProfileContent(
         state = state,
@@ -944,46 +956,161 @@ private fun LazyListScope.listingsTabContent(
         return
     }
 
+    val activeCount = listings.count { it.isActive }
+
+    item {
+        val spacing = ScentThemeExtras.spacing
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.profileRowHorizontalPadding, vertical = spacing.xs)
+                    .padding(top = spacing.xxs),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Text(
+                text = "ACTIVE LISTINGS",
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.4.sp,
+                    ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "$activeCount active",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ScentThemeExtras.gray400,
+                )
+                if (isOwnProfile) {
+                    Text(
+                        text = "+ ADD",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
+                        color = ScentThemeExtras.interactive,
+                        modifier = Modifier.accessibleClickable(label = "Create listing", onClick = onCreateListing),
+                    )
+                }
+            }
+        }
+    }
+
     if (isOwnProfile && actionError != null) {
         item {
+            val spacing = ScentThemeExtras.spacing
             Text(
                 text = "Couldn't update that listing: ${actionError.message}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = spacing.profileRowHorizontalPadding, vertical = spacing.xxs),
             )
         }
     }
 
-    if (isOwnProfile) {
-        items(listings, key = { it.id }) { listing ->
-            OwnerListingCard(
-                listing = listing,
-                onClick = { onEditListing(listing.id) },
-                onToggleActive = {
-                    val event =
-                        if (listing.isActive) {
-                            ProfileEvent.UnlistListing(listing.id)
-                        } else {
-                            ProfileEvent.RelistListing(listing.id)
-                        }
-                    onEvent(event)
-                },
-                onDeleteRequest = { onEvent(ProfileEvent.RequestDelete(listing.id)) },
-                isActionInFlight = actionInFlightId == listing.id,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-            )
-        }
-    } else {
-        items(listings, key = { it.id }) { listing ->
-            ListingCard(
-                listing = listing,
-                onClick = {},
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-            )
-        }
+    items(listings, key = { it.id }) { listing ->
+        ProfileListingRow(
+            listing = listing.toProfileListingRowUiModel(),
+            onEdit = { onEditListing(listing.id) },
+            onUnlist = {
+                val event =
+                    if (listing.isActive) {
+                        ProfileEvent.UnlistListing(listing.id)
+                    } else {
+                        ProfileEvent.RelistListing(listing.id)
+                    }
+                onEvent(event)
+            },
+            onDelete = { onEvent(ProfileEvent.RequestDelete(listing.id)) },
+            onClick = { onEditListing(listing.id) },
+            showActions = isOwnProfile,
+            isActionInFlight = actionInFlightId == listing.id,
+            modifier = Modifier.padding(horizontal = ScentThemeExtras.spacing.profileRowHorizontalPadding),
+        )
     }
-    item { Spacer(Modifier.height(20.dp)) }
+    item {
+        val spacing = ScentThemeExtras.spacing
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.padding(horizontal = spacing.profileRowHorizontalPadding),
+        )
+        Spacer(Modifier.height(spacing.xl - spacing.xxs))
+    }
+}
+
+/**
+ * The one place [Listing] gets translated into [ProfileListingRowUiModel] — condition
+ * mapping, fill-percent arithmetic, price formatting, and the accessibility string all
+ * happen here, not in the composable. Per ADS-STE100: presentation logic belongs in a
+ * mapper/UI model, composables receive ready-to-render values only.
+ */
+private fun Listing.toProfileListingRowUiModel(): ProfileListingRowUiModel {
+    val terms = if (isNegotiable) "negotiable" else "firm"
+    val meta = metaLine(this)
+    // The domain model has no status field (active/reserved/sold) — only [isActive],
+    // a different concept (unlisted, not "reserved" in the sale-pending sense). Per
+    // explicit direction: don't borrow another field to fake a status — hardcode LIVE
+    // until a real status field exists on [Listing].
+    val pillStatus = ListingRowPillStatus.LIVE
+    return ProfileListingRowUiModel(
+        id = id,
+        photoUrl = photoUrls.firstOrNull(),
+        brand = fragrance.brand.uppercase(),
+        fragranceName = fragrance.name,
+        priceText = "£${price.roundToInt()}",
+        termsText = terms,
+        metaText = meta,
+        pillStatus = pillStatus,
+        unlistLabel = (if (isActive) "Unlist" else "Relist").uppercase(),
+        accessibilityDescription = listingRowAccessibilityDescription(this, terms, meta, pillStatus),
+    )
+}
+
+/** "Like new · 90% full · 50 ml" — built from real fields only, skipping any part
+ *  that isn't available so the string never renders a stray separator. */
+private fun metaLine(listing: Listing): String? {
+    val parts =
+        buildList {
+            conditionDisplayText(listing.condition)?.let { add(it) }
+            fillPercentText(listing)?.let { add(it) }
+            listing.nominalSizeMl?.let { add("$it ml") }
+        }
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}
+
+/** [Listing.condition] is a raw pass-through of the server's enum name (`NEW`, `USED`,
+ *  `DECANT`, `SAMPLE`) — never `.name`/`.toString()`'d directly here, always mapped to
+ *  a display string. Falls back to the raw value, title-cased, for anything unmapped
+ *  rather than dropping it silently or exposing the enum spelling verbatim. */
+private fun conditionDisplayText(condition: String): String? {
+    if (condition.isBlank()) return null
+    return when (condition.uppercase()) {
+        "NEW" -> "New"
+        "LIKE_NEW" -> "Like new"
+        "USED" -> "Used"
+        "DECANT" -> "Decant"
+        "SAMPLE" -> "Sample"
+        else -> condition.lowercase().replaceFirstChar { it.uppercase() }
+    }
+}
+
+private fun fillPercentText(listing: Listing): String? {
+    val nominal = listing.nominalSizeMl?.takeIf { it > 0 } ?: return null
+    val remaining = listing.remainingMl ?: return null
+    val percent = ((remaining.toFloat() / nominal) * 100).roundToInt()
+    return "$percent% full"
+}
+
+private fun listingRowAccessibilityDescription(
+    listing: Listing,
+    terms: String,
+    meta: String?,
+    pillStatus: ListingRowPillStatus,
+): String {
+    val metaSuffix = meta?.let { ", $it" }.orEmpty()
+    return "${listing.fragrance.name} by ${listing.fragrance.brand}, £${listing.price.roundToInt()}, " +
+        "$terms price, ${pillStatus.name.lowercase()}$metaSuffix"
 }
 
 // Reviews

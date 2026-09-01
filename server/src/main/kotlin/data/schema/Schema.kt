@@ -132,6 +132,17 @@ object FragranceMediaTable : Table("fragrance_media") {
     override val primaryKey = PrimaryKey(fragranceId, mediaItemId)
 }
 
+/** A listing's own photos of the actual bottle, distinct from the catalogue fragrance's
+ *  stock imagery in [FragranceMediaTable]. [position] is the display/thumbnail order —
+ *  the client sends the full ordered id list on every write, so reordering never
+ *  requires re-uploading an untouched photo. */
+object ListingMediaTable : Table("listing_media") {
+    val listingId = reference("listing_id", ListingsTable)
+    val mediaItemId = reference("media_item_id", MediaItemsTable)
+    val position = integer("position")
+    override val primaryKey = PrimaryKey(listingId, mediaItemId)
+}
+
 object FragranceNotesTable : Table("fragrance_notes") {
     val fragranceId = reference("fragrance_id", FragrancesTable)
     val note = varchar("note", 100)

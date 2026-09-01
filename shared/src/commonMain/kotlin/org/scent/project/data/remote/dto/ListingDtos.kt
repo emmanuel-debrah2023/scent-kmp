@@ -16,6 +16,7 @@ data class ListingResponse(
     @SerialName("is_active") val isActive: Boolean? = null,
     @SerialName("created_at") val createdAt: Long? = null, // TODO: server-guaranteed invariant — make non-nullable
     @SerialName("photo_urls") val photoUrls: List<String>? = null,
+    @SerialName("media_ids") val mediaIds: List<Int>? = null,
     val kind: String? = null,
     @SerialName("nominal_size_ml") val nominalSizeMl: Int? = null,
     @SerialName("remaining_ml") val remainingMl: Int? = null,

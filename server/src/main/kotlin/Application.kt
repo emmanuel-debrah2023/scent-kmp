@@ -12,7 +12,9 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import plugins.configureSecurity
 import providers.CloudflareStreamProvider
+import providers.FakeImageProvider
 import providers.FakeStreamProvider
+import providers.SupabaseStorageProvider
 import routing.authRoutes
 import routing.devRoutes
 import routing.fragranceRoutes
@@ -71,6 +73,18 @@ fun Application.module() {
             )
         }
 
+    val fakeImageMode = System.getProperty("IMAGE_PROVIDER") == "fake"
+    val imageProvider =
+        if (fakeImageMode) {
+            FakeImageProvider()
+        } else {
+            SupabaseStorageProvider(
+                projectUrl = System.getProperty("SUPABASE_URL") ?: "",
+                serviceRoleKey = System.getProperty("SUPABASE_SERVICE_ROLE_KEY") ?: "",
+                bucket = System.getProperty("SUPABASE_STORAGE_BUCKET") ?: "listing-photos",
+            )
+        }
+
     routing {
         get("/") {
             call.respondText("Scent API is running")
@@ -78,9 +92,9 @@ fun Application.module() {
         authRoutes()
         fragranceRoutes()
         listingRoutes()
-        mediaRoutes(streamProvider, fakeMode)
+        mediaRoutes(streamProvider, imageProvider, fakeMode, fakeImageMode)
         postRoutes()
         userRoutes()
-        if (fakeMode) devRoutes()
+        if (fakeMode || fakeImageMode) devRoutes()
     }
 }

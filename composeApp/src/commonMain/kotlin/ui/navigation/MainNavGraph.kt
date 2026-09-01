@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import org.scent.project.domain.model.AuthUser
 import ui.components.BlendedScaffold
 import ui.home.ScentHomeHost
+import ui.listing.CreateListingScreen
+import ui.listing.EditListingScreen
 import ui.marketplace.MarketplaceScreen
 import ui.profile.ProfileScreen
 
@@ -76,8 +78,17 @@ private fun ProfileNavHost(
                 onEditListing = { listingId -> nav.navigateTo(ProfileRoute.EditListing(listingId)) },
             )
 
-        is ProfileRoute.CreateListing -> PlaceholderScreen("Create Listing")
-        is ProfileRoute.EditListing -> PlaceholderScreen("Edit Listing ${route.listingId}")
+        is ProfileRoute.CreateListing ->
+            CreateListingScreen(
+                onBack = { nav.goBack() },
+                onCreated = { nav.goBack() },
+            )
+        is ProfileRoute.EditListing ->
+            EditListingScreen(
+                listingId = route.listingId,
+                onBack = { nav.goBack() },
+                onSaved = { nav.goBack() },
+            )
     }
 }
 

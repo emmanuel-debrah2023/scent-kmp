@@ -9,6 +9,14 @@ data class UploadUrlResponse(
     val uid: String,
 )
 
+/** [id] is the [data.schema.MediaItemsTable] row id — what a caller actually needs to
+ *  put in a listing's `media_ids`, since [UploadUrlResponse.uid] is only the provider's
+ *  own opaque upload identifier. */
+@Serializable
+data class CompleteUploadResponse(
+    val id: Int,
+)
+
 @Serializable
 data class WebhookPayload(
     val uid: String,
