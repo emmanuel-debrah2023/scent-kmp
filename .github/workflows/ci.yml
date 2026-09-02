@@ -10,6 +10,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DATABASE_URL: ci-placeholder
+  DATABASE_USER: ci-placeholder
+  DATABASE_PASSWORD: ci-placeholder
+  DB_URL: ci-placeholder
+  DB_USER: ci-placeholder
+  DB_PASSWORD: ci-placeholder
+
 jobs:
   lint:
     name: Lint (ktlint + detekt)
@@ -27,22 +35,15 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run ktlintCheckt
+      - name: Run ktlintCheck
         run: ./gradlew ktlintCheck
 
       - name: Run detekt
         run: ./gradlew detekt
 
-  build-and-test:
-    name: Build & Test
-    runs-on: macos-latest
-    env:
-      DATABASE_URL: ci-placeholder
-      DATABASE_USER: ci-placeholder
-      DATABASE_PASSWORD: ci-placeholder
-      DB_URL: ci-placeholder
-      DB_USER: ci-placeholder
-      DB_PASSWORD: ci-placeholder
+  jvm-android:
+    name: JVM + Android (test & build)
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,16 +57,54 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run all tests
-        run: ./gradlew allTests
+      - name: Run JVM + Android unit tests
+        run: >-
+          ./gradlew
+          :shared:jvmTest
+          :shared:testDebugUnitTest
+          :composeApp:testDebugUnitTest
+          :server:test
 
-      - name: Assemble all targets
-        run: ./gradlew assemble
+      - name: Assemble Android app + server
+        run: ./gradlew :composeApp:assembleDebug :server:assemble
 
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: test-reports-jvm-android
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+  ios:
+    name: iOS (test & framework link)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run iOS simulator tests
+        run: ./gradlew :shared:iosSimulatorArm64Test :composeApp:iosSimulatorArm64Test
+
+      - name: Link iOS frameworks (device + simulator)
+        run: >-
+          ./gradlew
+          :composeApp:linkDebugFrameworkIosArm64
+          :composeApp:linkDebugFrameworkIosSimulatorArm64
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-ios
           path: '**/build/reports/tests/'
           retention-days: 7
