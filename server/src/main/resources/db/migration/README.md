@@ -81,6 +81,43 @@ createdb fragrances_dev
 ./gradlew :server:run
 ```
 
+## Rollback behaviour
+
+**Flyway does not provide automatic rollbacks.** Migrations are one-way by design. Instead:
+
+### If a migration fails on deployment
+
+1. **Immediate**: Application will fail to start. No cleanup needed — the failed migration is recorded in `flyway_schema_history` with status `FAILED`.
+
+2. **Fix the root cause**: If the migration is syntactically wrong, fix it in the code repository. If it's a constraint violation or data issue, investigate why.
+
+3. **Create a new migration** to undo the failed one's side effects, OR fix the original and increment the version (e.g., rename `V2__bad_migration.sql` to `V3__bad_migration_fixed.sql` and adjust the contents).
+
+   ```sql
+   -- V3__fix_migration_v2.sql
+   -- Undo whatever V2 attempted (if it partially succeeded)
+   DROP TABLE IF EXISTS public.new_table;
+   -- Then apply the corrected change
+   CREATE TABLE public.new_table (id INT PRIMARY KEY);
+   ```
+
+### On Supabase free tier (cold starts)
+
+Migrations run on every cold start. A failed migration will:
+- Keep the database locked until manually released
+- Block the Render dyno from starting
+- Require SSH into Supabase to inspect `flyway_schema_history` and manually resolve
+
+**Strategy**: Test thoroughly locally before merging. A failing migration in production is a hard stop.
+
+### Prevention
+
+- Always test migrations on a local copy of production schema
+- Use `pg_dump -U postgres --schema-only <prod-db>` to get the exact schema
+- Test with realistic data volumes (esp. for backfill operations)
+- Add `EXPLAIN ANALYZE` to UPDATEs/INSERTs that modify large tables
+- Keep migrations small and focused — one logical change per version
+
 ## Never modify applied migrations
 
 Once a migration is merged to `main`:
