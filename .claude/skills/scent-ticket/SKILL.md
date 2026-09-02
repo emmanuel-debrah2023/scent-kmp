@@ -21,7 +21,7 @@ Full schema detail lives in `references/schema.md` — read it if you need exact
 |---|---|---|
 | Task name | title | free text (required) |
 | Description | text | free text |
-| Status | status | `Not started` (default) / `In progress` / `Done` |
+| Status | status | `Not started` (default) / `In progress` / `In testing` / `Done` |
 | Priority | select | `High` / `Medium` / `Low` |
 | Task type | multi-select | `🐞 Bug` / `💬 Feature request` / `💅 Polish` / `📝 Docs` / `🔧 Tech Task` (exact strings incl. emoji — must match verbatim) |
 | Effort level | select | `Small` / `Medium` / `Large` |
@@ -76,7 +76,7 @@ Full schema detail lives in `references/schema.md` — read it if you need exact
 
 ## Showing the board
 
-If the user just wants to see current state rather than add anything, point them at the board view URL above (grouped by Status: Not started / In progress / Done — mirrors a Jira board's To Do / In Progress / Done columns) rather than recreating one from scratch. If they want a richer or differently-grouped visual (e.g. grouped by Task type, or an artifact that also shows priority color-coding), build an HTML kanban artifact by querying the data source and grouping client-side — see the main app's guidance on artifacts for live/persisted views.
+If the user just wants to see current state rather than add anything, point them at the board view URL above (grouped by Status: Not started / In progress / In testing / Done — mirrors a Jira board's To Do / In Progress / In Review / Done columns) rather than recreating one from scratch. If they want a richer or differently-grouped visual (e.g. grouped by Task type, or an artifact that also shows priority color-coding), build an HTML kanban artifact by querying the data source and grouping client-side — see the main app's guidance on artifacts for live/persisted views.
 
 ## Lifecycle status updates
 
@@ -90,17 +90,20 @@ Whenever the user says to work on / implement / pick up a ticket and links a Not
 
 ### Merging a PR that corresponds to a Notion ticket
 Whenever a PR is merged (or the user says "merge the MR / PR") and there is a Notion ticket linked in the conversation:
-1. After the merge succeeds, update the ticket's `Status` to `Done`.
+1. After the merge succeeds, update the ticket's `Status` to `In testing` — a merged PR is code-complete but not yet verified. The one exception is a ticket with nothing to verify (pure docs, config, tooling with no observable behaviour) — those go straight to `Done`.
 2. Confirm the status change to the user in one line.
 
-Use the Notion `update-page` tool with the ticket's page ID to set the `Status` property. The exact value strings are `In progress` and `Done` (match verbatim).
+### Moving a ticket to Done
+`Done` means the change has been verified working, not merely merged. Move a ticket from `In testing` to `Done` when the user confirms it's been tested / QA'd, or when a verification step in the conversation (manual smoke test, passing CI on `main`, the user saying "that works") has actually happened. Don't self-promote `In testing` → `Done` without that confirmation.
+
+Use the Notion `update-page` tool with the ticket's page ID to set the `Status` property. The exact value strings are `In progress`, `In testing`, and `Done` (match verbatim).
 
 ## Answering "what's next"
 
 Whenever the user asks something like "what's next", "what work is next", "what should I work on", or "what's on the backlog" — query the tracker fresh rather than answering from memory of this conversation; tickets change between sessions.
 
 1. Query the data source (or the "All Tasks" view) and drop anything with `Status = Done`.
-2. Anything already `In progress` goes first, regardless of Priority — an unfinished ticket takes precedence over starting something new. Flag it clearly (e.g. "already in progress") so it doesn't read like a fresh suggestion.
+2. Anything already `In progress` goes first, regardless of Priority — an unfinished ticket takes precedence over starting something new. Flag it clearly (e.g. "already in progress") so it doesn't read like a fresh suggestion. List `In testing` tickets next, flagged as "awaiting verification" — they're not new work, they just need a test pass before they close.
 3. After that, sort the remaining `Not started` tickets by `Priority` (High, then Medium, then Low).
 4. Return the result as a flat bulleted list, not a table — one line per ticket: **Task name** (Task type emoji, Priority, Feature Branch if set). Lead with the `In progress` item(s) if any, then High priority, and so on.
 5. Keep it to the tickets that actually matter right now — the High priority tier plus anything in progress is usually enough. Only spill into Medium/Low if High is empty, and say so explicitly ("nothing else is High priority, next up:") rather than silently padding the list.
