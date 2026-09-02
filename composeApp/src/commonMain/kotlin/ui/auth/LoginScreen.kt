@@ -114,6 +114,11 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // TODO(feature/social-signin-client-wiring): POST /auth/google and
+                // POST /auth/apple are both live on the server (see docs/auth.md Phase 2/3)
+                // — only the client half is missing. Separately, see
+                // fix/auth-buttons-missing-logo: this SecondaryButton wrapper doesn't
+                // forward an icon param, so even once wired the provider logos won't render.
                 SecondaryButton(
                     text = "Google",
                     onClick = { /* TODO: Phase 2 */ },

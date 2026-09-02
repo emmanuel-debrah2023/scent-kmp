@@ -39,6 +39,11 @@ fun AuthGraph(
                 isLoading = loginState is UiState.Loading,
                 errorMessage = (loginState as? UiState.Error)?.error?.message,
             )
+            // TODO(fix/auth-success-side-effect): called directly in the composable body,
+            // not inside a LaunchedEffect — re-fires on every recomposition while
+            // loginState stays Success, not just once on the transition into it. Harmless
+            // today only because App.kt passes an empty lambda; becomes a real bug the
+            // moment onAuthSuccess does anything (navigation, analytics, etc.).
             if (loginState is UiState.Success) onAuthSuccess()
         }
 
@@ -54,6 +59,7 @@ fun AuthGraph(
                 isLoading = registerState is UiState.Loading,
                 errorMessage = (registerState as? UiState.Error)?.error?.message,
             )
+            // TODO(fix/auth-success-side-effect): same composition-body call as Login above.
             if (registerState is UiState.Success) onAuthSuccess()
         }
     }

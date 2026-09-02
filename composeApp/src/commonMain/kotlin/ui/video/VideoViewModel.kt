@@ -1,3 +1,5 @@
+// TODO(chore/remove-dead-video-screen): only referenced by the also-dead VideoScreen.kt
+// and registered in ViewModelModule for it — safe to delete both together.
 package ui.video
 
 import androidx.lifecycle.viewModelScope

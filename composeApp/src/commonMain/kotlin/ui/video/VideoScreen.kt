@@ -1,3 +1,6 @@
+// TODO(chore/remove-dead-video-screen): unreferenced anywhere in the nav graph.
+// VideoPostScreen.kt (ui.home) is the live video-post screen; this file and
+// VideoViewModel.kt are superseded and safe to delete.
 package ui.video
 
 import androidx.compose.foundation.background

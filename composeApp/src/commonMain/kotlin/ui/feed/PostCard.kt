@@ -1,3 +1,8 @@
+// TODO(chore/remove-dead-video-screen): unreferenced — HomeFullBleedScreen.kt's
+// Community feed renders its own private TextPostCard/PhotoPostCard/CommunityPostCard
+// instead. Notably, the Notion ticket "Wire up post card action buttons" is marked
+// Done, but this file — which looks like the one it should have wired — is the
+// unreferenced one; the actions landed on HomeFullBleedScreen's private composables.
 package ui.feed
 
 import androidx.compose.foundation.clickable

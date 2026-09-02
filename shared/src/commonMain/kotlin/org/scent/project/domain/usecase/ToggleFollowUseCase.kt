@@ -12,6 +12,9 @@ data class ToggleFollowResult(
 // Pure use case — no repository dependency until the follow/unfollow endpoint exists.
 // Computes the optimistic follower-count update and returns the result as Either so
 // the ViewModel can use handleResult uniformly.
+// TODO(feature/follow-unfollow-endpoint): still true — this is optimistic-only. There is
+// no backend route and no persistence; the follower count reverts to the server value
+// (or vanishes) on the next reload.
 class ToggleFollowUseCase {
     operator fun invoke(
         user: User,

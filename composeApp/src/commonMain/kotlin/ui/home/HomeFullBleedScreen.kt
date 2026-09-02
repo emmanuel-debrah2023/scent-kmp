@@ -87,6 +87,10 @@ fun HomeFullBleedScreen(
     LaunchedEffect(Unit) { feedViewModel.loadFeed() }
 
     var topTab by remember { mutableIntStateOf(initialTab) }
+    // TODO(chore/unify-home-nav-tab-state): duplicates MainNavState.selectedTab — this
+    // screen keeps its own copy of the bottom-nav tab index instead of reading the
+    // shared one, which is how it drifts out of sync on tab re-entry (see
+    // ScentHomeHost.kt's `screen`/`topTab` for the matching duplication one level up).
     var navTab by remember { mutableIntStateOf(0) }
 
     val listState = rememberLazyListState()
@@ -124,6 +128,11 @@ fun HomeFullBleedScreen(
                 if (topTab == 1) PaddingValues(top = innerPadding.calculateTopPadding()) else PaddingValues(0.dp),
         ) {
             if (topTab == 0) {
+                // TODO(feature/home-fragrances-tab-wiring): this entire "Trending now"
+                // section — HeroItem plus the three FragranceCardItems below
+                // (Santal 33 / Oud Wood / Bal d'Afrique) — is literal content. Both
+                // SearchFragrancesUseCase and GET /fragrances already exist and sit
+                // unused; "See all" below is plain Text with no click handler.
                 item { HeroItem(onOpenVideo = { onOpenVideo("") }) }
 
                 item {
@@ -143,6 +152,8 @@ fun HomeFullBleedScreen(
                             color = MaterialTheme.colorScheme.primary,
                             fontFamily = DmSansFamily,
                         )
+                        // TODO(feature/home-fragrances-tab-wiring): "See all" is plain
+                        // Text — no onClick, no destination.
                         Text(
                             text = "See all",
                             fontSize = 14.sp,
@@ -181,6 +192,12 @@ fun HomeFullBleedScreen(
             } else {
                 item { CommunityFeedHeader() }
 
+                // TODO(fix/feed-loading-error-states): UiState.Loading and UiState.Error
+                // both fall through the `?:` to emptyList() here — a slow network and a
+                // failed request are visually identical to "no posts yet". No spinner,
+                // no error screen, no retry. See also feature/feed-infinite-scroll:
+                // even a successful load never triggers loadNextPage() since this
+                // LazyColumn has no scroll-to-bottom listener.
                 val communityItems =
                     (feedUiState as? UiState.Success)
                         ?.data
@@ -230,6 +247,8 @@ private fun HeroItem(onOpenVideo: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
 
+    // TODO(feature/home-fragrances-tab-wiring): favorite toggle on the hardcoded
+    // hero card — no persistence once this tab is wired to real data.
     var liked by remember { mutableStateOf(false) }
 
     Box(
@@ -403,6 +422,8 @@ private fun FragranceCardItem(
     val spacing = ScentThemeExtras.spacing
     val elevation = ScentThemeExtras.elevation
 
+    // TODO(feature/home-fragrances-tab-wiring): favorite toggle on a hardcoded
+    // fragrance card — no persistence once this tab is wired to real data.
     var liked by remember { mutableStateOf(false) }
 
     Card(
@@ -551,6 +572,8 @@ private fun TextPostCard(item: CommunityFeedItem.Text) {
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
     val elevation = ScentThemeExtras.elevation
+    // TODO(fix/community-card-like-wiring): local state only — never calls
+    // FeedViewModel.likePost(), so likes never leave the device.
     var liked by remember { mutableStateOf(false) }
 
     Card(
@@ -658,6 +681,8 @@ private fun PhotoPostCard(item: CommunityFeedItem.Photo) {
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
     val elevation = ScentThemeExtras.elevation
+    // TODO(fix/community-card-like-wiring): local state only — never calls
+    // FeedViewModel.likePost(), so likes never leave the device.
     var liked by remember { mutableStateOf(false) }
 
     Card(
@@ -782,6 +807,8 @@ private fun CommunityPostCard(
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
     val elevation = ScentThemeExtras.elevation
+    // TODO(fix/community-card-like-wiring): local state only — never calls
+    // FeedViewModel.likePost(), so likes never leave the device.
     var liked by remember { mutableStateOf(false) }
 
     Card(

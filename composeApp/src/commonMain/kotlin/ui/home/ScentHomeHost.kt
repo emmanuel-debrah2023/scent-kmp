@@ -20,6 +20,11 @@ sealed interface ScentScreen {
     data object VideoPost : ScentScreen
 }
 
+// TODO(chore/unify-home-nav-tab-state): this `screen` state is a second, independent
+// back stack living outside AppNavState/NavigationState<HomeRoute> (see
+// docs/architecture-guidelines.md's per-tab navigation section) — it resets on every
+// tab re-entry since it's local `remember` state, not part of the app's real nav graph.
+// `topTab` below has the same duplication problem against the caller's own tab state.
 @Composable
 fun ScentHomeHost(
     start: ScentScreen = ScentScreen.HomeFeed,
