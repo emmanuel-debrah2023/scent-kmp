@@ -2492,6 +2492,63 @@ app/src/
 
 Full pattern-by-pattern rationale and a screen-by-screen mapping (auth, feed, marketplace, search, profile) lives in `talkback-accessibility-guidelines.md`.
 
+## Deferred Work Annotations (`TODO` convention)
+
+Not every gap found while building a feature belongs in that feature's PR. A
+stubbed action, a use case with no call site, a screen wired to literal content —
+these are real, but folding their fixes into an unrelated PR bloats the diff and
+couples review of one change to the risk of another. The rule is: **keep the PR
+scoped, but never let the gap go untracked.** An in-source annotation plus a
+backlog ticket is how both hold at once.
+
+### Format
+
+```kotlin
+// TODO(<type>/<kebab-slug>): <what is missing, and why it is safe to defer>.
+```
+
+- `<type>/<kebab-slug>` is the **proposed follow-up branch name** — same
+  `feature/` · `fix/` · `chore/` prefixes as `CLAUDE.md`'s branch convention. It
+  is a stable handle: the ticket references it, the eventual branch uses it
+  verbatim, and `grep -rn "TODO(feature/home-fragrances-tab-wiring)"` finds every
+  site the follow-up must touch.
+- Reuse one slug across every call site of the same gap. Multiple files carrying
+  `TODO(fix/community-card-like-wiring)` is the signal that the fix is
+  cross-cutting — that is information for whoever picks it up, not duplication.
+- The body states the **concrete gap** ("`loadNextPage()` has no call site"), not
+  a vague wish ("improve pagination"). If deferring is only safe under a
+  condition ("harmless while `onAuthSuccess` is an empty lambda"), say so — that
+  is what tells the next reader when the clock starts.
+- Cross-link related slugs in the body when they interact, so a reader landing on
+  one annotation sees the whole shape.
+
+### Obligations
+
+- **Every new `TODO(<type>/<slug>)` needs a matching Tasks Tracker ticket** with
+  that slug as its proposed Feature Branch. The annotation is a pointer; the
+  ticket is the tracked work. An annotation with no ticket is the thing this
+  convention exists to prevent.
+- A bare `// TODO:` with no slug is allowed only for something you will resolve
+  **within the same PR**. Anything crossing a PR boundary gets a slug and a
+  ticket.
+- When the follow-up branch merges, its PR removes the annotations it addressed.
+  A stale `TODO(<slug>)` for merged work is a bug — `grep` for the slug as part
+  of closing the ticket.
+
+### ✅ DO
+
+- ✅ Annotate a deferred gap at **every** call site, with the follow-up branch slug
+- ✅ Open the backlog ticket in the same PR that adds the annotation
+- ✅ State the concrete missing wiring and the condition that makes deferral safe
+- ✅ Reuse one slug for one gap; cross-link interacting slugs
+
+### ❌ DON'T
+
+- ❌ Don't expand a feature PR to fix adjacent gaps — annotate and ticket instead
+- ❌ Don't add a slugged `TODO` without creating its ticket
+- ❌ Don't use a slug that won't be a valid branch name (`CLAUDE.md` naming rules)
+- ❌ Don't leave a merged follow-up's annotations behind
+
 ## Summary
 
 This error handling system provides:
