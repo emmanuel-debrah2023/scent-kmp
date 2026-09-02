@@ -2,29 +2,9 @@ package data
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import data.schema.DecantsTable
-import data.schema.FollowsTable
-import data.schema.FragranceMediaTable
-import data.schema.FragranceNotesTable
-import data.schema.FragrancesTable
-import data.schema.ListingMediaTable
-import data.schema.ListingsTable
-import data.schema.MediaItemsTable
-import data.schema.MediaLikesTable
-import data.schema.OrdersTable
-import data.schema.PostFragrancesTable
-import data.schema.PostHashtagsTable
-import data.schema.PostLikesTable
-import data.schema.PostListingsTable
-import data.schema.PostMediaTable
-import data.schema.PostsTable
-import data.schema.ReviewsTable
-import data.schema.UserFragranceCollectionTable
-import data.schema.UsersTable
 import io.ktor.server.config.ApplicationConfig
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.SchemaUtils
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("Database")
@@ -80,27 +60,10 @@ fun initDatabase(config: ApplicationConfig) {
     val dataSource = HikariDataSource(hikariConfig)
     Database.connect(dataSource)
 
-    transaction {
-        SchemaUtils.createMissingTablesAndColumns(
-            UsersTable,
-            FragrancesTable,
-            DecantsTable,
-            UserFragranceCollectionTable,
-            MediaItemsTable,
-            FragranceNotesTable,
-            OrdersTable,
-            ReviewsTable,
-            FollowsTable,
-            MediaLikesTable,
-            FragranceMediaTable,
-            PostsTable,
-            PostMediaTable,
-            PostFragrancesTable,
-            PostHashtagsTable,
-            PostLikesTable,
-            PostListingsTable,
-            ListingsTable,
-            ListingMediaTable,
-        )
-    }
+    Flyway
+        .configure()
+        .dataSource(dataSource)
+        .locations("classpath:db/migration")
+        .load()
+        .migrate()
 }

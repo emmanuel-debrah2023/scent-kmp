@@ -1,2 +1,6 @@
+app.cash.turbine:turbine
+com.h2database:h2
 io.gitlab.arturbosch.detekt:detekt-formatting
 io.nlopez.compose.rules:detekt
+org.flywaydb:flyway-core
+org.flywaydb:flyway-database-postgresql

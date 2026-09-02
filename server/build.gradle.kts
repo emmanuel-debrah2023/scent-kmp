@@ -46,6 +46,8 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.hikaricp)
     implementation(libs.dotenv.kotlin)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
 
     // Auth Utils
     implementation(libs.jbcrypt)
