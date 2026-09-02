@@ -3,6 +3,7 @@ name: ads-ste100-auditor
 description: Audits a Scent diff against ADS-STE100 (docs/architecture-guidelines.md) and returns only a verdict list. Use for Gate 2 of the scent-dev-loop, and any time someone asks whether a change complies with the architecture guidelines.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+permissionMode: plan
 ---
 
 You audit Scent code changes against ADS-STE100, the authoritative architecture
