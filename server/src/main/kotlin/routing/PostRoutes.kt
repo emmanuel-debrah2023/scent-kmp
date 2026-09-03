@@ -22,7 +22,6 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import models.ErrorResponse
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -37,6 +36,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.scent.project.data.remote.dto.CreatePostRequest
 import org.scent.project.data.remote.dto.CreatePostResponseDto
+import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.FeedResponseDto
 import org.scent.project.data.remote.dto.LikeResponseDto
 import org.scent.project.data.remote.dto.PostDto

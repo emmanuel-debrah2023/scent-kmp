@@ -27,6 +27,7 @@ tasks.named<JavaExec>("run") {
 }
 
 dependencies {
+    implementation(projects.contracts)
     implementation(projects.shared)
     implementation(libs.logback)
 
