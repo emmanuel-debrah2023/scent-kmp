@@ -3,6 +3,8 @@ package models
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Server-only request types; shared response contracts are imported directly from org.scent.project.data.remote.dto
+
 @Serializable
 data class CreateListingServerRequest(
     @SerialName("fragrance_id") val fragranceId: Int,
@@ -30,39 +32,4 @@ data class UpdateListingRequest(
     val kind: String? = null,
     @SerialName("nominal_size_ml") val nominalSizeMl: Int? = null,
     @SerialName("remaining_ml") val remainingMl: Int? = null,
-)
-
-@Serializable
-data class ListingResponseDto(
-    val id: Int,
-    val fragrance: FragranceResponseDto,
-    @SerialName("seller_id") val sellerId: Int,
-    @SerialName("seller_username") val sellerUsername: String,
-    val price: Double,
-    val condition: String,
-    @SerialName("is_negotiable") val isNegotiable: Boolean,
-    @SerialName("stock_quantity") val stockQuantity: Int,
-    @SerialName("is_active") val isActive: Boolean,
-    @SerialName("created_at") val createdAt: Long,
-    @SerialName("photo_urls") val photoUrls: List<String> = emptyList(),
-    // Empty when photoUrls fell back to catalogue stock imagery — those aren't this
-    // listing's own media, so there's nothing here for an edit screen to reorder/replace.
-    @SerialName("media_ids") val mediaIds: List<Int> = emptyList(),
-    val kind: String? = null,
-    @SerialName("nominal_size_ml") val nominalSizeMl: Int? = null,
-    @SerialName("remaining_ml") val remainingMl: Int? = null,
-    @SerialName("fill_source") val fillSource: String? = null,
-    @SerialName("fill_confidence") val fillConfidence: Double? = null,
-)
-
-@Serializable
-data class ListingListResponse(
-    val listings: List<ListingResponseDto>,
-    val nextCursor: String? = null,
-    val totalCount: Int,
-)
-
-@Serializable
-data class BrandListResponse(
-    val brands: List<String>,
 )

@@ -24,11 +24,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import models.CreateFragranceRequest
-import models.ErrorResponse
 import models.FragranceCreatedResponse
-import models.FragranceListResponse
-import models.FragranceNoteResponseDto
-import models.FragranceResponseDto
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -42,6 +38,10 @@ import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.scent.project.data.remote.dto.ErrorResponse
+import org.scent.project.data.remote.dto.FragranceListResponseDto
+import org.scent.project.data.remote.dto.FragranceNoteDto
+import org.scent.project.data.remote.dto.FragranceResponse
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @OptIn(kotlin.time.ExperimentalTime::class)
@@ -89,7 +89,7 @@ fun Route.fragranceRoutes() {
                 }
 
             val nextCursor = result.lastOrNull()?.id?.toString()
-            this.call.respond(HttpStatusCode.OK, FragranceListResponse(result, nextCursor))
+            this.call.respond(HttpStatusCode.OK, FragranceListResponseDto(fragrances = result, nextCursor = nextCursor))
         }
 
         get("/{id}") {
@@ -217,13 +217,13 @@ private fun buildFragranceDto(
     id: Int,
     row: org.jetbrains.exposed.v1.core.ResultRow,
     viewCountIncrement: Int = 0,
-): FragranceResponseDto {
+): FragranceResponse {
     val notes =
         FragranceNotesTable
             .selectAll()
             .where { FragranceNotesTable.fragranceId eq id }
             .map { noteRow ->
-                FragranceNoteResponseDto(
+                FragranceNoteDto(
                     note = noteRow[FragranceNotesTable.note],
                     noteType = noteRow[FragranceNotesTable.noteType].name,
                 )
@@ -249,7 +249,7 @@ private fun buildFragranceDto(
         }
     val reviewCount = reviewRows.size
 
-    return FragranceResponseDto(
+    return FragranceResponse(
         id = id,
         sellerId = row[FragrancesTable.sellerId].value,
         name = row[FragrancesTable.name],
