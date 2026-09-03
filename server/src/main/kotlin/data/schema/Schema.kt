@@ -243,9 +243,10 @@ object ListingsTable : IntIdTable("listings") {
     val deletedAt = datetime("deleted_at").nullable()
 
     // ── Fill fields ───────────────────────────────────────────────────────────
-    // kind is now NOT NULL (V2__Tighten_listings_kind_to_not_null).
-    // Three of the four below are still logically required. They remain nullable
-    // pending business logic clarification on fill semantics.
+    // kind is now NOT NULL (V2__Tighten_listings_kind_to_not_null.sql).
+    // TODO(chore/tighten-listing-fill-columns): the three fields below are still
+    // logically required but remain nullable pending business logic clarification
+    // on fill semantics — this is not the intended end state.
 
     /** [ListingKind] as a string; NOT NULL since V2 migration. */
     val kind = varchar("kind", 16)

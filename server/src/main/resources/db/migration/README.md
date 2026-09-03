@@ -59,7 +59,23 @@ git add server/src/main/resources/db/migration/V<N>__<description>.sql
 git commit -m "chore(db): <description of schema change>"
 ```
 
-The pre-commit hook will verify you've added a migration when schema files change.
+The pre-commit hook will verify you've added a migration when schema files change —
+see **Install the pre-commit hook** below. It has to be installed once per clone;
+`.git/hooks/` itself is never committed, so the hook script lives in `scripts/git-hooks/`
+and is wired in via `git config core.hooksPath`.
+
+## Install the pre-commit hook
+
+Run once per clone:
+
+```bash
+git config core.hooksPath scripts/git-hooks
+```
+
+This points git at the tracked `scripts/git-hooks/` directory instead of the default,
+untracked `.git/hooks/`. From then on, `git commit` runs `scripts/git-hooks/pre-commit`
+automatically and blocks any commit that touches `Schema.kt` / `SchemaEntities.kt`
+without a corresponding `V<N>__*.sql` migration staged alongside it.
 
 ## Flyway in production
 

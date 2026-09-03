@@ -1,0 +1,53 @@
+#!/bin/bash
+# Pre-commit hook for Scent: validate schema changes have migrations
+
+set -e
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only)
+
+# Check if schema files are being modified
+SCHEMA_CHANGED=false
+for file in $STAGED_FILES; do
+    if [[ "$file" == *"Schema.kt" ]] || [[ "$file" == *"SchemaEntities.kt" ]]; then
+        SCHEMA_CHANGED=true
+        break
+    fi
+done
+
+if [ "$SCHEMA_CHANGED" = true ]; then
+    echo "📋 Schema files detected in staged changes."
+
+    # Check if any migration files are being added/modified
+    MIGRATION_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "server/src/main/resources/db/migration/V[0-9]+__.*\.sql$" || true)
+
+    if [ -z "$MIGRATION_FILES" ]; then
+        echo ""
+        echo "⚠️  MIGRATION REQUIRED"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "Schema changes detected but no migration file found."
+        echo ""
+        echo "Steps to fix:"
+        echo "1. Generate a new migration by running your schema change against a test database"
+        echo "2. Use pg_dump --schema-only to extract the DDL"
+        echo "3. Create a new migration file: server/src/main/resources/db/migration/V<N>__<description>.sql"
+        echo "   Example: V2__Add_user_preferences_table.sql"
+        echo "4. Stage the migration file: git add server/src/main/resources/db/migration/"
+        echo "5. Commit again"
+        echo ""
+        echo "For reference, Flyway naming: V<version>__<description>.sql"
+        echo "  - Version: incremental number (V1, V2, V3, ...)"
+        echo "  - Underscores: exactly two double-underscores"
+        echo "  - Description: use_snake_case_for_clarity"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        exit 1
+    else
+        echo "✅ Migration file(s) found:"
+        echo "$MIGRATION_FILES" | sed 's/^/   /'
+    fi
+fi
+
+exit 0

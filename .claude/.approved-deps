@@ -4,6 +4,5 @@ io.gitlab.arturbosch.detekt:detekt-formatting
 io.nlopez.compose.rules:detekt
 org.flywaydb:flyway-core
 org.flywaydb:flyway-database-postgresql
-org.testcontainers:junit4
 org.testcontainers:postgresql
 org.testcontainers:testcontainers

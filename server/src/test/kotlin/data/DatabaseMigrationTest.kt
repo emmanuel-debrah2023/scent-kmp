@@ -3,8 +3,10 @@ package data
 import io.ktor.server.config.MapApplicationConfig
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.AfterClass
+import org.junit.Assume.assumeTrue
 import org.junit.BeforeClass
 import org.junit.Test
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import java.sql.DriverManager
 import kotlin.test.assertEquals
@@ -16,6 +18,14 @@ import kotlin.test.assertTrue
  * Postgres container. H2-backed tests elsewhere in this module can't catch schema/
  * search_path/privilege bugs — this is what would have caught the missing
  * `.schemas("public")` config before it reached local Postgres.
+ *
+ * Requires a Docker daemon. Both test methods below share one class-level container
+ * (started once in [startContainer], not reset between tests) rather than the usual
+ * one-fixture-per-test independence — starting Postgres per test would multiply this
+ * file's runtime for no real isolation benefit, since `migrate()` is idempotent by
+ * construction and the second test exists specifically to prove that. If a future
+ * test here needs a clean database, give it its own container rather than resetting
+ * this one mid-suite.
  */
 class DatabaseMigrationTest {
     companion object {
@@ -28,6 +38,12 @@ class DatabaseMigrationTest {
         @BeforeClass
         @JvmStatic
         fun startContainer() {
+            // Skip rather than fail on machines/CI runners without a Docker daemon —
+            // this is the one test file in :server that needs one.
+            assumeTrue(
+                "Docker is required for DatabaseMigrationTest and was not found — skipping",
+                DockerClientFactory.instance().isDockerAvailable,
+            )
             postgres.start()
         }
 
