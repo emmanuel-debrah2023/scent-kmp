@@ -1292,6 +1292,88 @@ object Validator {
 
 ---
 
+## Repository Layer: Two Shapes for Two Patterns
+
+**See ADR 0001** for the complete architectural decision. Scent's repository layer supports two valid method shapes; both return `Either<AppError, T>`. The shape decision only changes the outer wrapper, never the error boundary (see §2 above).
+
+### Two Repository Shapes: Suspend vs Flow SSOT
+
+| Shape | Signature | Use for |
+|-------|-----------|---------|
+| **Suspend (one-shot)** | `suspend fun ...(): Either<AppError, T>` | Auth, search, mutations (create, update, delete, follow/unfollow, purchase). Anything with a clear start and end triggered by the user once. |
+| **Flow SSOT** | `fun get<X>Flow(...): Flow<Either<AppError, T>>` | Feed, Marketplace (listings + detail), all Profile tabs (Posts, Collection, My Listings, Reviews, Followers/Following). Reads where a user watches the same data change on-screen, or another screen's write should reflect without a manual re-fetch. |
+
+### Naming Convention
+- Flow-returning methods **end in Flow suffix** — `getFeedFlow`, `getListingsFlow`, `getUserReviewsFlow` — not an observe-prefix. This keeps the verb consistent with existing `get...` convention; the suffix signals the return type differs.
+
+### Mechanics: Flow SSOT Architecture
+
+For Flow SSOT methods:
+
+1. **Room is the single source of truth** — the only thing the UI observes.
+2. **Network calls are writers, not readers** — a fetch upserts into Room; Room's Flow-returning DAO query re-emits to every collector automatically.
+3. **Never return data from a network call directly** — write it to Room and let the existing Flow carry it.
+
+#### Example: Feed Flow SSOT
+
+```kotlin
+// shared/src/commonMain/kotlin/domain/repository/PostRepository.kt
+interface PostRepository {
+    // Mutation — stays suspend, one-shot
+    suspend fun createPost(request: CreatePostRequest): Result<Post>
+
+    // Live-sensitive read — Flow SSOT, Room-backed
+    fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>>
+}
+
+// Implementation sketch
+class PostRepositoryImpl(
+    private val apiClient: ApiClient,
+    private val postDao: PostDao
+) : PostRepository {
+
+    override suspend fun createPost(request: CreatePostRequest): Result<Post> {
+        // Unchanged: suspend + Either (see §2)
+        val response = apiClient.createPost(request)
+        return if (response.isSuccessful && response.data != null) {
+            response.data.toDomain().asRight()
+        } else {
+            AppError.Network(response.error).asLeft()
+        }
+    }
+
+    override fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>> =
+        postDao.observeFeed(page, limit) // Room Flow query — local DB is the only reader
+            .map { entities -> entities.map { it.toDomain() }.asRight() }
+            .onStart { refreshFeedFromNetwork(page, limit) } // network only ever writes
+            .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
+
+    private suspend fun refreshFeedFromNetwork(page: Int, limit: Int) {
+        val response = apiClient.getFeed(page, limit)
+        if (response.isSuccessful && response.data != null) {
+            postDao.upsertAll(response.data.map { it.toEntity() }) // triggers re-emission
+        }
+        // Network failure here is silent to the Flow by design — the last good
+        // Room state keeps rendering; surface the failure via a separate side channel
+        // (e.g. a SharedFlow<AppError>) if the screen needs to show a toast/snackbar.
+    }
+}
+```
+
+### Discipline: When NOT to Convert to Flow SSOT
+
+Don't convert a method to Flow SSOT just for consistency with a neighboring method — the two-shape split is intentional. If a method is genuinely one-shot (a mutation, or a read no other screen needs to see update live), it stays suspend. Mixing shapes intentionally is correct; mixing them accidentally is an antipattern.
+
+#### Room Cache-Invalidation Rules
+
+When using Flow SSOT, Room's correctness depends entirely on upsert logic. **Critical rules:**
+
+1. **Upsert must be exhaustive** — `insertOrReplace` or `insertOrUpdate` replaces the entire old entity; use `insertOrReplace` for list views where you're paginating, never do a partial column update that leaves old data behind.
+2. **Deletion must be explicit** — if a network fetch returns a list of 10 items but last time had 15, explicitly delete the 5 missing ones or they'll render stale. (Corollary: pagination with `LIMIT` and `OFFSET` requires careful ordering and deduplication.)
+3. **Cascade deletes** — if you delete a Post, decide whether Comments/Likes stay or cascade; document the rule at the DAO level.
+
+---
+
 ## Navigation Architecture for Compose Multiplatform
 
 **CRITICAL**: Since official Compose Multiplatform Navigation is not yet stable, use simple state-based navigation for now, designed for easy migration to official navigation later. The app uses a **bottom-nav / tabbed** structure: each tab owns an isolated back stack, and switching tabs preserves each tab's position.
