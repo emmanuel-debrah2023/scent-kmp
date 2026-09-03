@@ -6,6 +6,12 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 kotlin {
@@ -37,6 +43,9 @@ kotlin {
             implementation(libs.kotlinx.datetime)
 
             implementation(libs.koin.core)
+
+            implementation(libs.room.runtime)
+            implementation(libs.sqlite.bundled)
         }
 
         androidMain.dependencies {
@@ -59,6 +68,15 @@ kotlin {
             implementation(libs.turbine)
         }
     }
+}
+
+// Room's KSP processor runs per target, so each one is registered explicitly.
+// Adding a Kotlin target above means adding its ksp configuration here too.
+dependencies {
+    add("kspAndroid", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
+    add("kspJvm", libs.room.compiler)
 }
 
 android {
