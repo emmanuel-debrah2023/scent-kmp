@@ -1,3 +1,7 @@
+// TODO(chore/remove-dead-video-screen): scaffold/example file from the original KMP
+// bootstrap (see "Initial KMP project setup" ticket) — no package declaration, defines
+// its own unused AppNavigation()/FragranceListScreen(), never imported. Safe to delete
+// alongside the other dead files in this ticket.
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

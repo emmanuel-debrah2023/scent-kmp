@@ -130,6 +130,8 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // TODO(feature/social-signin-client-wiring): same gap as LoginScreen.kt —
+                // backend is live, client is stubbed.
                 SecondaryButton(
                     text = "Google",
                     onClick = { /* TODO: Phase 2 */ },

@@ -51,6 +51,11 @@ These come up constantly. Getting them wrong means a redo.
   on cream), `interactive` (gold-brown, inline links). Don't collapse them.
 - **Accessibility is written into the ticket that builds the screen**, never
   deferred to a follow-up. Use the `ui/accessibility` Modifier extensions.
+- **Deferred gaps get a slugged TODO + a ticket, not a bigger PR.** A stub or
+  missing wiring found outside the current scope is annotated at every call site
+  as `TODO(<type>/<kebab-slug>):` — the slug being the proposed follow-up branch
+  — and logged to the Tasks Tracker in the same PR. See ADS-STE100 "Deferred Work
+  Annotations". A bare `// TODO:` is only for something fixed in the same PR.
 
 ---
 

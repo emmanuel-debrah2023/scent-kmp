@@ -101,6 +101,10 @@ fun ProfileScreen(
         viewModel.onEvent(ProfileEvent.Retry)
     }
 
+    // TODO(fix/profile-logout-unreachable): this Logout branch is wired correctly (see
+    // onLogout -> SessionViewModel.logout() in App.kt) but nothing in ProfileContent ever
+    // dispatches ProfileEvent.Logout — OwnProfileActions below only exposes Edit Profile
+    // and Settings, both still TODO stubs. A signed-in user has no way to sign out.
     ProfileContent(
         state = state,
         onEvent = { event ->
@@ -109,6 +113,8 @@ fun ProfileScreen(
                 else -> viewModel.onEvent(event)
             }
         },
+        // TODO(feature/profile-actions-wiring): followers/following/fragrance navigation
+        // still has no destination route.
         onNavigateToFollowers = { /* TODO: navigate to followers list when route exists */ },
         onNavigateToFollowing = { /* TODO: navigate to following list when route exists */ },
         onNavigateToFragrance = { /* TODO: navigate to fragrance detail when profile route exists */ },
@@ -448,8 +454,13 @@ private fun ProfileHeader(
 
         // Action buttons
         if (data.isOwnProfile) {
+            // TODO(feature/profile-actions-wiring): Edit Profile and Settings are both
+            // no-ops. Settings is also the natural home for the missing Logout affordance
+            // — see fix/profile-logout-unreachable — rather than adding a separate entry
+            // point.
             OwnProfileActions(onEditProfile = { /* TODO */ }, onSettings = { /* TODO */ })
         } else {
+            // TODO(feature/profile-actions-wiring): overflow menu (report/block/share) is a no-op.
             OtherProfileActions(
                 isFollowing = isFollowing,
                 onFollowToggle = { onEvent(ProfileEvent.ToggleFollow) },

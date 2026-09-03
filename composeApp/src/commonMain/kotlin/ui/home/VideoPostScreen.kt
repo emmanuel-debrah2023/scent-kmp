@@ -77,6 +77,11 @@ fun VideoPostScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // TODO(feature/video-post-screen-wiring): entire screen is hardcoded — no ViewModel,
+    // no post data passed in beyond `url`. Caption, handle, like count ("1,208" below),
+    // and the Velvet Orchid listing row are all literal strings; comment/share/save/
+    // FOLLOW/Buy are every one a no-op. See also fix/community-card-like-wiring for the
+    // `liked` local-state pattern duplicated here.
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
 

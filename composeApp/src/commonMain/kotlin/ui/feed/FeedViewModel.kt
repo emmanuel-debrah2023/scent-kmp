@@ -47,6 +47,11 @@ class FeedViewModel(
         }
     }
 
+    // TODO(feature/feed-infinite-scroll): fully implemented — cursor merge, isLoadingMore
+    // guard, error rollback — but has no call site anywhere in the app. The Community
+    // feed's LazyColumn in HomeFullBleedScreen.kt never reaches the end of its list to
+    // trigger it (see fix/feed-loading-error-states for the related UiState gap on the
+    // same screen).
     fun loadNextPage() {
         val current = (_uiState.value as? UiState.Success)?.data ?: return
         if (current.nextCursor == null || current.isLoadingMore) return
