@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.FragranceCondition
 import data.schema.FragrancesTable
 import data.schema.ListingsTable
@@ -19,7 +20,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 @Serializable
 data class SeedResponse(
@@ -41,17 +41,17 @@ private val seedHashtags = listOf("fragrance", "scentoftheday", "niche", "perfum
 private const val DEFAULT_SEED_COUNT = 10
 private const val MAX_SEED_COUNT = 50
 
-private fun resolveSeedUserId(): Int = resolveSeedUser("scent_seed_bot", "seed@scent.dev", "Scent Seed Bot")
+private suspend fun resolveSeedUserId(): Int = resolveSeedUser("scent_seed_bot", "seed@scent.dev", "Scent Seed Bot")
 
-private fun resolveSeedSellerId(): Int =
+private suspend fun resolveSeedSellerId(): Int =
     resolveSeedUser("scent_seed_seller", "seed-seller@scent.dev", "Scent Seed Seller")
 
-private fun resolveSeedUser(
+private suspend fun resolveSeedUser(
     username: String,
     email: String,
     displayName: String,
 ): Int =
-    transaction {
+    dbQuery {
         val existing =
             UsersTable
                 .selectAll()
@@ -72,13 +72,13 @@ private fun resolveSeedUser(
         }
     }
 
-private fun insertSeedPosts(
+private suspend fun insertSeedPosts(
     userId: Int,
     count: Int,
 ) {
     val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     repeat(count) { index ->
-        transaction {
+        dbQuery {
             val postId =
                 PostsTable
                     .insertAndGetId {
@@ -117,14 +117,14 @@ private val seedFragrances =
         SeedFragrance("Light Blue", "Dolce & Gabbana", 70.0),
     )
 
-private fun insertSeedListings(
+private suspend fun insertSeedListings(
     sellerId: Int,
     count: Int,
 ) {
     val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     val conditions = FragranceCondition.entries
     repeat(count) { index ->
-        transaction {
+        dbQuery {
             val seed = seedFragrances[index % seedFragrances.size]
             val condition = conditions[index % conditions.size]
 

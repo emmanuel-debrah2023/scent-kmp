@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
@@ -50,7 +51,6 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.scent.project.domain.model.FillSource
 import org.scent.project.domain.model.ListingKind
@@ -91,7 +91,7 @@ fun Route.listingRoutes() {
             val baseQuery = ListingsTable.innerJoin(FragrancesTable)
 
             val result =
-                transaction {
+                dbQuery {
                     val filterOp: Op<Boolean> =
                         run {
                             val activeFilter: Op<Boolean> = ListingsTable.isActive eq true
@@ -196,7 +196,7 @@ fun Route.listingRoutes() {
             }
 
             val brands =
-                transaction {
+                dbQuery {
                     ListingsTable
                         .innerJoin(FragrancesTable)
                         .select(FragrancesTable.brand)
@@ -228,7 +228,7 @@ fun Route.listingRoutes() {
                         )
 
                 val listings =
-                    transaction {
+                    dbQuery {
                         ListingsTable
                             .selectAll()
                             .where {
@@ -250,13 +250,13 @@ fun Route.listingRoutes() {
                     )
 
             val listing =
-                transaction {
+                dbQuery {
                     val row =
                         ListingsTable
                             .selectAll()
                             .where { ListingsTable.id eq listingId and ListingsTable.deletedAt.isNull() }
                             .singleOrNull()
-                            ?: return@transaction null
+                            ?: return@dbQuery null
                     buildListingDto(listingId, row)
                 }
 
@@ -300,7 +300,7 @@ fun Route.listingRoutes() {
 
                 // Verify fragrance exists
                 val fragranceExists =
-                    transaction {
+                    dbQuery {
                         FragrancesTable
                             .selectAll()
                             .where { FragrancesTable.id eq request.fragranceId }
@@ -337,7 +337,7 @@ fun Route.listingRoutes() {
                 }
 
                 val listingId =
-                    transaction {
+                    dbQuery {
                         val id =
                             ListingsTable
                                 .insertAndGetId {
@@ -361,7 +361,7 @@ fun Route.listingRoutes() {
                     }
 
                 val created =
-                    transaction {
+                    dbQuery {
                         val row =
                             ListingsTable
                                 .selectAll()
@@ -405,7 +405,7 @@ fun Route.listingRoutes() {
                         }
 
                 val listing =
-                    transaction {
+                    dbQuery {
                         ListingsTable
                             .selectAll()
                             .where { ListingsTable.id eq listingId }
@@ -487,7 +487,7 @@ fun Route.listingRoutes() {
                         request.kind != null ||
                         normalizedFill != null
 
-                transaction {
+                dbQuery {
                     if (touchesScalarField) {
                         ListingsTable.update({ ListingsTable.id eq listingId }) {
                             request.price?.let { p -> it[price] = p.toBigDecimal() }
@@ -509,7 +509,7 @@ fun Route.listingRoutes() {
 
                 // Return updated listing
                 val updated =
-                    transaction {
+                    dbQuery {
                         val row =
                             ListingsTable
                                 .selectAll()
@@ -544,7 +544,7 @@ fun Route.listingRoutes() {
                         )
 
                 val listing =
-                    transaction {
+                    dbQuery {
                         ListingsTable
                             .selectAll()
                             .where { ListingsTable.id eq listingId }
@@ -568,7 +568,7 @@ fun Route.listingRoutes() {
                 // Soft delete only — there is no permanent delete. Order history (once
                 // orders reference listing_id — see chore/listing-versioning-order-snapshot)
                 // stays intact because the row is never removed.
-                transaction {
+                dbQuery {
                     ListingsTable.update({ ListingsTable.id eq listingId }) {
                         it[deletedAt] =
                             Clock.System
@@ -598,14 +598,14 @@ private fun ApplicationCall.requireUserId(): Int? =
  * is trivially true — the 1..6 count check happens separately at the call site, so this
  * function only needs to answer "are these specific ids usable".
  */
-private fun mediaIdsOwnedAndReady(
+private suspend fun mediaIdsOwnedAndReady(
     mediaIds: List<Int>,
     userId: Int,
 ): Boolean {
     val distinctIds = mediaIds.distinct()
     if (distinctIds.isEmpty()) return true
     val readyOwnedCount =
-        transaction {
+        dbQuery {
             MediaItemsTable
                 .selectAll()
                 .where {

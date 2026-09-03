@@ -6,6 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import data.dbQuery
 import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -31,7 +32,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
 import plugins.generateToken
 import java.net.URL
@@ -50,7 +50,7 @@ fun Route.authRoutes() {
                 }
 
             val userExists =
-                transaction {
+                dbQuery {
                     !UsersTable.select(UsersTable.id).where { UsersTable.email eq request.email }.empty()
                 }
 
@@ -62,7 +62,7 @@ fun Route.authRoutes() {
             val passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt())
 
             val userId =
-                transaction {
+                dbQuery {
                     UsersTable
                         .insertAndGetId {
                             it[username] = request.username
@@ -90,7 +90,7 @@ fun Route.authRoutes() {
                 }
 
             val user =
-                transaction {
+                dbQuery {
                     UsersTable
                         .selectAll()
                         .where { UsersTable.email eq request.email }
@@ -147,7 +147,7 @@ fun Route.authRoutes() {
             val name = payload["name"] as? String ?: "User"
 
             val userId =
-                transaction {
+                dbQuery {
                     val existing = UsersTable.selectAll().where { UsersTable.googleId eq googleId }.singleOrNull()
                     existing?.get(UsersTable.id)?.value ?: UsersTable
                         .insertAndGetId {
@@ -162,7 +162,7 @@ fun Route.authRoutes() {
                 }
 
             val username =
-                transaction {
+                dbQuery {
                     UsersTable
                         .selectAll()
                         .where { UsersTable.id eq userId }
@@ -222,7 +222,7 @@ fun Route.authRoutes() {
             val givenName = body.givenName ?: "Scent User"
 
             val userId =
-                transaction {
+                dbQuery {
                     val existing = UsersTable.selectAll().where { UsersTable.appleId eq appleId }.singleOrNull()
                     existing?.get(UsersTable.id)?.value ?: UsersTable
                         .insertAndGetId {
@@ -237,7 +237,7 @@ fun Route.authRoutes() {
                 }
 
             val appleUsername =
-                transaction {
+                dbQuery {
                     UsersTable
                         .selectAll()
                         .where { UsersTable.id eq userId }
@@ -259,7 +259,7 @@ fun Route.authRoutes() {
                 }
 
                 val userResponse =
-                    transaction {
+                    dbQuery {
                         UsersTable
                             .selectAll()
                             .where { UsersTable.id eq userId }

@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.CollectionStatus
 import data.schema.FragrancesTable
 import data.schema.PostFragrancesTable
@@ -28,7 +29,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.scent.project.data.remote.dto.FeedResponseDto
 import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
@@ -40,7 +40,7 @@ fun Route.userRoutes() {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val posts = transaction { queryUserPosts(userId, likedByUserId = null) }
+            val posts = dbQuery { queryUserPosts(userId, likedByUserId = null) }
             call.respond(HttpStatusCode.OK, FeedResponseDto(posts = posts, nextCursor = null))
         }
 
@@ -48,7 +48,7 @@ fun Route.userRoutes() {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val entries = transaction { queryUserCollection(userId) }
+            val entries = dbQuery { queryUserCollection(userId) }
             call.respond(HttpStatusCode.OK, UserCollectionResponse(entries = entries))
         }
 
@@ -56,7 +56,7 @@ fun Route.userRoutes() {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val entries = transaction { queryUserWishlist(userId) }
+            val entries = dbQuery { queryUserWishlist(userId) }
             call.respond(HttpStatusCode.OK, UserCollectionResponse(entries = entries))
         }
 
@@ -64,7 +64,7 @@ fun Route.userRoutes() {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val reviews = transaction { queryUserReviews(userId) }
+            val reviews = dbQuery { queryUserReviews(userId) }
             call.respond(HttpStatusCode.OK, UserReviewsResponse(reviews = reviews))
         }
 
@@ -72,7 +72,7 @@ fun Route.userRoutes() {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val posts = transaction { queryUserLikes(userId) }
+            val posts = dbQuery { queryUserLikes(userId) }
             call.respond(HttpStatusCode.OK, FeedResponseDto(posts = posts, nextCursor = null))
         }
     }
