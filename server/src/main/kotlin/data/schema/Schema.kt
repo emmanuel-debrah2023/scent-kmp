@@ -243,13 +243,13 @@ object ListingsTable : IntIdTable("listings") {
     val deletedAt = datetime("deleted_at").nullable()
 
     // ── Fill fields ───────────────────────────────────────────────────────────
-    // Four of the five below are logically required. They are nullable ONLY
-    // because SchemaUtils.createMissingTablesAndColumns cannot add NOT NULL
-    // columns or create Postgres enum types. Tracked by
-    // chore/tighten-listing-fill-columns — this is not the intended end state.
+    // kind is now NOT NULL (V2__Tighten_listings_kind_to_not_null.sql).
+    // TODO(chore/tighten-listing-fill-columns): the three fields below are still
+    // logically required but remain nullable pending business logic clarification
+    // on fill semantics — this is not the intended end state.
 
-    /** [ListingKind] as a string; SchemaUtils will not create a Postgres ENUM type. */
-    val kind = varchar("kind", 16).nullable()
+    /** [ListingKind] as a string; NOT NULL since V2 migration. */
+    val kind = varchar("kind", 16)
 
     /**
      * For SEALED/OPENED/TESTER this is the bottle size. For DECANT it is the

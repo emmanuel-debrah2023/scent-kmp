@@ -46,6 +46,8 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.hikaricp)
     implementation(libs.dotenv.kotlin)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
 
     // Auth Utils
     implementation(libs.jbcrypt)
@@ -61,6 +63,8 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.h2)
+    testImplementation(libs.testcontainers.core)
+    testImplementation(libs.testcontainers.postgresql)
 }
 
 tasks.withType<Tar> {

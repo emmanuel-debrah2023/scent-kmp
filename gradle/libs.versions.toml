@@ -39,6 +39,8 @@ androidx-media3 = "1.7.1"
 datastore = "1.1.1"
 h2 = "2.2.224"
 hotswan = "2.0.0-beta04"
+flyway = "10.17.0"
+testcontainers = "1.21.4"
 
 [libraries]
 # Kotlin
@@ -112,6 +114,10 @@ jwks-rsa = { module = "com.auth0:jwks-rsa", version.ref = "jwks-rsa" }
 
 # Testing
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+testcontainers-core = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }

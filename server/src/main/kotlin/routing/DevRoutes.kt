@@ -145,6 +145,7 @@ private fun insertSeedListings(
                 it[price] = seed.price.toBigDecimal()
                 it[ListingsTable.condition] = condition
                 it[isNegotiable] = index % 2 == 0
+                it[ListingsTable.kind] = "SEALED"
                 it[createdAt] = now
             }
         }
