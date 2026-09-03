@@ -63,6 +63,7 @@ fun initDatabase(config: ApplicationConfig) {
     Flyway
         .configure()
         .dataSource(dataSource)
+        .schemas("public")
         .locations("classpath:db/migration")
         .load()
         .migrate()
