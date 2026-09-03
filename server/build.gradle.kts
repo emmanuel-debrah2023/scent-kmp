@@ -27,6 +27,7 @@ tasks.named<JavaExec>("run") {
 }
 
 dependencies {
+    implementation(projects.contracts)
     implementation(projects.shared)
     implementation(libs.logback)
 
@@ -57,6 +58,7 @@ dependencies {
 
     // Utils
     implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.testJunit)
