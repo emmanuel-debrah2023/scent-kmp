@@ -1,105 +1,136 @@
-# ADR 0001: Data Layer Streaming Strategy — Suspend vs Flow SSOT
+# ADR-0001: Adopt Flow SSOT for Feed, Marketplace, and Profile reads, keep suspend+Either elsewhere
 
-**Status:** Accepted  
-**Date:** 2026-09-03  
-**Deciders:** Emmanuel Debrah
+- **Status:** Accepted
+- **Date:** 2026-09-03
+- **Deciders:** Emmanuel
+- **Ticket:** Scent Tasks Tracker — "ADR: decide data-layer streaming strategy (suspend vs Flow SSOT)" (https://app.notion.com/p/3cd11d6b186b81e1881fe80b38d3d095)
 
-## Problem
+## Context
 
-Scent's repository layer needs to handle two fundamentally different read patterns:
+Repositories in Scent currently expose one-shot `suspend fun ...(): Either<AppError, T>`
+methods. Read methods like `FragranceRepositoryImpl.searchFragrances` do an ad-hoc
+cache-then-network check: try the local cache, return early if it has data, otherwise
+hit the API and write through. Nothing pushes updates to a screen that's already open —
+if a like count changes on the Post Detail screen, the Feed screen behind it stays stale
+until it's manually re-fetched.
 
-1. **One-shot reads** — auth checks, search queries, mutations (create/update/delete) where the caller triggers a single fetch and the data isn't expected to change while the screen is visible.
-2. **Live-sensitive reads** — Feed, Marketplace, Profile tabs where a user watches the same data change: listings update in real-time, new posts appear, follow counts increment, collection items change.
-
-Using the same method shape for both scenarios creates architectural friction:
-- Returning live data from a suspend function requires manual re-polling; the UI has no automatic way to learn the data changed without explicit user action or a ViewModel managing a refresh timer.
-- Wrapping every live read in a Flow at the ViewModel layer (instead of the Repository) spreads the streaming logic and defers cache management to the UI state layer, which owns neither the persistence layer nor the network client.
+This staleness is most visible on three screens where users watch data change in
+real time while browsing: the short-form video Feed (like/comment/share counts,
+new posts), the Marketplace (listing price changes, sold-out state, new listings),
+and the Profile screen — its own review count, fragrance collection, seller
+listings, and follower/following stats and lists all update in place as the user
+takes actions (adding a review, adding a bottle, another user following them)
+without leaving or manually refreshing any of the screen's tabs. All of these are
+list- or count-shaped, multi-screen-visible or multi-action-visible within a single
+session, and read far more often than they're written to from that same session.
 
 ## Decision
 
-Scent's repository layer adopts **two valid method shapes**, each tied to a use case:
+Scent adopts a hybrid data-layer strategy. Repository methods keep their current
+`suspend fun ...(): Either<AppError, T>` shape for one-shot operations — auth
+(`AuthRepository`), and any create/update/delete mutation (`PostRepository.createPost`,
+`ListingRepository.purchaseListing`, etc.).
 
-| Shape | Signature | Use for |
-|-------|-----------|---------|
-| **Suspend (one-shot)** | `suspend fun ...(): Either<AppError, T>` | Auth, search, mutations (create, update, delete, follow/unfollow, purchase). Clear start and end, triggered once. |
-| **Flow SSOT** | `fun get<X>Flow(...): Flow<Either<AppError, T>>` | Feed, Marketplace (listings + detail), all Profile tabs (Posts, Collection, My Listings, Reviews, Followers/Following). Reads where user watches the same data change on-screen, or another screen's write should reflect without manual re-fetch. |
+For the Feed, Marketplace, and Profile read paths specifically, repositories instead
+expose `fun get...Flow(): Flow<Either<AppError, T>>`, backed by Room as the local
+source of truth:
 
-### Naming Convention
-- Flow-returning methods end in a **Flow suffix** — `getFeedFlow`, `getListingsFlow`, `getUserReviewsFlow` — not an observe-prefix.
-- This keeps the verb consistent with existing `get...` convention; the suffix signals the return type differs.
+- `PostRepository.getFeedFlow(page: Int, limit: Int): Flow<Either<AppError, List<Post>>>`
+- `ListingRepository.getListingsFlow(query: ListingQuery): Flow<Either<AppError, List<Listing>>>`
+- `ListingRepository.getListingDetailFlow(id: String): Flow<Either<AppError, Listing>>`
+- `UserRepository.getProfileFlow(userId: String): Flow<Either<AppError, User>>` —
+  includes `followerCount`/`followingCount` as live fields on `User`
+- `PostRepository.getUserPostsFlow(userId: String): Flow<Either<AppError, List<Post>>>`
+  — the Profile screen's Posts tab
+- `CollectionRepository.getUserCollectionFlow(userId: String): Flow<Either<AppError, List<UserFragrance>>>`
+  — the Collection tab
+- `ListingRepository.getUserListingsFlow(userId: String): Flow<Either<AppError, List<Listing>>>`
+  — the My Listings tab (`ProfileRoute.MyListings`)
+- `ReviewRepository.getUserReviewsFlow(userId: String): Flow<Either<AppError, List<Review>>>`
+  — the Reviews tab
+- `SocialRepository.getFollowersFlow(userId: String): Flow<Either<AppError, List<User>>>`
+  and `SocialRepository.getFollowingFlow(userId: String): Flow<Either<AppError, List<User>>>`
+  — the Followers/Following lists reachable from the profile stats
 
-### Mechanics
+Flow-returning repository methods are named with a `Flow` suffix (`getFeedFlow`,
+`getListingsFlow`), not an `observe`-prefix — this keeps the verb consistent with the
+existing `get...` naming used by the suspend methods, with the suffix as the only
+signal that the return type differs.
 
-For Flow SSOT methods:
-1. **Room is the single source of truth** — the only thing the UI observes.
-2. **Network calls are writers, not readers** — a fetch upserts into Room; Room's Flow-returning DAO query re-emits to every collector automatically.
-3. **Never return data from a network call directly** — write it to Room and let the existing Flow carry it.
+Network calls become **writers**, not readers, for these paths: a fetch upserts into
+Room, and Room's Flow-returning DAO query re-emits to every collector automatically.
+ViewModels for Feed, Marketplace, and Profile screens collect these Flows instead of
+calling a use case and pushing a one-shot result into `UiState`. The outer wrapper
+changes from `suspend` to `Flow`; the `Either<AppError, T>` error boundary is unchanged.
 
-### Example: Feed SSOT
-
-```kotlin
-// shared/src/commonMain/kotlin/domain/repository/PostRepository.kt
-interface PostRepository {
-    // Mutation — stays suspend, one-shot
-    suspend fun createPost(request: CreatePostRequest): Result<Post>
-
-    // Live-sensitive read — Flow SSOT, Room-backed
-    fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>>
-}
-
-// Implementation sketch
-class PostRepositoryImpl(
-    private val apiClient: ApiClient,
-    private val postDao: PostDao
-) : PostRepository {
-
-    override suspend fun createPost(request: CreatePostRequest): Result<Post> {
-        // Unchanged: suspend + Either (see Architecture Guidelines §2)
-        val request = apiClient.createPost(request)
-        return if (request.isSuccessful && request.data != null) {
-            request.data.toDomain().asRight()
-        } else {
-            AppError.Network(request.error).asLeft()
-        }
-    }
-
-    override fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>> =
-        postDao.observeFeed(page, limit) // Room Flow query — local DB is the only reader
-            .map { entities -> entities.map { it.toDomain() }.asRight() }
-            .onStart { refreshFeedFromNetwork(page, limit) } // network only ever writes
-            .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
-
-    private suspend fun refreshFeedFromNetwork(page: Int, limit: Int) {
-        val response = apiClient.getFeed(page, limit)
-        if (response.isSuccessful && response.data != null) {
-            postDao.upsertAll(response.data.map { it.toEntity() }) // triggers re-emission
-        }
-        // Network failure here is silent to the Flow by design — the last good
-        // Room state keeps rendering; surface the failure via a separate side channel
-        // (e.g. a SharedFlow<AppError>) if the screen needs to show a toast/snackbar.
-    }
-}
-```
+This decision applies only to the Feed, Marketplace, and Profile read paths in the
+shared KMP module. It does not apply to Search or any mutation-style repository
+method — adding a review or adding a bottle to a collection stays a `suspend fun
+...(): Either<AppError, Unit>` write; only the *read* that reflects the result of
+that write becomes a Flow.
 
 ## Consequences
 
-### Benefits
-- **Automatic cache invalidation** — Room's Flow automatically re-emits when the underlying data changes; no stale-data bugs or manual refresh logic at the ViewModel layer.
-- **Single source of truth** — all reads go through Room; writes go through Room; no drifting between a network response and local state.
-- **Scaling** — additional screens/collectors don't create additional network calls; they tap into the same Flow.
-- **Offline-first by design** — the last-good Room state always renders; network failures are surfaced via a side channel, not a blocking error.
+**Good**
+- Feed, Marketplace, and every Profile tab (Posts, Collection, My Listings, Reviews,
+  Followers/Following) reflect changes — likes, price updates, new listings, a review
+  or collection bottle just added, a new follower — as soon as the local DB is
+  written to, without a manual refresh or re-navigation.
+- The mandatory `Either<AppError, T>` boundary from `architecture-guidelines.md` is
+  preserved everywhere — this only changes the outer wrapper on the converted methods,
+  not the error-handling contract.
+- No repository-wide rewrite. Auth and every mutation-shaped repository method are
+  untouched, so most of the existing test suite doesn't change shape.
 
-### Costs
-- **Two shapes to maintain** — Repository classes must support both suspend and Flow methods; this requires discipline in design.
-- **Room cache-invalidation correctness** — upsert queries must be correct; incorrect upserts lead to inconsistent state or missed updates. See the Room section of Architecture Guidelines (§5) for invalidation rules.
-- **iOS Flow-bridging** — Kotlin Flow is coroutine-native; iOS doesn't have coroutines. ViewModels on iOS must bridge Flow to `StateFlow<>` or similar. See `composeApp/iosMain/` for the bridge implementation.
+**Bad**
+- Two repository shapes now coexist (`suspend`-`Either` and `Flow`-`Either`). Without
+  the rule stated above being followed consistently, new repository methods will be
+  added to whichever shape a given PR author reaches for first, and the boundary erodes.
+- Feed, Marketplace, and Profile need a real Room entity + DAO layer to become
+  authoritative caches — they currently only have stub DAOs (`CachedFragranceDao`,
+  `UserFragranceDao`) referenced in Koin's `databaseModule`, not a full write-through
+  schema for posts, listings, reviews, collection entries, and the follow graph. The
+  Profile screen alone now needs seven converted methods across six repositories
+  (`UserRepository`, `PostRepository`, `CollectionRepository`, `ListingRepository`,
+  `ReviewRepository`, `SocialRepository`), which is the largest single chunk of this
+  migration's Room surface.
+- Test surface changes for the converted methods only: assertions move from a single
+  suspend return to Flow emission sequences (Turbine), which is more test code per
+  method — and now spans seven Profile-tab methods on top of Feed and Marketplace.
+- Cache invalidation now matters in a way it didn't before. A stale suspend-based
+  cache previously meant one stale read; a stale or incorrectly-evicted Room row now
+  means every open collector keeps rendering wrong data until the next write. The
+  network writer has to upsert and evict correctly, not just "return what we got."
+- iOS Flow ergonomics: Swift has no native `Flow` collection. Feed, Marketplace, and
+  every Profile-tab ViewModel on iOS need a Flow-to-callback (or
+  `SkieKotlinFlow`-style) bridge that doesn't exist yet in `iosMain`.
 
-## Notes
+**Neutral**
+- Auth and Search screens are unaffected — they keep calling suspend use cases
+  exactly as they do today. Writes across all of Profile (submitting a review,
+  adding a bottle, following/unfollowing another user) also stay suspend-shaped;
+  only the reads that reflect them become Flow.
 
-**Don't convert a method to Flow SSOT just for consistency** — the two-shape split is intentional. If a method is genuinely one-shot (a mutation, or a read no other screen needs to see update live), it stays suspend. Mixing shapes intentionally is correct; mixing them accidentally is an antipattern.
+## Alternatives considered
 
-## Related
+**Full Flow SSOT (every repository method converted)** — rejected because it forces
+one-shot, mutation-style operations (login, create-post, checkout) into Flow shape
+they don't need, purely for repository-shape consistency. That's a full rewrite of
+every repository plus every consuming ViewModel, disproportionate to what the actual
+pain point (stale Feed, Marketplace, and Profile screens) requires at this stage of
+the project.
 
-- **Architecture Guidelines §2** (Error Handling) — both shapes use `Either<AppError, T>`.
-- **Architecture Guidelines §5** (Room & Data Layer) — cache-invalidation rules for SSOT correctness.
-- **ViewModel Pattern** — ViewModels on all platforms must observe Flow SSOT methods; suspend methods are observed on a one-shot basis.
+**Status quo (keep the ad-hoc suspend cache check everywhere)** — rejected because it
+leaves the actual problem unsolved: a like tapped on one screen still won't be
+reflected on the Feed screen behind it without a manual re-fetch, and the ticket that
+raised this was explicitly asking for the ad-hoc pattern to be reconsidered, not kept.
+
+## Revisit if
+
+- Scent adds real offline-write support (queued mutations, conflict resolution). At
+  that point Room-as-truth stops being optional for the read paths above and becomes
+  the only sane way to reconcile local writes against server state — likely widening
+  Flow SSOT to more repositories, which would supersede this ADR.
+- The set of screens needing live updates grows past Feed/Marketplace/Profile to the
+  point where maintaining two repository shapes costs more than standardizing on
+  Flow everywhere.
