@@ -57,6 +57,7 @@ dependencies {
 
     // Utils
     implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.testJunit)

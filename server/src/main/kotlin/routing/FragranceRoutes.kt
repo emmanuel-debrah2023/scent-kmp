@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.Concentration
 import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
@@ -40,7 +41,6 @@ import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -59,8 +59,8 @@ fun Route.fragranceRoutes() {
                     ?.toIntOrNull() ?: 20
 
             val result =
-                transaction {
-                    val dbQuery =
+                dbQuery {
+                    val dbQueryBuilder =
                         FragrancesTable.selectAll().where {
                             val activeFilter: Op<Boolean> = FragrancesTable.isActive eq true
                             val searchFilter: Op<Boolean> =
@@ -80,7 +80,7 @@ fun Route.fragranceRoutes() {
                         }
 
                     val rows =
-                        dbQuery
+                        dbQueryBuilder
                             .orderBy(FragrancesTable.id, SortOrder.DESC)
                             .limit(limit)
                             .toList()
@@ -101,13 +101,13 @@ fun Route.fragranceRoutes() {
                     )
 
             val fragrance =
-                transaction {
+                dbQuery {
                     val row =
                         FragrancesTable
                             .selectAll()
                             .where { FragrancesTable.id eq fragranceId }
                             .singleOrNull()
-                            ?: return@transaction null
+                            ?: return@dbQuery null
 
                     FragrancesTable.update({ FragrancesTable.id eq fragranceId }) {
                         it[viewCount] = FragrancesTable.viewCount plus 1
@@ -171,7 +171,7 @@ fun Route.fragranceRoutes() {
                     }
 
                 val fragranceId =
-                    transaction {
+                    dbQuery {
                         val id =
                             FragrancesTable
                                 .insertAndGetId {
