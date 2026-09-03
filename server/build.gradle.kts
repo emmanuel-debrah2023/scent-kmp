@@ -63,6 +63,8 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.h2)
+    testImplementation(libs.testcontainers.core)
+    testImplementation(libs.testcontainers.postgresql)
 }
 
 tasks.withType<Tar> {
