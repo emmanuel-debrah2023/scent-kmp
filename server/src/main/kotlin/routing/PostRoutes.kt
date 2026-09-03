@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.PostFragrancesTable
 import data.schema.PostHashtagsTable
 import data.schema.PostLikesTable
@@ -33,7 +34,6 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.scent.project.data.remote.dto.CreatePostRequest
 import org.scent.project.data.remote.dto.CreatePostResponseDto
@@ -63,7 +63,7 @@ fun Route.postRoutes() {
                         }
 
                 val postId =
-                    transaction {
+                    dbQuery {
                         val id =
                             PostsTable
                                 .insertAndGetId {
@@ -113,7 +113,7 @@ fun Route.postRoutes() {
                         ?: return@post this.call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid post ID"))
 
                 val (isLiked, newLikeCount) =
-                    transaction {
+                    dbQuery {
                         val alreadyLiked =
                             PostLikesTable
                                 .selectAll()
@@ -164,7 +164,7 @@ fun Route.postRoutes() {
                     ?.toIntOrNull() ?: 20
 
             val posts =
-                transaction {
+                dbQuery {
                     var query = PostsTable.selectAll()
                     if (cursor != null) {
                         query = query.where { PostsTable.id less cursor }
