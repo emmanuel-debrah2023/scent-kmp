@@ -1343,7 +1343,7 @@ class PostRepositoryImpl(
     }
 
     override fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>> =
-        postDao.observeFeed(page, limit) // Room Flow query — local DB is the only reader
+        postDao.getFeed(page, limit) // Room Flow query — local DB is the only reader
             .map { entities -> entities.map { it.toDomain() }.asRight() }
             .onStart { refreshFeedFromNetwork(page, limit) } // network only ever writes
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
