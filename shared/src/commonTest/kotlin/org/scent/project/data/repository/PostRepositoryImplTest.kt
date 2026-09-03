@@ -17,7 +17,13 @@ class PostRepositoryImplTest {
     private fun repo(
         api: FakePostApi = FakePostApi(),
         storage: FakeTokenStorage = FakeTokenStorage(),
-    ) = PostRepositoryImpl(api = api, tokenStorage = storage)
+    ) = PostRepositoryImpl(
+        api = api,
+        tokenStorage = storage,
+        postDao =
+            org.scent.project.fakes
+                .FakePostDao(),
+    )
 
     // -------------------------------------------------------------------------
     // getFeed

@@ -4,8 +4,10 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
+import androidx.room.TypeConverters
 import org.scent.project.data.local.dao.PostDao
 import org.scent.project.data.local.entity.PostEntity
+import org.scent.project.data.local.entity.PostListingEntity
 
 /**
  * Local single source of truth for the Flow-backed read paths (ADR-0001).
@@ -14,10 +16,11 @@ import org.scent.project.data.local.entity.PostEntity
  * version bump and a migration once the app ships with a populated database.
  */
 @Database(
-    entities = [PostEntity::class],
-    version = 1,
+    entities = [PostEntity::class, PostListingEntity::class],
+    version = 2,
     exportSchema = true,
 )
+@TypeConverters(Converters::class)
 @ConstructedBy(ScentDatabaseConstructor::class)
 abstract class ScentDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao

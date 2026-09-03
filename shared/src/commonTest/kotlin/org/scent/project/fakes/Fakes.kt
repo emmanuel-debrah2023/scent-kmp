@@ -207,6 +207,27 @@ class FakePostRepository : PostRepository {
     var lastLikePostId: String? = null
     var lastCreatePostParams: CreatePostParams? = null
 
+    /** Drive the SSOT read by emitting into this from a test. */
+    val feedFlow = MutableStateFlow<Result<List<Post>>>(emptyList<Post>().asRight())
+    var refreshFeedResult: Result<Unit> = Unit.asRight()
+    var loadMoreFeedResult: Result<Unit> = Unit.asRight()
+    var refreshFeedCallCount: Int = 0
+    var loadMoreFeedCallCount: Int = 0
+
+    override fun getFeedFlow(): Flow<Result<List<Post>>> = feedFlow
+
+    override suspend fun refreshFeed(limit: Int): Result<Unit> {
+        refreshFeedCallCount++
+        lastFeedLimit = limit
+        return refreshFeedResult
+    }
+
+    override suspend fun loadMoreFeed(limit: Int): Result<Unit> {
+        loadMoreFeedCallCount++
+        lastFeedLimit = limit
+        return loadMoreFeedResult
+    }
+
     override suspend fun getFeed(
         cursor: String?,
         limit: Int,

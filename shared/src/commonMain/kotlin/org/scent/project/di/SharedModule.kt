@@ -83,7 +83,9 @@ fun sharedModule(
     // Repositories
     single { AuthRepositoryImpl(api = get(), tokenStorage = get(), validator = get()) } bind AuthRepository::class
 
-    single { PostRepositoryImpl(api = get(), tokenStorage = get()) } bind PostRepository::class
+    single {
+        PostRepositoryImpl(api = get(), tokenStorage = get(), postDao = get())
+    } bind PostRepository::class
 
     single { FragranceRepositoryImpl(api = get()) } bind FragranceRepository::class
 
