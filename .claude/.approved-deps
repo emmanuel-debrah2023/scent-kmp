@@ -1,4 +1,8 @@
+androidx.room
+androidx.room:androidx.room.gradle.plugin
+androidx.sqlite:sqlite-bundled
 app.cash.turbine:turbine
+com.google.devtools.ksp
 com.h2database:h2
 io.gitlab.arturbosch.detekt:detekt-formatting
 io.nlopez.compose.rules:detekt

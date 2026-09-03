@@ -21,6 +21,10 @@ subprojects {
         filter {
             exclude("**/generated/**")
             exclude("**/build/**")
+            // The patterns above are matched relative to each source-set root, so they
+            // miss KSP/Room output under build/generated that the KMP plugin registers
+            // as a source directory. Match on the absolute path instead.
+            exclude { it.file.absolutePath.contains("${File.separator}build${File.separator}") }
         }
     }
 
