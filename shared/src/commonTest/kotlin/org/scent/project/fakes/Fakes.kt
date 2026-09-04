@@ -33,6 +33,7 @@ import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.model.ListingPage
+import org.scent.project.domain.model.ListingQuery
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.UpdateListingParams
 import org.scent.project.domain.repository.AuthRepository
@@ -207,6 +208,27 @@ class FakePostRepository : PostRepository {
     var lastLikePostId: String? = null
     var lastCreatePostParams: CreatePostParams? = null
 
+    /** Drive the SSOT read by emitting into this from a test. */
+    val feedFlow = MutableStateFlow<Result<List<Post>>>(emptyList<Post>().asRight())
+    var refreshFeedResult: Result<Unit> = Unit.asRight()
+    var loadMoreFeedResult: Result<Unit> = Unit.asRight()
+    var refreshFeedCallCount: Int = 0
+    var loadMoreFeedCallCount: Int = 0
+
+    override fun getFeedFlow(): Flow<Result<List<Post>>> = feedFlow
+
+    override suspend fun refreshFeed(limit: Int): Result<Unit> {
+        refreshFeedCallCount++
+        lastFeedLimit = limit
+        return refreshFeedResult
+    }
+
+    override suspend fun loadMoreFeed(limit: Int): Result<Unit> {
+        loadMoreFeedCallCount++
+        lastFeedLimit = limit
+        return loadMoreFeedResult
+    }
+
     override suspend fun getFeed(
         cursor: String?,
         limit: Int,
@@ -262,6 +284,52 @@ class FakeFragranceRepository : FragranceRepository {
 // -------------------------------------------------------------------------
 
 class FakeListingRepository : ListingRepository {
+    /** Drive the SSOT reads by emitting into these from a test. */
+    val listingsFlow = MutableStateFlow<Result<List<Listing>>>(emptyList<Listing>().asRight())
+    val userListingsFlow = MutableStateFlow<Result<List<Listing>>>(emptyList<Listing>().asRight())
+    val listingDetailFlow = MutableStateFlow<Result<Listing>>(AppError.Unknown().asLeft())
+
+    var refreshListingsResult: Result<Unit> = Unit.asRight()
+    var loadMoreListingsResult: Result<Unit> = Unit.asRight()
+    var refreshListingResult: Result<Unit> = Unit.asRight()
+    var refreshMyListingsResult: Result<Unit> = Unit.asRight()
+
+    var refreshListingsCallCount: Int = 0
+    var loadMoreListingsCallCount: Int = 0
+    var refreshMyListingsCallCount: Int = 0
+    var lastQuery: ListingQuery? = null
+    var lastRefreshedListingId: Int? = null
+
+    override fun getListingsFlow(): Flow<Result<List<Listing>>> = listingsFlow
+
+    override fun getListingDetailFlow(id: Int): Flow<Result<Listing>> = listingDetailFlow
+
+    override fun getUserListingsFlow(sellerId: Int): Flow<Result<List<Listing>>> = userListingsFlow
+
+    override suspend fun refreshListings(
+        query: ListingQuery,
+        limit: Int,
+    ): Result<Unit> {
+        refreshListingsCallCount++
+        lastQuery = query
+        return refreshListingsResult
+    }
+
+    override suspend fun loadMoreListings(limit: Int): Result<Unit> {
+        loadMoreListingsCallCount++
+        return loadMoreListingsResult
+    }
+
+    override suspend fun refreshListing(id: Int): Result<Unit> {
+        lastRefreshedListingId = id
+        return refreshListingResult
+    }
+
+    override suspend fun refreshMyListings(): Result<Unit> {
+        refreshMyListingsCallCount++
+        return refreshMyListingsResult
+    }
+
     var getListingsResult: Result<ListingPage> = AppError.Unknown().asLeft()
     var brandSuggestionsResult: Result<List<String>> = emptyList<String>().asRight()
     var createListingResult: Result<Listing> = AppError.Unknown().asLeft()
