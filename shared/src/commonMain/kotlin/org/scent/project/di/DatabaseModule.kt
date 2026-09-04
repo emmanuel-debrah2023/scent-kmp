@@ -31,4 +31,12 @@ fun databaseModule(databaseFactory: ScentDatabaseFactory) =
         single { get<ScentDatabase>().postDao() }
 
         single { get<ScentDatabase>().listingDao() }
+
+        single { get<ScentDatabase>().collectionDao() }
+
+        single { get<ScentDatabase>().reviewDao() }
+
+        single { get<ScentDatabase>().userDao() }
+
+        single { get<ScentDatabase>().followDao() }
     }

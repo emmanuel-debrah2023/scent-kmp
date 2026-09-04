@@ -5,13 +5,21 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
+import org.scent.project.data.local.dao.CollectionDao
+import org.scent.project.data.local.dao.FollowDao
 import org.scent.project.data.local.dao.ListingDao
 import org.scent.project.data.local.dao.PostDao
+import org.scent.project.data.local.dao.ReviewDao
+import org.scent.project.data.local.dao.UserDao
+import org.scent.project.data.local.entity.CollectionEntryEntity
+import org.scent.project.data.local.entity.FollowEntity
 import org.scent.project.data.local.entity.FragranceEntity
 import org.scent.project.data.local.entity.FragranceNoteEntity
 import org.scent.project.data.local.entity.ListingEntity
 import org.scent.project.data.local.entity.PostEntity
 import org.scent.project.data.local.entity.PostListingEntity
+import org.scent.project.data.local.entity.ReviewEntity
+import org.scent.project.data.local.entity.UserEntity
 
 /**
  * Local single source of truth for the Flow-backed read paths (ADR-0001).
@@ -26,8 +34,12 @@ import org.scent.project.data.local.entity.PostListingEntity
         ListingEntity::class,
         FragranceEntity::class,
         FragranceNoteEntity::class,
+        CollectionEntryEntity::class,
+        ReviewEntity::class,
+        UserEntity::class,
+        FollowEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -36,6 +48,14 @@ abstract class ScentDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
 
     abstract fun listingDao(): ListingDao
+
+    abstract fun collectionDao(): CollectionDao
+
+    abstract fun reviewDao(): ReviewDao
+
+    abstract fun userDao(): UserDao
+
+    abstract fun followDao(): FollowDao
 
     companion object {
         const val FILE_NAME: String = "scent.db"
