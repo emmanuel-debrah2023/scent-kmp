@@ -29,4 +29,6 @@ fun databaseModule(databaseFactory: ScentDatabaseFactory) =
         }
 
         single { get<ScentDatabase>().postDao() }
+
+        single { get<ScentDatabase>().listingDao() }
     }

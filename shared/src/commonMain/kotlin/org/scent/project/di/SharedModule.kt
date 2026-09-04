@@ -89,7 +89,8 @@ fun sharedModule(
 
     single { FragranceRepositoryImpl(api = get()) } bind FragranceRepository::class
 
-    single { ListingRepositoryImpl(api = get(), tokenStorage = get()) } bind ListingRepository::class
+    single { ListingRepositoryImpl(api = get(), tokenStorage = get(), listingDao = get()) } bind
+        ListingRepository::class
 
     single { MediaRepositoryImpl(api = get(), tokenStorage = get()) } bind MediaRepository::class
 

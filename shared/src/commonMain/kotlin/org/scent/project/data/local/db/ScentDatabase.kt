@@ -5,7 +5,11 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
+import org.scent.project.data.local.dao.ListingDao
 import org.scent.project.data.local.dao.PostDao
+import org.scent.project.data.local.entity.FragranceEntity
+import org.scent.project.data.local.entity.FragranceNoteEntity
+import org.scent.project.data.local.entity.ListingEntity
 import org.scent.project.data.local.entity.PostEntity
 import org.scent.project.data.local.entity.PostListingEntity
 
@@ -16,14 +20,22 @@ import org.scent.project.data.local.entity.PostListingEntity
  * version bump and a migration once the app ships with a populated database.
  */
 @Database(
-    entities = [PostEntity::class, PostListingEntity::class],
-    version = 2,
+    entities = [
+        PostEntity::class,
+        PostListingEntity::class,
+        ListingEntity::class,
+        FragranceEntity::class,
+        FragranceNoteEntity::class,
+    ],
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
 @ConstructedBy(ScentDatabaseConstructor::class)
 abstract class ScentDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
+
+    abstract fun listingDao(): ListingDao
 
     companion object {
         const val FILE_NAME: String = "scent.db"

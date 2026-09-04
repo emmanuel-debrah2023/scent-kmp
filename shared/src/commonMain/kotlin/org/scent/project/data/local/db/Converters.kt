@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 object Converters {
     private val json = Json { ignoreUnknownKeys = true }
     private val serializer = ListSerializer(String.serializer())
+    private val intSerializer = ListSerializer(Int.serializer())
 
     @TypeConverter
     fun fromStringList(value: List<String>): String = json.encodeToString(serializer, value)
@@ -24,6 +25,17 @@ object Converters {
             json.decodeFromString(serializer, value)
         } catch (_: IllegalArgumentException) {
             // A malformed cache row must not crash the read; the next refresh overwrites it.
+            emptyList()
+        }
+
+    @TypeConverter
+    fun fromIntList(value: List<Int>): String = json.encodeToString(intSerializer, value)
+
+    @TypeConverter
+    fun toIntList(value: String): List<Int> =
+        try {
+            json.decodeFromString(intSerializer, value)
+        } catch (_: IllegalArgumentException) {
             emptyList()
         }
 }
