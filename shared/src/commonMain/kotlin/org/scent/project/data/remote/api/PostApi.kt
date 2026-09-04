@@ -22,6 +22,11 @@ interface PostApi {
         token: String? = null,
     ): FeedResponseDto
 
+    suspend fun getUserPosts(
+        userId: Int,
+        token: String?,
+    ): FeedResponseDto
+
     suspend fun likePost(
         postId: String,
         token: String,
@@ -48,6 +53,15 @@ class PostApiImpl(
             .get("$postsUrl/feed") {
                 cursor?.let { parameter("cursor", it) }
                 parameter("limit", limit)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+            }.body()
+
+    override suspend fun getUserPosts(
+        userId: Int,
+        token: String?,
+    ): FeedResponseDto =
+        httpClient
+            .get("$baseUrl/api/v1/users/$userId/posts") {
                 token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
             }.body()
 

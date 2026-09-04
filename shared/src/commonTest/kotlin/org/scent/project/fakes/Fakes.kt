@@ -2,11 +2,29 @@ package org.scent.project.fakes
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import org.scent.project.data.local.TokenStorage
+import org.scent.project.data.local.dao.CollectionDao
+import org.scent.project.data.local.dao.FollowDao
+import org.scent.project.data.local.dao.ReviewDao
+import org.scent.project.data.local.dao.UserDao
+import org.scent.project.data.local.entity.CollectionEntryEntity
+import org.scent.project.data.local.entity.CollectionEntryWithFragrance
+import org.scent.project.data.local.entity.FollowEntity
+import org.scent.project.data.local.entity.FragranceEntity
+import org.scent.project.data.local.entity.FragranceNoteEntity
+import org.scent.project.data.local.entity.FragranceWithNotes
+import org.scent.project.data.local.entity.ReviewEntity
+import org.scent.project.data.local.entity.ReviewWithFragrance
+import org.scent.project.data.local.entity.UserEntity
 import org.scent.project.data.remote.api.AuthApi
+import org.scent.project.data.remote.api.CollectionApi
 import org.scent.project.data.remote.api.FragranceApi
 import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.api.PostApi
+import org.scent.project.data.remote.api.ProfileApi
+import org.scent.project.data.remote.api.ReviewApi
+import org.scent.project.data.remote.api.UserApi
 import org.scent.project.data.remote.dto.AuthResponse
 import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.CreateListingRequest
@@ -22,6 +40,9 @@ import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
 import org.scent.project.data.remote.dto.UpdateListingRequestDto
+import org.scent.project.data.remote.dto.UserCollectionResponseDto
+import org.scent.project.data.remote.dto.UserResponse
+import org.scent.project.data.remote.dto.UserReviewsResponseDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthState
 import org.scent.project.domain.model.AuthUser
@@ -247,6 +268,18 @@ class FakePostRepository : PostRepository {
         lastCreatePostParams = params
         return createPostResult
     }
+
+    /** Drive the SSOT user-posts read by emitting into this from a test. */
+    val userPostsFlow = MutableStateFlow<Result<List<Post>>>(emptyList<Post>().asRight())
+    var getUserPostsResult: Result<List<Post>> = AppError.Unknown().asLeft()
+    var lastUserPostsUserId: String? = null
+
+    override fun getUserPostsFlow(userId: String): Flow<Result<List<Post>>> = userPostsFlow
+
+    override suspend fun getUserPosts(userId: String): Result<List<Post>> {
+        lastUserPostsUserId = userId
+        return getUserPostsResult
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -430,6 +463,9 @@ class FakePostApi : PostApi {
     var feedResponse: FeedResponseDto? = null
     var feedException: Exception? = null
 
+    var userPostsResponse: FeedResponseDto? = null
+    var userPostsException: Exception? = null
+
     var likeResponse: LikeResponseDto? = null
     var likeException: Exception? = null
 
@@ -443,6 +479,14 @@ class FakePostApi : PostApi {
     ): FeedResponseDto {
         feedException?.let { throw it }
         return feedResponse ?: error("FakePostApi.feedResponse not set")
+    }
+
+    override suspend fun getUserPosts(
+        userId: Int,
+        token: String?,
+    ): FeedResponseDto {
+        userPostsException?.let { throw it }
+        return userPostsResponse ?: error("FakePostApi.userPostsResponse not set")
     }
 
     override suspend fun likePost(
@@ -622,5 +666,264 @@ class FakeMediaRepository : MediaRepository {
     override suspend fun completeUpload(uid: String): Result<Int> {
         lastCompletedUid = uid
         return completeUploadResult
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeProfileApi
+// -------------------------------------------------------------------------
+
+class FakeProfileApi : ProfileApi {
+    var userCollectionResponse: UserCollectionResponseDto? = null
+    var userCollectionException: Exception? = null
+    var feedResponse: FeedResponseDto? = null
+    var feedException: Exception? = null
+
+    override suspend fun getUserWishlist(
+        userId: Int,
+        token: String?,
+    ): UserCollectionResponseDto {
+        userCollectionException?.let { throw it }
+        return userCollectionResponse ?: error("FakeProfileApi.userCollectionResponse not set")
+    }
+
+    override suspend fun getUserLikes(
+        userId: Int,
+        token: String?,
+    ): FeedResponseDto {
+        feedException?.let { throw it }
+        return feedResponse ?: error("FakeProfileApi.feedResponse not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeCollectionApi
+// -------------------------------------------------------------------------
+
+class FakeCollectionApi : CollectionApi {
+    var response: UserCollectionResponseDto? = null
+    var exception: Exception? = null
+
+    override suspend fun getUserCollection(
+        userId: Int,
+        token: String?,
+    ): UserCollectionResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeCollectionApi.response not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeReviewApi
+// -------------------------------------------------------------------------
+
+class FakeReviewApi : ReviewApi {
+    var response: UserReviewsResponseDto? = null
+    var exception: Exception? = null
+
+    override suspend fun getUserReviews(
+        userId: Int,
+        token: String?,
+    ): UserReviewsResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeReviewApi.response not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeUserApi
+// -------------------------------------------------------------------------
+
+class FakeUserApi : UserApi {
+    var response: UserResponse? = null
+    var exception: Exception? = null
+
+    override suspend fun getProfile(
+        userId: Int,
+        token: String?,
+    ): UserResponse {
+        exception?.let { throw it }
+        return response ?: error("FakeUserApi.response not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeCollectionDao
+// -------------------------------------------------------------------------
+
+class FakeCollectionDao : CollectionDao {
+    private val entries = MutableStateFlow<List<CollectionEntryEntity>>(emptyList())
+    private val fragrances = MutableStateFlow<List<FragranceEntity>>(emptyList())
+    private val notes = MutableStateFlow<List<FragranceNoteEntity>>(emptyList())
+
+    /** Set to make reads fail, covering the Flow's error path. */
+    var readException: Throwable? = null
+
+    private fun CollectionEntryEntity.join(): CollectionEntryWithFragrance {
+        val fragrance = fragrances.value.firstOrNull { it.id == fragranceId }
+        return CollectionEntryWithFragrance(
+            entry = this,
+            fragrance =
+                fragrance?.let { f ->
+                    FragranceWithNotes(f, notes.value.filter { it.fragranceId == f.id })
+                },
+        )
+    }
+
+    override fun getUserCollection(userId: Int): Flow<List<CollectionEntryWithFragrance>> =
+        entries.map { rows ->
+            readException?.let { throw it }
+            rows
+                .filter { it.userId == userId && it.status != "WISHLIST" }
+                .sortedByDescending { it.addedAt }
+                .map { it.join() }
+        }
+
+    override suspend fun upsertEntries(entries: List<CollectionEntryEntity>) {
+        val incoming = entries.associateBy { it.userId to it.fragranceId }
+        this.entries.value = this.entries.value.filterNot { (it.userId to it.fragranceId) in incoming.keys } + entries
+    }
+
+    override suspend fun upsertFragrances(fragrances: List<FragranceEntity>) {
+        val incoming = fragrances.associateBy { it.id }
+        this.fragrances.value = this.fragrances.value.filterNot { it.id in incoming.keys } + fragrances
+    }
+
+    override suspend fun upsertFragranceNotes(notes: List<FragranceNoteEntity>) {
+        val incoming = notes.map { it.fragranceId to it.position }.toSet()
+        this.notes.value = this.notes.value.filterNot { (it.fragranceId to it.position) in incoming } + notes
+    }
+
+    override suspend fun deleteNotesFor(fragranceIds: List<Int>) {
+        notes.value = notes.value.filterNot { it.fragranceId in fragranceIds }
+    }
+
+    override suspend fun deleteUserCollection(userId: Int) {
+        entries.value = entries.value.filterNot { it.userId == userId }
+    }
+
+    override suspend fun replaceUserCollection(
+        userId: Int,
+        entries: List<CollectionEntryEntity>,
+        fragrances: List<FragranceEntity>,
+        notes: List<FragranceNoteEntity>,
+    ) {
+        deleteUserCollection(userId)
+        upsertFragrances(fragrances)
+        deleteNotesFor(fragrances.map { it.id })
+        upsertFragranceNotes(notes)
+        upsertEntries(entries)
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeReviewDao
+// -------------------------------------------------------------------------
+
+class FakeReviewDao : ReviewDao {
+    private val reviews = MutableStateFlow<List<ReviewEntity>>(emptyList())
+    private val fragrances = MutableStateFlow<List<FragranceEntity>>(emptyList())
+    private val notes = MutableStateFlow<List<FragranceNoteEntity>>(emptyList())
+
+    /** Set to make reads fail, covering the Flow's error path. */
+    var readException: Throwable? = null
+
+    private fun ReviewEntity.join(): ReviewWithFragrance {
+        val fragrance = fragrances.value.firstOrNull { it.id == fragranceId }
+        return ReviewWithFragrance(
+            review = this,
+            fragrance =
+                fragrance?.let { f ->
+                    FragranceWithNotes(f, notes.value.filter { it.fragranceId == f.id })
+                },
+        )
+    }
+
+    override fun getUserReviews(userId: Int): Flow<List<ReviewWithFragrance>> =
+        reviews.map { rows ->
+            readException?.let { throw it }
+            rows
+                .filter { it.reviewerId == userId }
+                .sortedByDescending { it.createdAt }
+                .map { it.join() }
+        }
+
+    override suspend fun upsertReviews(reviews: List<ReviewEntity>) {
+        val incoming = reviews.associateBy { it.id }
+        this.reviews.value = this.reviews.value.filterNot { it.id in incoming.keys } + reviews
+    }
+
+    override suspend fun upsertFragrances(fragrances: List<FragranceEntity>) {
+        val incoming = fragrances.associateBy { it.id }
+        this.fragrances.value = this.fragrances.value.filterNot { it.id in incoming.keys } + fragrances
+    }
+
+    override suspend fun upsertFragranceNotes(notes: List<FragranceNoteEntity>) {
+        val incoming = notes.map { it.fragranceId to it.position }.toSet()
+        this.notes.value = this.notes.value.filterNot { (it.fragranceId to it.position) in incoming } + notes
+    }
+
+    override suspend fun deleteNotesFor(fragranceIds: List<Int>) {
+        notes.value = notes.value.filterNot { it.fragranceId in fragranceIds }
+    }
+
+    override suspend fun deleteUserReviews(userId: Int) {
+        reviews.value = reviews.value.filterNot { it.reviewerId == userId }
+    }
+
+    override suspend fun replaceUserReviews(
+        userId: Int,
+        reviews: List<ReviewEntity>,
+        fragrances: List<FragranceEntity>,
+        notes: List<FragranceNoteEntity>,
+    ) {
+        deleteUserReviews(userId)
+        upsertFragrances(fragrances)
+        deleteNotesFor(fragrances.map { it.id })
+        upsertFragranceNotes(notes)
+        upsertReviews(reviews)
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeUserDao
+// -------------------------------------------------------------------------
+
+class FakeUserDao : UserDao {
+    private val user = MutableStateFlow<UserEntity?>(null)
+
+    override fun getUser(userId: Int): Flow<UserEntity?> = user
+
+    override suspend fun upsertUser(user: UserEntity) {
+        this.user.value = user
+    }
+
+    fun insertUser(user: UserEntity) {
+        this.user.value = user
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeFollowDao
+// -------------------------------------------------------------------------
+
+class FakeFollowDao : FollowDao {
+    private val followerCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
+    private val followingCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
+
+    override fun getFollowerCount(userId: Int): Flow<Int> = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
+
+    override fun getFollowingCount(userId: Int): Flow<Int> = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
+
+    override suspend fun upsertFollow(follow: FollowEntity) {}
+
+    fun addFollower(userId: Int) {
+        val flow = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
+        flow.value = (flow.value) + 1
+    }
+
+    fun addFollowing(userId: Int) {
+        val flow = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
+        flow.value = (flow.value) + 1
     }
 }
