@@ -7,6 +7,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.local.dao.ListingDao
+import org.scent.project.data.local.entity.BrowseMetadataEntity
 import org.scent.project.data.mapper.ListingEntityMapper.notCached
 import org.scent.project.data.mapper.ListingEntityMapper.toDomain
 import org.scent.project.data.mapper.ListingEntityMapper.toDomainList
@@ -22,7 +23,6 @@ import org.scent.project.data.remote.dto.UpdateListingRequestDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.CreateListingParams
 import org.scent.project.domain.model.Listing
-import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.model.ListingQuery
 import org.scent.project.domain.model.UpdateListingParams
 import org.scent.project.domain.repository.ListingRepository
@@ -63,6 +63,8 @@ class ListingRepositoryImpl(
             .getListingsBySeller(sellerId)
             .map { it.toDomainList() }
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
+
+    override fun getBrowseTotalCountFlow(): Flow<Int?> = listingDao.getBrowseTotalCount()
 
     override suspend fun refreshListings(
         query: ListingQuery,
@@ -116,6 +118,7 @@ class ListingRepositoryImpl(
                 notes = dtos.noteEntities(),
                 resetBrowse = !append,
             )
+            listingDao.upsertBrowseMetadata(BrowseMetadataEntity(totalCount = response.totalCount))
 
             browseCursor = response.nextCursor
             browseExhausted = response.nextCursor == null || dtos.isEmpty()
@@ -162,23 +165,6 @@ class ListingRepositoryImpl(
         mapNotNull { it.fragrance }
             .distinctBy { it.id }
             .flatMap { it.toNoteEntities() }
-
-    override suspend fun getListings(
-        cursor: String?,
-        limit: Int,
-        brand: String?,
-        condition: String?,
-        volume: Int?,
-        minPrice: Double?,
-        maxPrice: Double?,
-    ): Result<ListingPage> =
-        safeApiCall(
-            onHttpError = { status ->
-                AppError.NetworkError.ServerError(statusCode = status).asLeft()
-            },
-        ) {
-            api.getListings(cursor, limit, brand, condition, volume, minPrice, maxPrice).toListingPage().asRight()
-        }
 
     override suspend fun getBrandSuggestions(
         query: String,

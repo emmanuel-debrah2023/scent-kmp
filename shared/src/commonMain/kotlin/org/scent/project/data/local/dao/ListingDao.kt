@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+import org.scent.project.data.local.entity.BrowseMetadataEntity
 import org.scent.project.data.local.entity.FragranceEntity
 import org.scent.project.data.local.entity.FragranceNoteEntity
 import org.scent.project.data.local.entity.ListingEntity
@@ -35,6 +36,13 @@ interface ListingDao {
 
     @Query("SELECT COALESCE(MAX(browsePosition), -1) FROM listings")
     suspend fun maxBrowsePosition(): Int
+
+    /** The server's reported total for the current browse query, if it sent one. */
+    @Query("SELECT totalCount FROM browse_metadata WHERE id = 0")
+    fun getBrowseTotalCount(): Flow<Int?>
+
+    @Upsert
+    suspend fun upsertBrowseMetadata(metadata: BrowseMetadataEntity)
 
     @Upsert
     suspend fun upsertListings(listings: List<ListingEntity>)

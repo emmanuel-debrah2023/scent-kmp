@@ -1,12 +1,10 @@
 package org.scent.project.data.mapper
 
-import org.scent.project.data.remote.dto.FeedResponseDto
 import org.scent.project.data.remote.dto.LikeResponseDto
 import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.ContentFormat
-import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.PostListing
@@ -68,11 +66,6 @@ object PostMapper {
     }
 
     fun List<PostDto>.toDomainList(): List<Post> = mapNotNull { it.toDomain().getOrNull() }
-
-    fun FeedResponseDto.toFeedPage(): Result<FeedPage> {
-        val posts = posts?.toDomainList() ?: emptyList()
-        return FeedPage(posts = posts, nextCursor = nextCursor).asRight()
-    }
 
     fun LikeResponseDto.toLikeResult(): Result<LikeResult> {
         val isLiked =

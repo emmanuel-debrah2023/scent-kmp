@@ -1,9 +1,7 @@
 package org.scent.project.data.mapper
 
 import org.scent.project.data.mapper.PostMapper.toDomain
-import org.scent.project.data.mapper.PostMapper.toFeedPage
 import org.scent.project.data.mapper.PostMapper.toLikeResult
-import org.scent.project.data.remote.dto.FeedResponseDto
 import org.scent.project.data.remote.dto.LikeResponseDto
 import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
@@ -91,47 +89,6 @@ class PostMapperTest {
         val result = dto.toDomain()
         assertTrue(result.isRight)
         assertEquals(emptyList(), result.getOrNull()!!.fragranceIds)
-    }
-
-    // -------------------------------------------------------------------------
-    // FeedResponseDto.toFeedPage
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `toFeedPage maps valid response with posts and cursor`() {
-        val feedDto =
-            FeedResponseDto(
-                posts =
-                    listOf(
-                        PostDto(
-                            id = "1",
-                            userId = "u1",
-                            fragranceIds = listOf("f1"),
-                            createdAt = 100L,
-                        ),
-                    ),
-                nextCursor = "cursor_1",
-            )
-
-        val result = feedDto.toFeedPage()
-
-        assertTrue(result.isRight)
-        val page = result.getOrNull()!!
-        assertEquals(1, page.posts.size)
-        assertEquals("1", page.posts[0].id)
-        assertEquals("cursor_1", page.nextCursor)
-    }
-
-    @Test
-    fun `toFeedPage defaults to empty list when posts is null`() {
-        val feedDto = FeedResponseDto(posts = null, nextCursor = null)
-
-        val result = feedDto.toFeedPage()
-
-        assertTrue(result.isRight)
-        val page = result.getOrNull()!!
-        assertTrue(page.posts.isEmpty())
-        assertEquals(null, page.nextCursor)
     }
 
     // -------------------------------------------------------------------------
