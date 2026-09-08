@@ -54,7 +54,7 @@ object ProfileMapper {
             fragrance = fragranceDomain,
             rating = rating,
             content = content ?: "",
-            createdAt = createdAt,
+            createdAt = createdAt ?: 0L,
         ).asRight()
     }
 
