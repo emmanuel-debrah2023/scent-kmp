@@ -12,3 +12,8 @@ data class UserResponse(
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("bio") val bio: String? = null,
 )
+
+@Serializable
+data class UserListResponseDto(
+    val users: List<UserResponse>? = null,
+)
