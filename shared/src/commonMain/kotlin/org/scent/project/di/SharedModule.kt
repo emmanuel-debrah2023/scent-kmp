@@ -48,10 +48,8 @@ import org.scent.project.domain.usecase.CreateListingUseCase
 import org.scent.project.domain.usecase.DeleteListingUseCase
 import org.scent.project.domain.usecase.GetBrandSuggestionsUseCase
 import org.scent.project.domain.usecase.GetCurrentUserUseCase
-import org.scent.project.domain.usecase.GetFeedUseCase
 import org.scent.project.domain.usecase.GetFragranceDetailUseCase
 import org.scent.project.domain.usecase.GetListingUseCase
-import org.scent.project.domain.usecase.GetListingsUseCase
 import org.scent.project.domain.usecase.GetMyListingsUseCase
 import org.scent.project.domain.usecase.GetUserCollectionUseCase
 import org.scent.project.domain.usecase.GetUserLikesUseCase
@@ -170,8 +168,6 @@ fun sharedModule(
     factory { ObserveAuthStateUseCase(repository = get()) }
 
     // Feed / Posts
-    factory { GetFeedUseCase(repository = get()) }
-
     factory { LikePostUseCase(repository = get()) }
 
     // Fragrances
@@ -180,8 +176,6 @@ fun sharedModule(
     factory { GetFragranceDetailUseCase(repository = get()) }
 
     // Listings
-    factory { GetListingsUseCase(repository = get()) }
-
     factory { GetBrandSuggestionsUseCase(repository = get()) }
 
     factory { CreateListingUseCase(repository = get(), validator = get()) }

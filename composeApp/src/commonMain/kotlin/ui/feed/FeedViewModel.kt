@@ -4,9 +4,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.scent.project.domain.model.Post
-import org.scent.project.domain.usecase.GetFeedUseCase
+import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.usecase.LikePostUseCase
 import ui.base.BaseViewModel
 import ui.base.UiState
@@ -14,63 +15,81 @@ import ui.base.UiState
 data class FeedState(
     val posts: List<Post>,
     val communityItems: List<CommunityFeedItem>,
-    val nextCursor: String?,
     val isLoadingMore: Boolean = false,
 )
 
 class FeedViewModel(
-    private val getFeedUseCase: GetFeedUseCase,
+    private val postRepository: PostRepository,
     private val likePostUseCase: LikePostUseCase,
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow<UiState<FeedState>>(UiState.Idle)
     val uiState: StateFlow<UiState<FeedState>> = _uiState.asStateFlow()
 
+    // Gates the Flow collector's Success emissions: without it, Room's immediate
+    // (possibly empty, possibly stale) cache read would flash over the Loading
+    // state set below while the first refreshFeed() is still in flight.
+    private val ready = MutableStateFlow(false)
+    private var collecting = false
+
     fun loadFeed(refresh: Boolean = false) {
         if (!refresh && _uiState.value is UiState.Success) return
+        startCollectingIfNeeded()
+        ready.value = false
+        _uiState.value = UiState.Loading
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            getFeedUseCase().handleResult(
-                onSuccess = { page ->
-                    _uiState.value =
-                        UiState.Success(
-                            FeedState(
-                                posts = page.posts,
-                                communityItems = page.posts.toCommunityFeedItems(),
-                                nextCursor = page.nextCursor,
-                            ),
-                        )
-                },
-                onError = { error ->
-                    _uiState.value = UiState.Error(error)
-                },
+            postRepository.refreshFeed().handleResult(
+                onSuccess = { ready.value = true },
+                onError = { error -> _uiState.value = UiState.Error(error) },
             )
         }
     }
 
-    // TODO(feature/feed-infinite-scroll): fully implemented — cursor merge, isLoadingMore
-    // guard, error rollback — but has no call site anywhere in the app. The Community
+    private fun startCollectingIfNeeded() {
+        if (collecting) return
+        collecting = true
+        viewModelScope.launch {
+            val feedAndReady =
+                combine(postRepository.getFeedFlow(), ready) { result, isReady -> result to isReady }
+            feedAndReady.collect { (result, isReady) ->
+                if (!isReady) return@collect
+                result.handleResult(
+                    onSuccess = { posts ->
+                        val current = (_uiState.value as? UiState.Success)?.data
+                        _uiState.value =
+                            UiState.Success(
+                                FeedState(
+                                    posts = posts,
+                                    communityItems = posts.toCommunityFeedItems(),
+                                    isLoadingMore = current?.isLoadingMore ?: false,
+                                ),
+                            )
+                    },
+                    onError = { error -> _uiState.value = UiState.Error(error) },
+                )
+            }
+        }
+    }
+
+    // TODO(feature/feed-infinite-scroll): fully implemented — isLoadingMore guard,
+    // error rollback — but has no call site anywhere in the app. The Community
     // feed's LazyColumn in HomeFullBleedScreen.kt never reaches the end of its list to
     // trigger it (see fix/feed-loading-error-states for the related UiState gap on the
     // same screen).
     fun loadNextPage() {
         val current = (_uiState.value as? UiState.Success)?.data ?: return
-        if (current.nextCursor == null || current.isLoadingMore) return
+        if (current.isLoadingMore) return
         viewModelScope.launch {
             _uiState.value = UiState.Success(current.copy(isLoadingMore = true))
-            getFeedUseCase(cursor = current.nextCursor).handleResult(
-                onSuccess = { page ->
-                    val mergedPosts = current.posts + page.posts
-                    _uiState.value =
-                        UiState.Success(
-                            FeedState(
-                                posts = mergedPosts,
-                                communityItems = mergedPosts.toCommunityFeedItems(),
-                                nextCursor = page.nextCursor,
-                            ),
-                        )
+            postRepository.loadMoreFeed().handleResult(
+                onSuccess = {
+                    val latest = (_uiState.value as? UiState.Success)?.data ?: return@handleResult
+                    _uiState.value = UiState.Success(latest.copy(isLoadingMore = false))
                 },
                 onError = { error ->
-                    _uiState.value = UiState.Success(current.copy(isLoadingMore = false))
+                    val latest = (_uiState.value as? UiState.Success)?.data
+                    if (latest != null) {
+                        _uiState.value = UiState.Success(latest.copy(isLoadingMore = false))
+                    }
                     handleError(error)
                 },
             )

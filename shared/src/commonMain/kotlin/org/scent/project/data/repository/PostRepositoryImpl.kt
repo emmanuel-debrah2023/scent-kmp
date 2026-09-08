@@ -11,7 +11,6 @@ import org.scent.project.data.mapper.PostEntityMapper.toDomainList
 import org.scent.project.data.mapper.PostEntityMapper.toEntity
 import org.scent.project.data.mapper.PostEntityMapper.toListingEntities
 import org.scent.project.data.mapper.PostMapper.toDomain
-import org.scent.project.data.mapper.PostMapper.toFeedPage
 import org.scent.project.data.mapper.PostMapper.toLikeResult
 import org.scent.project.data.remote.api.PostApi
 import org.scent.project.data.remote.dto.CreatePostRequest
@@ -19,7 +18,6 @@ import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.CreatePostParams
-import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.repository.PostRepository
@@ -97,20 +95,6 @@ class PostRepositoryImpl(
             feedCursor = response.nextCursor
             feedExhausted = response.nextCursor == null || dtos.isEmpty()
             Unit.asRight()
-        }
-
-    override suspend fun getFeed(
-        cursor: String?,
-        limit: Int,
-    ): Result<FeedPage> =
-        safeApiCall(
-            onHttpError = { status ->
-                AppError.NetworkError.ServerError(statusCode = status).asLeft()
-            },
-        ) {
-            val token = tokenStorage.getToken().getOrNull()
-            val response = api.getFeed(cursor, limit, token)
-            response.toFeedPage()
         }
 
     override suspend fun likePost(postId: String): Result<LikeResult> {

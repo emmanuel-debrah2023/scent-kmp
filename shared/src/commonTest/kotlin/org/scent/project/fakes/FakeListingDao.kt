@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import org.scent.project.data.local.dao.ListingDao
+import org.scent.project.data.local.entity.BrowseMetadataEntity
 import org.scent.project.data.local.entity.FragranceEntity
 import org.scent.project.data.local.entity.FragranceNoteEntity
 import org.scent.project.data.local.entity.FragranceWithNotes
@@ -18,6 +19,7 @@ class FakeListingDao : ListingDao {
     private val listings = MutableStateFlow<List<ListingEntity>>(emptyList())
     private val fragrances = MutableStateFlow<List<FragranceEntity>>(emptyList())
     private val notes = MutableStateFlow<List<FragranceNoteEntity>>(emptyList())
+    private val browseMetadata = MutableStateFlow(BrowseMetadataEntity(totalCount = null))
 
     /** Set to make reads fail, covering the Flow's error path. */
     var readException: Throwable? = null
@@ -61,6 +63,12 @@ class FakeListingDao : ListingDao {
         }
 
     override suspend fun maxBrowsePosition(): Int = listings.value.mapNotNull { it.browsePosition }.maxOrNull() ?: -1
+
+    override fun getBrowseTotalCount(): Flow<Int?> = browseMetadata.map { it.totalCount }
+
+    override suspend fun upsertBrowseMetadata(metadata: BrowseMetadataEntity) {
+        browseMetadata.value = metadata
+    }
 
     override suspend fun upsertListings(listings: List<ListingEntity>) {
         val incoming = listings.associateBy { it.id }

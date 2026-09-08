@@ -11,6 +11,7 @@ import org.scent.project.data.local.dao.ListingDao
 import org.scent.project.data.local.dao.PostDao
 import org.scent.project.data.local.dao.ReviewDao
 import org.scent.project.data.local.dao.UserDao
+import org.scent.project.data.local.entity.BrowseMetadataEntity
 import org.scent.project.data.local.entity.CollectionEntryEntity
 import org.scent.project.data.local.entity.FollowEntity
 import org.scent.project.data.local.entity.FragranceEntity
@@ -38,8 +39,9 @@ import org.scent.project.data.local.entity.UserEntity
         ReviewEntity::class,
         UserEntity::class,
         FollowEntity::class,
+        BrowseMetadataEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

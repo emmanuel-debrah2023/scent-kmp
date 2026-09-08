@@ -3,7 +3,6 @@ package org.scent.project.data.repository
 import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
-import kotlinx.serialization.SerializationException
 import org.scent.project.data.remote.dto.FeedResponseDto
 import org.scent.project.data.remote.dto.LikeResponseDto
 import org.scent.project.data.remote.dto.PostDto
@@ -43,64 +42,6 @@ class PostRepositoryImplTest {
         dao: FakePostDao = FakePostDao(),
         storage: FakeTokenStorage = FakeTokenStorage(),
     ) = PostRepositoryImpl(api = api, tokenStorage = storage, postDao = dao)
-
-    // -------------------------------------------------------------------------
-    // getFeed (suspend, transitional — see PostRepository's TODO)
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `getFeed returns Right with FeedPage on success`() =
-        runTest {
-            val api =
-                FakePostApi().apply {
-                    feedResponse =
-                        FeedResponseDto(
-                            posts =
-                                listOf(
-                                    PostDto(
-                                        id = "1",
-                                        userId = "u1",
-                                        fragranceIds = listOf("f1"),
-                                        createdAt = 100L,
-                                    ),
-                                ),
-                            nextCursor = "next",
-                        )
-                }
-
-            val result = repo(api = api).getFeed()
-
-            assertTrue(result.isRight)
-            assertTrue(
-                result
-                    .getOrNull()
-                    ?.posts
-                    .orEmpty()
-                    .isNotEmpty(),
-            )
-        }
-
-    @Test
-    fun `getFeed returns NoConnection on IOException`() =
-        runTest {
-            val api = FakePostApi().apply { feedException = IOException("no network") }
-
-            val result = repo(api = api).getFeed()
-
-            assertTrue(result.isLeft)
-            assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
-        }
-
-    @Test
-    fun `getFeed returns ParseError on SerializationException`() =
-        runTest {
-            val api = FakePostApi().apply { feedException = SerializationException("bad json") }
-
-            val result = repo(api = api).getFeed()
-
-            assertTrue(result.isLeft)
-            assertIs<AppError.NetworkError.ParseError>(result.leftOrNull())
-        }
 
     // -------------------------------------------------------------------------
     // likePost

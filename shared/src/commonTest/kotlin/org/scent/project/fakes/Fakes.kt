@@ -51,12 +51,10 @@ import org.scent.project.domain.model.AuthState
 import org.scent.project.domain.model.AuthUser
 import org.scent.project.domain.model.CreateListingParams
 import org.scent.project.domain.model.CreatePostParams
-import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.ListingKind
-import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.model.ListingQuery
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.UpdateListingParams
@@ -223,11 +221,9 @@ class FakeValidator(
 // -------------------------------------------------------------------------
 
 class FakePostRepository : PostRepository {
-    var getFeedResult: Result<FeedPage> = AppError.Unknown().asLeft()
     var likePostResult: Result<LikeResult> = AppError.Unknown().asLeft()
     var createPostResult: Result<Post> = AppError.Unknown().asLeft()
 
-    var lastFeedCursor: String? = null
     var lastFeedLimit: Int? = null
     var lastLikePostId: String? = null
     var lastCreatePostParams: CreatePostParams? = null
@@ -251,15 +247,6 @@ class FakePostRepository : PostRepository {
         loadMoreFeedCallCount++
         lastFeedLimit = limit
         return loadMoreFeedResult
-    }
-
-    override suspend fun getFeed(
-        cursor: String?,
-        limit: Int,
-    ): Result<FeedPage> {
-        lastFeedCursor = cursor
-        lastFeedLimit = limit
-        return getFeedResult
     }
 
     override suspend fun likePost(postId: String): Result<LikeResult> {
@@ -336,11 +323,15 @@ class FakeListingRepository : ListingRepository {
     var lastQuery: ListingQuery? = null
     var lastRefreshedListingId: Int? = null
 
+    val browseTotalCountFlow = MutableStateFlow<Result<Int?>>(null.asRight())
+
     override fun getListingsFlow(): Flow<Result<List<Listing>>> = listingsFlow
 
     override fun getListingDetailFlow(id: Int): Flow<Result<Listing>> = listingDetailFlow
 
     override fun getUserListingsFlow(sellerId: Int): Flow<Result<List<Listing>>> = userListingsFlow
+
+    override fun getBrowseTotalCountFlow(): Flow<Result<Int?>> = browseTotalCountFlow
 
     override suspend fun refreshListings(
         query: ListingQuery,
@@ -366,39 +357,12 @@ class FakeListingRepository : ListingRepository {
         return refreshMyListingsResult
     }
 
-    var getListingsResult: Result<ListingPage> = AppError.Unknown().asLeft()
     var brandSuggestionsResult: Result<List<String>> = emptyList<String>().asRight()
     var createListingResult: Result<Listing> = AppError.Unknown().asLeft()
 
-    var lastListingsCursor: String? = null
-    var lastListingsLimit: Int? = null
-    var lastListingsBrand: String? = null
-    var lastListingsCondition: String? = null
-    var lastListingsVolume: Int? = null
-    var lastListingsMinPrice: Double? = null
-    var lastListingsMaxPrice: Double? = null
     var lastBrandQuery: String? = null
     var lastBrandLimit: Int? = null
     var lastCreateParams: CreateListingParams? = null
-
-    override suspend fun getListings(
-        cursor: String?,
-        limit: Int,
-        brand: String?,
-        condition: String?,
-        volume: Int?,
-        minPrice: Double?,
-        maxPrice: Double?,
-    ): Result<ListingPage> {
-        lastListingsCursor = cursor
-        lastListingsLimit = limit
-        lastListingsBrand = brand
-        lastListingsCondition = condition
-        lastListingsVolume = volume
-        lastListingsMinPrice = minPrice
-        lastListingsMaxPrice = maxPrice
-        return getListingsResult
-    }
 
     override suspend fun getBrandSuggestions(
         query: String,

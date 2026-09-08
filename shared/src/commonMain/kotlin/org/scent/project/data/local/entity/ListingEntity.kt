@@ -58,3 +58,14 @@ data class ListingWithFragrance(
     )
     val fragrance: FragranceWithNotes?,
 )
+
+/**
+ * The server's reported total for the current browse query. Single row
+ * (fixed id), separate from [ListingEntity] because it describes the browse
+ * result set as a whole, not any one listing.
+ */
+@Entity(tableName = "browse_metadata")
+data class BrowseMetadataEntity(
+    @PrimaryKey val id: Int = 0,
+    val totalCount: Int?,
+)

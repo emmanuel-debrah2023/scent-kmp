@@ -2,7 +2,6 @@ package org.scent.project.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 import org.scent.project.domain.model.CreatePostParams
-import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.util.Result
@@ -27,18 +26,6 @@ interface PostRepository {
      * feed is exhausted; callers observe the result through [getFeedFlow].
      */
     suspend fun loadMoreFeed(limit: Int = DEFAULT_PAGE_SIZE): Result<Unit>
-
-    /**
-     * Reads the feed straight from the network, bypassing Room.
-     *
-     * TODO(chore/feed-marketplace-flow-viewmodels): superseded by [getFeedFlow].
-     * It stays only until FeedViewModel collects the Flow; keeping two ways to
-     * read the feed past that point is the shape-erosion ADR-0001 warns about.
-     */
-    suspend fun getFeed(
-        cursor: String? = null,
-        limit: Int = DEFAULT_PAGE_SIZE,
-    ): Result<FeedPage>
 
     suspend fun likePost(postId: String): Result<LikeResult>
 
