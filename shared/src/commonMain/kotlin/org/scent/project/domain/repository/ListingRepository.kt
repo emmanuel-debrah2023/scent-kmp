@@ -3,7 +3,6 @@ package org.scent.project.domain.repository
 import kotlinx.coroutines.flow.Flow
 import org.scent.project.domain.model.CreateListingParams
 import org.scent.project.domain.model.Listing
-import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.model.ListingQuery
 import org.scent.project.domain.model.UpdateListingParams
 import org.scent.project.domain.util.Result
@@ -25,6 +24,12 @@ interface ListingRepository {
     /** A seller's own listings, including inactive ones. Backs the My Listings tab. */
     fun getUserListingsFlow(sellerId: Int): Flow<Result<List<Listing>>>
 
+    /**
+     * The server's reported total for the current browse query, if any —
+     * null until the first [refreshListings] and whenever the server omits it.
+     */
+    fun getBrowseTotalCountFlow(): Flow<Result<Int?>>
+
     /** Reloads the first page of marketplace results under [query], replacing them. */
     suspend fun refreshListings(
         query: ListingQuery = ListingQuery(),
@@ -44,16 +49,6 @@ interface ListingRepository {
 
     /** Fetches the caller's own listings into the cache. */
     suspend fun refreshMyListings(): Result<Unit>
-
-    suspend fun getListings(
-        cursor: String? = null,
-        limit: Int = 20,
-        brand: String? = null,
-        condition: String? = null,
-        volume: Int? = null,
-        minPrice: Double? = null,
-        maxPrice: Double? = null,
-    ): Result<ListingPage>
 
     suspend fun getBrandSuggestions(
         query: String,
@@ -81,7 +76,7 @@ interface ListingRepository {
     /**
      * The caller's own listings, including inactive ones, excluding deleted ones.
      *
-     * TODO(chore/feed-marketplace-flow-viewmodels): superseded by
+     * TODO(chore/profile-viewmodel-split): superseded by
      * [getUserListingsFlow] + [refreshMyListings]. Removed once ProfileViewModel
      * stops calling it through GetMyListingsUseCase.
      */

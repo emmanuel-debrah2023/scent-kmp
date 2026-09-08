@@ -389,7 +389,7 @@ private fun MarketplaceBody(
                         SkeletonListingCard()
                     }
                 }
-            } else if (state.nextCursor == null) {
+            } else if (!state.hasMore) {
                 item(key = "end-of-results") {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,

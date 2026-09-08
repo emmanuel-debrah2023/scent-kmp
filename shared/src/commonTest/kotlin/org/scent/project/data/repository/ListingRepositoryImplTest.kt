@@ -3,7 +3,6 @@ package org.scent.project.data.repository
 import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
-import kotlinx.serialization.SerializationException
 import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.FragranceNoteDto
 import org.scent.project.data.remote.dto.FragranceResponse
@@ -23,10 +22,9 @@ import kotlin.test.assertTrue
 
 /**
  * Covers both ListingRepository's suspend surface (auth-gated mutations, the
- * transitional getListings/getListing/getMyListings) and its Flow SSOT contract
- * from ADR-0001: Room is the only reader, mutations write back through it, and
- * browse membership stays separate from rows cached by the detail and My
- * Listings paths.
+ * transitional getMyListings) and its Flow SSOT contract from ADR-0001: Room is
+ * the only reader, mutations write back through it, and browse membership stays
+ * separate from rows cached by the detail and My Listings paths.
  */
 class ListingRepositoryImplTest {
     private fun fragrance(id: Int = 1) =
@@ -68,111 +66,6 @@ class ListingRepositoryImplTest {
         dao: FakeListingDao = FakeListingDao(),
         storage: FakeTokenStorage = FakeTokenStorage().apply { storedToken = "token" },
     ) = ListingRepositoryImpl(api = api, tokenStorage = storage, listingDao = dao)
-
-    // -------------------------------------------------------------------------
-    // getListings (suspend, transitional — see ListingRepository's TODO)
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `getListings returns Right on success`() =
-        runTest {
-            val api =
-                FakeListingApi().apply {
-                    listingsResponse =
-                        ListingListResponseDto(listings = listOf(validListingResponse))
-                }
-
-            val result = repo(api).getListings()
-
-            assertTrue(result.isRight)
-            assertEquals(1, requireNotNull(result.getOrNull()).listings.size)
-        }
-
-    @Test
-    fun `getListings surfaces nextCursor from the response`() =
-        runTest {
-            val api =
-                FakeListingApi().apply {
-                    listingsResponse =
-                        ListingListResponseDto(
-                            listings = listOf(validListingResponse),
-                            nextCursor = "cursor-2",
-                        )
-                }
-
-            val result = repo(api).getListings()
-
-            assertEquals("cursor-2", requireNotNull(result.getOrNull()).nextCursor)
-        }
-
-    @Test
-    fun `getListings surfaces totalCount from the response`() =
-        runTest {
-            val api =
-                FakeListingApi().apply {
-                    listingsResponse =
-                        ListingListResponseDto(
-                            listings = listOf(validListingResponse),
-                            totalCount = 312,
-                        )
-                }
-
-            val result = repo(api).getListings()
-
-            assertEquals(312, requireNotNull(result.getOrNull()).totalCount)
-        }
-
-    @Test
-    fun `getListings returns NoConnection on IOException`() =
-        runTest {
-            val api = FakeListingApi().apply { listingsException = IOException("offline") }
-
-            val result = repo(api).getListings()
-
-            assertTrue(result.isLeft)
-            assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
-        }
-
-    @Test
-    fun `getListings forwards brand condition and volume to the api`() =
-        runTest {
-            val api =
-                FakeListingApi().apply {
-                    listingsResponse = ListingListResponseDto(listings = listOf(validListingResponse))
-                }
-
-            repo(api).getListings(brand = "Dior", condition = "NEW", volume = 50)
-
-            assertEquals("Dior", api.lastListingsBrand)
-            assertEquals("NEW", api.lastListingsCondition)
-            assertEquals(50, api.lastListingsVolume)
-        }
-
-    @Test
-    fun `getListings forwards minPrice and maxPrice to the api`() =
-        runTest {
-            val api =
-                FakeListingApi().apply {
-                    listingsResponse = ListingListResponseDto(listings = listOf(validListingResponse))
-                }
-
-            repo(api).getListings(minPrice = 50.0, maxPrice = 200.0)
-
-            assertEquals(50.0, api.lastListingsMinPrice)
-            assertEquals(200.0, api.lastListingsMaxPrice)
-        }
-
-    @Test
-    fun `getListings returns ParseError on SerializationException`() =
-        runTest {
-            val api =
-                FakeListingApi().apply { listingsException = SerializationException("bad") }
-
-            val result = repo(api).getListings()
-
-            assertTrue(result.isLeft)
-            assertIs<AppError.NetworkError.ParseError>(result.leftOrNull())
-        }
 
     // -------------------------------------------------------------------------
     // getBrandSuggestions
@@ -415,6 +308,46 @@ class ListingRepositoryImplTest {
                 repository.refreshListings()
 
                 assertEquals(listOf(1, 2), awaitItem().getOrNull().orEmpty().map { it.id })
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `getBrowseTotalCountFlow reflects the server's totalCount after refreshListings`() =
+        runTest {
+            val api = FakeListingApi()
+            val repository = repo(api)
+
+            repository.getBrowseTotalCountFlow().test {
+                assertEquals(null, awaitItem().getOrNull())
+
+                api.listingsResponse =
+                    ListingListResponseDto(listings = listOf(listing(1)), totalCount = 312)
+                repository.refreshListings()
+
+                assertEquals(312, awaitItem().getOrNull())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `getBrowseTotalCountFlow updates again after loadMoreListings`() =
+        runTest {
+            val api = FakeListingApi()
+            val repository = repo(api)
+
+            api.listingsResponse =
+                ListingListResponseDto(listings = listOf(listing(1)), nextCursor = "c1", totalCount = 312)
+            repository.refreshListings()
+
+            repository.getBrowseTotalCountFlow().test {
+                assertEquals(312, awaitItem().getOrNull())
+
+                api.listingsResponse =
+                    ListingListResponseDto(listings = listOf(listing(2)), totalCount = 400)
+                repository.loadMoreListings()
+
+                assertEquals(400, awaitItem().getOrNull())
                 cancelAndIgnoreRemainingEvents()
             }
         }
