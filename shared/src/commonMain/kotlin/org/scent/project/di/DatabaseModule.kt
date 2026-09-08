@@ -20,8 +20,15 @@ fun databaseModule(databaseFactory: ScentDatabaseFactory) =
                 .setDriver(BundledSQLiteDriver())
                 // Default rather than the JVM-only IO dispatcher: this is commonMain.
                 .setQueryCoroutineContext(Dispatchers.Default)
+                // TODO(chore/room-release-migrations): valid only until the first
+                // release. The cache is rebuildable from the network, so dropping it
+                // on a schema change costs nothing today — but once the database
+                // holds anything user-authored, this silently deletes it.
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }
 
         single { get<ScentDatabase>().postDao() }
+
+        single { get<ScentDatabase>().listingDao() }
     }
