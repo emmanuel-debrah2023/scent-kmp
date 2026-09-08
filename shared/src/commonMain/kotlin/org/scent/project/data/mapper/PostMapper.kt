@@ -16,21 +16,25 @@ import org.scent.project.domain.util.asRight
 
 object PostMapper {
     fun PostDto.toDomain(): Result<Post> {
-        if (id.isNullOrBlank()) {
+        val postId = id
+        val postUserId = userId
+        val postCreatedAt = createdAt
+
+        if (postId.isNullOrBlank()) {
             return AppError.NetworkError
                 .ParseError(
                     message = "Post ID is missing",
                 ).asLeft()
         }
 
-        if (userId.isNullOrBlank()) {
+        if (postUserId.isNullOrBlank()) {
             return AppError.NetworkError
                 .ParseError(
                     message = "User ID is missing",
                 ).asLeft()
         }
 
-        if (createdAt == null) {
+        if (postCreatedAt == null) {
             return AppError.NetworkError
                 .ParseError(
                     message = "Created timestamp is missing",
@@ -38,8 +42,8 @@ object PostMapper {
         }
 
         return Post(
-            id = id,
-            userId = userId,
+            id = postId,
+            userId = postUserId,
             contentFormat = ContentFormat.fromString(contentFormat),
             textContent = textContent ?: "",
             mediaUrls = mediaUrls?.filterNotNull() ?: emptyList(),
@@ -48,7 +52,7 @@ object PostMapper {
             likeCount = likeCount ?: 0,
             commentCount = commentCount ?: 0,
             shareCount = shareCount ?: 0,
-            createdAt = createdAt,
+            createdAt = postCreatedAt,
             listingData = listingData?.mapNotNull { it.toPostListing() } ?: emptyList(),
             isLiked = isLiked ?: false,
         ).asRight()

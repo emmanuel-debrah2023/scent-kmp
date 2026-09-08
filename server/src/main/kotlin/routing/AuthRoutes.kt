@@ -22,17 +22,17 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import models.AppleAuthRequest
-import models.AuthResponse
-import models.ErrorResponse
 import models.GoogleAuthRequest
-import models.LoginRequest
-import models.RegisterRequest
-import models.UserResponse
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.mindrot.jbcrypt.BCrypt
+import org.scent.project.data.remote.dto.AuthResponse
+import org.scent.project.data.remote.dto.ErrorResponse
+import org.scent.project.data.remote.dto.LoginRequest
+import org.scent.project.data.remote.dto.MeResponse
+import org.scent.project.data.remote.dto.RegisterRequest
 import plugins.generateToken
 import java.net.URL
 import java.security.interfaces.RSAPublicKey
@@ -49,9 +49,25 @@ fun Route.authRoutes() {
                     return@post
                 }
 
+            val email = request.email
+            val username = request.username
+            val password = request.password
+            val displayName = request.displayName
+
+            val isValidRequest =
+                email?.isNotBlank() == true &&
+                    username?.isNotBlank() == true &&
+                    password?.isNotBlank() == true &&
+                    displayName?.isNotBlank() == true
+
+            if (!isValidRequest) {
+                call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing required fields"))
+                return@post
+            }
+
             val userExists =
                 dbQuery {
-                    !UsersTable.select(UsersTable.id).where { UsersTable.email eq request.email }.empty()
+                    !UsersTable.select(UsersTable.id).where { UsersTable.email eq email }.empty()
                 }
 
             if (userExists) {
@@ -59,16 +75,16 @@ fun Route.authRoutes() {
                 return@post
             }
 
-            val passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt())
+            val passwordHash = BCrypt.hashpw(password, BCrypt.gensalt())
 
             val userId =
                 dbQuery {
                     UsersTable
                         .insertAndGetId {
-                            it[username] = request.username
-                            it[email] = request.email
+                            it[UsersTable.username] = username
+                            it[UsersTable.email] = email
                             it[UsersTable.passwordHash] = passwordHash
-                            it[displayName] = request.displayName
+                            it[UsersTable.displayName] = displayName
                             it[createdAt] = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                         }.value
                 }
@@ -89,11 +105,19 @@ fun Route.authRoutes() {
                     return@post
                 }
 
+            val email = request.email
+            val password = request.password
+
+            if (email.isNullOrBlank() || password.isNullOrBlank()) {
+                call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing required fields"))
+                return@post
+            }
+
             val user =
                 dbQuery {
                     UsersTable
                         .selectAll()
-                        .where { UsersTable.email eq request.email }
+                        .where { UsersTable.email eq email }
                         .map {
                             AuthUserRow(
                                 id = it[UsersTable.id].value,
@@ -105,7 +129,7 @@ fun Route.authRoutes() {
                         }.singleOrNull()
                 }
 
-            if (user == null || user.passwordHash == null || !BCrypt.checkpw(request.password, user.passwordHash)) {
+            if (user == null || user.passwordHash == null || !BCrypt.checkpw(password, user.passwordHash)) {
                 call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid email or password"))
                 return@post
             }
@@ -264,7 +288,7 @@ fun Route.authRoutes() {
                             .selectAll()
                             .where { UsersTable.id eq userId }
                             .map {
-                                UserResponse(
+                                MeResponse(
                                     userId = it[UsersTable.id].value,
                                     username = it[UsersTable.username],
                                     email = it[UsersTable.email],
