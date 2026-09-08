@@ -5,6 +5,8 @@ import org.koin.dsl.module
 import org.scent.project.data.local.TokenStorageFactory
 import org.scent.project.data.remote.api.AuthApi
 import org.scent.project.data.remote.api.AuthApiImpl
+import org.scent.project.data.remote.api.CollectionApi
+import org.scent.project.data.remote.api.CollectionApiImpl
 import org.scent.project.data.remote.api.FragranceApi
 import org.scent.project.data.remote.api.FragranceApiImpl
 import org.scent.project.data.remote.api.ListingApi
@@ -15,19 +17,29 @@ import org.scent.project.data.remote.api.PostApi
 import org.scent.project.data.remote.api.PostApiImpl
 import org.scent.project.data.remote.api.ProfileApi
 import org.scent.project.data.remote.api.ProfileApiImpl
+import org.scent.project.data.remote.api.ReviewApi
+import org.scent.project.data.remote.api.ReviewApiImpl
+import org.scent.project.data.remote.api.UserApi
+import org.scent.project.data.remote.api.UserApiImpl
 import org.scent.project.data.remote.createHttpClient
 import org.scent.project.data.repository.AuthRepositoryImpl
+import org.scent.project.data.repository.CollectionRepositoryImpl
 import org.scent.project.data.repository.FragranceRepositoryImpl
 import org.scent.project.data.repository.ListingRepositoryImpl
 import org.scent.project.data.repository.MediaRepositoryImpl
 import org.scent.project.data.repository.PostRepositoryImpl
 import org.scent.project.data.repository.ProfileRepositoryImpl
+import org.scent.project.data.repository.ReviewRepositoryImpl
+import org.scent.project.data.repository.UserRepositoryImpl
 import org.scent.project.domain.repository.AuthRepository
+import org.scent.project.domain.repository.CollectionRepository
 import org.scent.project.domain.repository.FragranceRepository
 import org.scent.project.domain.repository.ListingRepository
 import org.scent.project.domain.repository.MediaRepository
 import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.repository.ProfileRepository
+import org.scent.project.domain.repository.ReviewRepository
+import org.scent.project.domain.repository.UserRepository
 import org.scent.project.domain.usecase.CreateListingUseCase
 import org.scent.project.domain.usecase.DeleteListingUseCase
 import org.scent.project.domain.usecase.GetBrandSuggestionsUseCase
@@ -98,6 +110,37 @@ fun sharedModule(
 
     single { ProfileRepositoryImpl(api = get(), tokenStorage = get()) } bind ProfileRepository::class
 
+    single { CollectionApiImpl(httpClient = get(), baseUrl = baseUrl) } bind CollectionApi::class
+
+    single {
+        CollectionRepositoryImpl(
+            api = get(),
+            tokenStorage = get(),
+            collectionDao = get(),
+        )
+    } bind CollectionRepository::class
+
+    single { ReviewApiImpl(httpClient = get(), baseUrl = baseUrl) } bind ReviewApi::class
+
+    single {
+        ReviewRepositoryImpl(
+            api = get(),
+            tokenStorage = get(),
+            reviewDao = get(),
+        )
+    } bind ReviewRepository::class
+
+    single { UserApiImpl(httpClient = get(), baseUrl = baseUrl) } bind UserApi::class
+
+    single {
+        UserRepositoryImpl(
+            api = get(),
+            tokenStorage = get(),
+            userDao = get(),
+            followDao = get(),
+        )
+    } bind UserRepository::class
+
     // -------------------------------------------------------------------------
     // Factories — use cases
     // -------------------------------------------------------------------------
@@ -145,13 +188,13 @@ fun sharedModule(
     factory { ToggleFollowUseCase() }
 
     // Profile
-    factory { GetUserPostsUseCase(repository = get()) }
+    factory { GetUserPostsUseCase(repository = get<PostRepository>()) }
 
-    factory { GetUserCollectionUseCase(repository = get()) }
+    factory { GetUserCollectionUseCase(repository = get<CollectionRepository>()) }
 
     factory { GetUserWishlistUseCase(repository = get()) }
 
-    factory { GetUserReviewsUseCase(repository = get()) }
+    factory { GetUserReviewsUseCase(repository = get<ReviewRepository>()) }
 
     factory { GetUserLikesUseCase(repository = get()) }
 }

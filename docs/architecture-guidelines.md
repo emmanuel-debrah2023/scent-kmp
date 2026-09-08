@@ -159,7 +159,7 @@ enum class FragranceGender {
 }
 
 data class User(
-    val id: String,
+    val id: Int,
     val username: String,
     val displayName: String,
     val email: String,
@@ -524,7 +524,7 @@ fun FragranceDto.toDomain(): Result<Fragrance> {
 ```kotlin
 // ✅ CORRECT: Non-null with defaults
 data class User(
-    val id: String,
+    val id: Int,
     val username: String,
     val bio: String = "",                    // Default empty string
     val profileImageUrl: String = "",        // Default empty string
