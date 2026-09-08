@@ -213,6 +213,12 @@ class MarketplaceViewModel(
         _uiState.value = UiState.Loading
         viewModelScope.launch {
             val price = filters.priceRange()
+            // TODO(fix/marketplace-price-range-validation): GetListingsUseCase validated
+            // minPrice/maxPrice >= 0 and minPrice <= maxPrice before this repointing; nothing
+            // in the Flow SSOT path (ListingQuery, ListingRepositoryImpl.refreshListings)
+            // replaces that check. Low risk today — the filter sheet's own input UI
+            // constrains the range — but an inverted/negative range reaching the repository
+            // is currently unvalidated.
             val query =
                 ListingQuery(
                     brand = filters.valueFor(FilterCategory.BRAND),
