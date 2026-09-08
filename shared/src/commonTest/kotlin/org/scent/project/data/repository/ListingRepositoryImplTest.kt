@@ -313,6 +313,46 @@ class ListingRepositoryImplTest {
         }
 
     @Test
+    fun `getBrowseTotalCountFlow reflects the server's totalCount after refreshListings`() =
+        runTest {
+            val api = FakeListingApi()
+            val repository = repo(api)
+
+            repository.getBrowseTotalCountFlow().test {
+                assertEquals(null, awaitItem().getOrNull())
+
+                api.listingsResponse =
+                    ListingListResponseDto(listings = listOf(listing(1)), totalCount = 312)
+                repository.refreshListings()
+
+                assertEquals(312, awaitItem().getOrNull())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `getBrowseTotalCountFlow updates again after loadMoreListings`() =
+        runTest {
+            val api = FakeListingApi()
+            val repository = repo(api)
+
+            api.listingsResponse =
+                ListingListResponseDto(listings = listOf(listing(1)), nextCursor = "c1", totalCount = 312)
+            repository.refreshListings()
+
+            repository.getBrowseTotalCountFlow().test {
+                assertEquals(312, awaitItem().getOrNull())
+
+                api.listingsResponse =
+                    ListingListResponseDto(listings = listOf(listing(2)), totalCount = 400)
+                repository.loadMoreListings()
+
+                assertEquals(400, awaitItem().getOrNull())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun `the fragrance and its notes survive the round trip through Room`() =
         runTest {
             val api = FakeListingApi()

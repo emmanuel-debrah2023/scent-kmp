@@ -28,7 +28,7 @@ interface ListingRepository {
      * The server's reported total for the current browse query, if any —
      * null until the first [refreshListings] and whenever the server omits it.
      */
-    fun getBrowseTotalCountFlow(): Flow<Int?>
+    fun getBrowseTotalCountFlow(): Flow<Result<Int?>>
 
     /** Reloads the first page of marketplace results under [query], replacing them. */
     suspend fun refreshListings(

@@ -38,7 +38,7 @@ class MarketplaceViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val listingsFlow = MutableSharedFlow<Result<List<Listing>>>(replay = 1)
-    private val totalCountFlow = MutableStateFlow<Int?>(null)
+    private val totalCountFlow = MutableStateFlow<Result<Int?>>(null.asRight())
 
     @BeforeTest
     fun setup() {
@@ -64,7 +64,7 @@ class MarketplaceViewModelTest {
     ) {
         coEvery { listingRepository.refreshListings(query, any()) } coAnswers {
             listingsFlow.emit(listings.asRight())
-            totalCountFlow.value = total
+            totalCountFlow.value = total.asRight()
             Unit.asRight()
         }
     }
@@ -87,7 +87,7 @@ class MarketplaceViewModelTest {
             coEvery { listingRepository.refreshListings(any(), any()) } coAnswers {
                 stateWhenRefreshCalled = viewModel.uiState.value
                 listingsFlow.emit(listOf(makeListing(1), makeListing(2)).asRight())
-                totalCountFlow.value = 312
+                totalCountFlow.value = 312.asRight()
                 Unit.asRight()
             }
 

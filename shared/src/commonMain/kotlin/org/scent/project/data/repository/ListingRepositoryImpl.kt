@@ -64,7 +64,11 @@ class ListingRepositoryImpl(
             .map { it.toDomainList() }
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
 
-    override fun getBrowseTotalCountFlow(): Flow<Int?> = listingDao.getBrowseTotalCount()
+    override fun getBrowseTotalCountFlow(): Flow<Result<Int?>> =
+        listingDao
+            .getBrowseTotalCount()
+            .map<Int?, Result<Int?>> { it.asRight() }
+            .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
 
     override suspend fun refreshListings(
         query: ListingQuery,

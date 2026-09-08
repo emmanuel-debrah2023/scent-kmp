@@ -170,7 +170,9 @@ class MarketplaceViewModel(
                 combine(
                     listingRepository.getListingsFlow(),
                     listingRepository.getBrowseTotalCountFlow(),
-                ) { listingsResult, totalCount -> listingsResult to totalCount }
+                    // A totalCount read failure is non-critical display metadata, not a
+                    // reason to fail the whole screen — fall back to "unknown".
+                ) { listingsResult, totalCountResult -> listingsResult to totalCountResult.getOrNull() }
             val transientState =
                 combine(
                     activeFilters,

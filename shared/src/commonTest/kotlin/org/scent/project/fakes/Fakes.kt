@@ -323,7 +323,7 @@ class FakeListingRepository : ListingRepository {
     var lastQuery: ListingQuery? = null
     var lastRefreshedListingId: Int? = null
 
-    val browseTotalCountFlow = MutableStateFlow<Int?>(null)
+    val browseTotalCountFlow = MutableStateFlow<Result<Int?>>(null.asRight())
 
     override fun getListingsFlow(): Flow<Result<List<Listing>>> = listingsFlow
 
@@ -331,7 +331,7 @@ class FakeListingRepository : ListingRepository {
 
     override fun getUserListingsFlow(sellerId: Int): Flow<Result<List<Listing>>> = userListingsFlow
 
-    override fun getBrowseTotalCountFlow(): Flow<Int?> = browseTotalCountFlow
+    override fun getBrowseTotalCountFlow(): Flow<Result<Int?>> = browseTotalCountFlow
 
     override suspend fun refreshListings(
         query: ListingQuery,
