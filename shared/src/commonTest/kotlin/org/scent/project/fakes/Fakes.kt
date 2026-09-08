@@ -2,6 +2,7 @@ package org.scent.project.fakes
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.local.dao.CollectionDao
@@ -24,6 +25,7 @@ import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.api.PostApi
 import org.scent.project.data.remote.api.ProfileApi
 import org.scent.project.data.remote.api.ReviewApi
+import org.scent.project.data.remote.api.SocialApi
 import org.scent.project.data.remote.api.UserApi
 import org.scent.project.data.remote.dto.AuthResponse
 import org.scent.project.data.remote.dto.BrandListResponseDto
@@ -41,6 +43,7 @@ import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
 import org.scent.project.data.remote.dto.UpdateListingRequestDto
 import org.scent.project.data.remote.dto.UserCollectionResponseDto
+import org.scent.project.data.remote.dto.UserListResponseDto
 import org.scent.project.data.remote.dto.UserResponse
 import org.scent.project.data.remote.dto.UserReviewsResponseDto
 import org.scent.project.domain.error.AppError
@@ -910,12 +913,33 @@ class FakeUserDao : UserDao {
 class FakeFollowDao : FollowDao {
     private val followerCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
     private val followingCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
+    private val follows = MutableStateFlow<List<FollowEntity>>(emptyList())
+    private val users = MutableStateFlow<List<UserEntity>>(emptyList())
+
+    /** Set to make reads fail, covering the Flow's error path. */
+    var readException: Throwable? = null
 
     override fun getFollowerCount(userId: Int): Flow<Int> = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
 
     override fun getFollowingCount(userId: Int): Flow<Int> = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
 
-    override suspend fun upsertFollow(follow: FollowEntity) {}
+    override fun getFollowers(userId: Int): Flow<List<UserEntity>> =
+        combine(follows, users) { fs, us ->
+            readException?.let { throw it }
+            fs.filter { it.followingId == userId }.mapNotNull { f -> us.firstOrNull { it.id == f.followerId } }
+        }
+
+    override fun getFollowing(userId: Int): Flow<List<UserEntity>> =
+        combine(follows, users) { fs, us ->
+            readException?.let { throw it }
+            fs.filter { it.followerId == userId }.mapNotNull { f -> us.firstOrNull { it.id == f.followingId } }
+        }
+
+    override suspend fun upsertFollow(follow: FollowEntity) {
+        follows.value =
+            follows.value.filterNot { it.followerId == follow.followerId && it.followingId == follow.followingId } +
+            follow
+    }
 
     fun addFollower(userId: Int) {
         val flow = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
@@ -925,5 +949,39 @@ class FakeFollowDao : FollowDao {
     fun addFollowing(userId: Int) {
         val flow = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
         flow.value = (flow.value) + 1
+    }
+
+    fun seedUser(user: UserEntity) {
+        users.value = users.value.filterNot { it.id == user.id } + user
+    }
+
+    fun seedFollow(
+        followerId: Int,
+        followingId: Int,
+        createdAt: Long = 0L,
+    ) {
+        follows.value =
+            follows.value + FollowEntity(followerId = followerId, followingId = followingId, createdAt = createdAt)
+    }
+}
+
+class FakeSocialApi : SocialApi {
+    var response: UserListResponseDto? = null
+    var exception: Exception? = null
+
+    override suspend fun getFollowers(
+        userId: Int,
+        token: String?,
+    ): UserListResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeSocialApi.response not set")
+    }
+
+    override suspend fun getFollowing(
+        userId: Int,
+        token: String?,
+    ): UserListResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeSocialApi.response not set")
     }
 }

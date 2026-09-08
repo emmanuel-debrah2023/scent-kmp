@@ -19,6 +19,8 @@ import org.scent.project.data.remote.api.ProfileApi
 import org.scent.project.data.remote.api.ProfileApiImpl
 import org.scent.project.data.remote.api.ReviewApi
 import org.scent.project.data.remote.api.ReviewApiImpl
+import org.scent.project.data.remote.api.SocialApi
+import org.scent.project.data.remote.api.SocialApiImpl
 import org.scent.project.data.remote.api.UserApi
 import org.scent.project.data.remote.api.UserApiImpl
 import org.scent.project.data.remote.createHttpClient
@@ -30,6 +32,7 @@ import org.scent.project.data.repository.MediaRepositoryImpl
 import org.scent.project.data.repository.PostRepositoryImpl
 import org.scent.project.data.repository.ProfileRepositoryImpl
 import org.scent.project.data.repository.ReviewRepositoryImpl
+import org.scent.project.data.repository.SocialRepositoryImpl
 import org.scent.project.data.repository.UserRepositoryImpl
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.repository.CollectionRepository
@@ -39,6 +42,7 @@ import org.scent.project.domain.repository.MediaRepository
 import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.repository.ProfileRepository
 import org.scent.project.domain.repository.ReviewRepository
+import org.scent.project.domain.repository.SocialRepository
 import org.scent.project.domain.repository.UserRepository
 import org.scent.project.domain.usecase.CreateListingUseCase
 import org.scent.project.domain.usecase.DeleteListingUseCase
@@ -140,6 +144,15 @@ fun sharedModule(
             followDao = get(),
         )
     } bind UserRepository::class
+
+    single { SocialApiImpl(httpClient = get(), baseUrl = baseUrl) } bind SocialApi::class
+
+    single {
+        SocialRepositoryImpl(
+            api = get(),
+            followDao = get(),
+        )
+    } bind SocialRepository::class
 
     // -------------------------------------------------------------------------
     // Factories — use cases
