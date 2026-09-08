@@ -181,4 +181,27 @@ class PostRepositoryImpl(
             ).toDomain()
         }
     }
+
+    override fun getUserPostsFlow(userId: String): Flow<Result<List<Post>>> =
+        postDao
+            .getPostsByUser(userId)
+            .map { it.toDomainList() }
+            .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
+
+    override suspend fun getUserPosts(userId: String): Result<List<Post>> =
+        safeApiCall(
+            onHttpError = { status ->
+                AppError.NetworkError.ServerError(statusCode = status).asLeft()
+            },
+        ) {
+            val token = tokenStorage.getToken().getOrNull()
+            val userIdInt =
+                userId.toIntOrNull()
+                    ?: return@safeApiCall AppError.NetworkError.ParseError(fieldName = "userId").asLeft()
+            val response = api.getUserPosts(userIdInt, token)
+            response.posts
+                .orEmpty()
+                .mapNotNull { it.toDomain().getOrNull() }
+                .asRight()
+        }
 }

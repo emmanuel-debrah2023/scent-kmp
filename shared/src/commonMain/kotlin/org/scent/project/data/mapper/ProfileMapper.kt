@@ -39,6 +39,8 @@ object ProfileMapper {
 
     fun List<CollectionEntryDto>.toCollectionList(): List<CollectionEntry> = mapNotNull { it.toDomain().getOrNull() }
 
+    fun UserCollectionResponseDto.toCollection(): List<CollectionEntry> = entries?.toCollectionList() ?: emptyList()
+
     fun ReviewDto.toDomain(): Result<Review> {
         val id = id ?: return AppError.NetworkError.ParseError(fieldName = "id").asLeft()
         val rating =
@@ -59,8 +61,6 @@ object ProfileMapper {
     }
 
     fun List<ReviewDto>.toReviewList(): List<Review> = mapNotNull { it.toDomain().getOrNull() }
-
-    fun UserCollectionResponseDto.toCollection(): List<CollectionEntry> = entries?.toCollectionList() ?: emptyList()
 
     fun UserReviewsResponseDto.toReviews(): List<Review> = reviews?.toReviewList() ?: emptyList()
 

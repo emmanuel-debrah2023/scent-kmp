@@ -44,6 +44,24 @@ interface PostRepository {
 
     suspend fun createPost(params: CreatePostParams): Result<Post>
 
+    /**
+     * User's posts, cached in Room (ADR-0001). Lives alongside the feed on the
+     * same [posts] table; scoped deletes prevent collision.
+     *
+     * TODO(chore/post-dao-scope-feed-writes): the feed writer currently does
+     * deleteAll(), which would clobber cached user posts. Once that's fixed,
+     * this Flow will be meaningful; until then it emits whatever the feed
+     * cached, if anything.
+     */
+    fun getUserPostsFlow(userId: String): Flow<Result<List<Post>>>
+
+    /**
+     * Transitional suspend read for ProfileViewModel's async/await pattern.
+     *
+     * TODO(chore/profile-viewmodel-split): superseded by [getUserPostsFlow].
+     */
+    suspend fun getUserPosts(userId: String): Result<List<Post>>
+
     companion object {
         const val DEFAULT_PAGE_SIZE: Int = 20
     }
