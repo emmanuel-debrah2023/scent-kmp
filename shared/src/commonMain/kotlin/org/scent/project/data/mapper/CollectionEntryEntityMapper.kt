@@ -32,6 +32,8 @@ object CollectionEntryEntityMapper {
             status = statusStr,
             personalNotes = personalNotes ?: "",
             bottleSizeMl = bottleSizeMl,
+            // TODO(fix/collection-entry-added-at): CollectionEntryDto carries no timestamp from
+            // the server, so every row sorts identically under CollectionDao's ORDER BY addedAt DESC.
             addedAt = 0L,
         )
     }

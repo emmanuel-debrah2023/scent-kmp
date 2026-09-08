@@ -25,7 +25,7 @@ class CollectionRepositoryImplTest {
     ) = CollectionRepositoryImpl(api = api, tokenStorage = storage, collectionDao = dao)
 
     @Test
-    fun getUserCollectionFlow_emitsEmptyFirst() =
+    fun `getUserCollectionFlow emits empty list before any refresh`() =
         runTest {
             val repo = repo()
 
@@ -38,7 +38,7 @@ class CollectionRepositoryImplTest {
         }
 
     @Test
-    fun getUserCollectionFlow_emitsAfterRefresh() =
+    fun `getUserCollectionFlow re-emits with new data after refreshUserCollection`() =
         runTest {
             val api = FakeCollectionApi()
             val dao = FakeCollectionDao()
@@ -70,7 +70,7 @@ class CollectionRepositoryImplTest {
         }
 
     @Test
-    fun refreshUserCollection_networkFailureLeavesCacheIntact() =
+    fun `refreshUserCollection network failure leaves cache intact`() =
         runTest {
             val api = FakeCollectionApi()
             val dao = FakeCollectionDao()
@@ -98,7 +98,7 @@ class CollectionRepositoryImplTest {
         }
 
     @Test
-    fun getUserCollectionFlow_daoReadExceptionEmitsUnknownLeft() =
+    fun `getUserCollectionFlow emits Unknown Left on DAO read exception`() =
         runTest {
             val dao = FakeCollectionDao().apply { readException = IllegalStateException("db corrupt") }
             val repo = repo(dao = dao)
@@ -111,7 +111,7 @@ class CollectionRepositoryImplTest {
         }
 
     @Test
-    fun getUserCollection_success() =
+    fun `getUserCollection returns Right on success`() =
         runTest {
             val api = FakeCollectionApi()
             val fragrance = FragranceResponse(id = 1, name = "Rose", brand = "Guerlain")
@@ -135,7 +135,7 @@ class CollectionRepositoryImplTest {
         }
 
     @Test
-    fun getUserCollection_returnsNoConnectionOnIOException() =
+    fun `getUserCollection returns NoConnection on IOException`() =
         runTest {
             val api = FakeCollectionApi().apply { exception = IOException("offline") }
 

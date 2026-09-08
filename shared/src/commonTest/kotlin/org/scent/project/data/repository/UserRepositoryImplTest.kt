@@ -39,7 +39,7 @@ class UserRepositoryImplTest {
         )
 
     @Test
-    fun getProfileFlow_emitsNotCachedWhenEmpty() =
+    fun `getProfileFlow emits NotCached when the user is not cached`() =
         runTest {
             val repo = repo()
 
@@ -51,7 +51,7 @@ class UserRepositoryImplTest {
         }
 
     @Test
-    fun getProfileFlow_emitsCachedUser() =
+    fun `getProfileFlow emits the cached user`() =
         runTest {
             val userDao = FakeUserDao().apply { insertUser(testUser()) }
             val repo = repo(userDao = userDao)
@@ -69,7 +69,7 @@ class UserRepositoryImplTest {
         }
 
     @Test
-    fun getProfileFlow_liveUpdatesFollowerCount() =
+    fun `getProfileFlow live-updates when follower count changes`() =
         runTest {
             val userDao = FakeUserDao().apply { insertUser(testUser()) }
             val followDao = FakeFollowDao()
@@ -87,7 +87,7 @@ class UserRepositoryImplTest {
         }
 
     @Test
-    fun getProfileFlow_liveUpdatesFollowingCount() =
+    fun `getProfileFlow live-updates when following count changes`() =
         runTest {
             val userDao = FakeUserDao().apply { insertUser(testUser()) }
             val followDao = FakeFollowDao()
@@ -105,7 +105,7 @@ class UserRepositoryImplTest {
         }
 
     @Test
-    fun refreshProfile_isStub() =
+    fun `refreshProfile is a stub pending the get-profile-by-id endpoint`() =
         runTest {
             val repo = repo()
 

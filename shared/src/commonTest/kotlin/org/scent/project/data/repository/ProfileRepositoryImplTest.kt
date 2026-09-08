@@ -20,7 +20,7 @@ class ProfileRepositoryImplTest {
     ) = ProfileRepositoryImpl(api = api, tokenStorage = storage)
 
     @Test
-    fun getUserWishlist_success() =
+    fun `getUserWishlist returns Right on success`() =
         runTest {
             val api = FakeProfileApi()
             val entry =
@@ -40,7 +40,7 @@ class ProfileRepositoryImplTest {
         }
 
     @Test
-    fun getUserWishlist_returnsNoConnectionOnIOException() =
+    fun `getUserWishlist returns NoConnection on IOException`() =
         runTest {
             val api = FakeProfileApi().apply { userCollectionException = IOException("offline") }
 
@@ -50,7 +50,7 @@ class ProfileRepositoryImplTest {
         }
 
     @Test
-    fun getUserLikes_success() =
+    fun `getUserLikes returns Right on success`() =
         runTest {
             val api = FakeProfileApi()
             val post =
@@ -74,7 +74,7 @@ class ProfileRepositoryImplTest {
         }
 
     @Test
-    fun getUserLikes_returnsNoConnectionOnIOException() =
+    fun `getUserLikes returns NoConnection on IOException`() =
         runTest {
             val api = FakeProfileApi().apply { feedException = IOException("offline") }
 

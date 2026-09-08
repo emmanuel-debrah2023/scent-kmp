@@ -25,7 +25,7 @@ class ReviewRepositoryImplTest {
     ) = ReviewRepositoryImpl(api = api, tokenStorage = storage, reviewDao = dao)
 
     @Test
-    fun getUserReviewsFlow_emitsEmptyFirst() =
+    fun `getUserReviewsFlow emits empty list before any refresh`() =
         runTest {
             val repo = repo()
 
@@ -38,7 +38,7 @@ class ReviewRepositoryImplTest {
         }
 
     @Test
-    fun getUserReviewsFlow_emitsAfterRefresh() =
+    fun `getUserReviewsFlow re-emits with new data after refreshUserReviews`() =
         runTest {
             val api = FakeReviewApi()
             val dao = FakeReviewDao()
@@ -72,7 +72,7 @@ class ReviewRepositoryImplTest {
         }
 
     @Test
-    fun refreshUserReviews_networkFailureLeavesCacheIntact() =
+    fun `refreshUserReviews network failure leaves cache intact`() =
         runTest {
             val api = FakeReviewApi()
             val dao = FakeReviewDao()
@@ -109,7 +109,7 @@ class ReviewRepositoryImplTest {
         }
 
     @Test
-    fun getUserReviewsFlow_daoReadExceptionEmitsUnknownLeft() =
+    fun `getUserReviewsFlow emits Unknown Left on DAO read exception`() =
         runTest {
             val dao = FakeReviewDao().apply { readException = IllegalStateException("db corrupt") }
             val repo = repo(dao = dao)
@@ -122,7 +122,7 @@ class ReviewRepositoryImplTest {
         }
 
     @Test
-    fun getUserReviews_success() =
+    fun `getUserReviews returns Right on success`() =
         runTest {
             val api = FakeReviewApi()
             val fragrance = FragranceResponse(id = 1, name = "Oud", brand = "Creed")
@@ -141,7 +141,7 @@ class ReviewRepositoryImplTest {
         }
 
     @Test
-    fun getUserReviews_returnsNoConnectionOnIOException() =
+    fun `getUserReviews returns NoConnection on IOException`() =
         runTest {
             val api = FakeReviewApi().apply { exception = IOException("offline") }
 
