@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.local.dao.ReviewDao
-import org.scent.project.data.mapper.ProfileMapper.toReviews
 import org.scent.project.data.mapper.ReviewEntityMapper.toDomainList
 import org.scent.project.data.mapper.ReviewEntityMapper.toEntity
 import org.scent.project.data.mapper.ReviewEntityMapper.toNoteEntities
@@ -28,16 +27,6 @@ class ReviewRepositoryImpl(
             .getUserReviews(userId)
             .map { it.toDomainList() }
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
-
-    override suspend fun getUserReviews(userId: Int): Result<List<Review>> =
-        safeApiCall(
-            onHttpError = { status ->
-                AppError.NetworkError.ServerError(statusCode = status).asLeft()
-            },
-        ) {
-            val token = tokenStorage.getToken().getOrNull()
-            api.getUserReviews(userId, token).toReviews().asRight()
-        }
 
     override suspend fun refreshUserReviews(userId: Int): Result<Unit> =
         safeApiCall(

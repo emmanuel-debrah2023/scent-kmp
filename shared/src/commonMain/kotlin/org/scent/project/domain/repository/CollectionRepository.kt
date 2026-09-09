@@ -15,11 +15,4 @@ interface CollectionRepository {
     fun getUserCollectionFlow(userId: Int): Flow<Result<List<CollectionEntry>>>
 
     suspend fun refreshUserCollection(userId: Int): Result<Unit>
-
-    /**
-     * Transitional suspend read for ProfileViewModel's async/await pattern.
-     *
-     * TODO(chore/profile-viewmodel-split): superseded by [getUserCollectionFlow].
-     */
-    suspend fun getUserCollection(userId: Int): Result<List<CollectionEntry>>
 }

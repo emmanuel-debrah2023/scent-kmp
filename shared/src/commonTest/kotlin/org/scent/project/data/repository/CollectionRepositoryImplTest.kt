@@ -109,38 +109,4 @@ class CollectionRepositoryImplTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
-
-    @Test
-    fun `getUserCollection returns Right on success`() =
-        runTest {
-            val api = FakeCollectionApi()
-            val fragrance = FragranceResponse(id = 1, name = "Rose", brand = "Guerlain")
-            api.response =
-                UserCollectionResponseDto(
-                    entries = listOf(CollectionEntryDto(status = "OWNS", fragrance = fragrance)),
-                )
-
-            val result = repo(api = api).getUserCollection(userId = 1)
-
-            assertTrue(result.isRight)
-            assertEquals(1, result.getOrNull()?.size)
-            assertEquals(
-                "Rose",
-                result
-                    .getOrNull()
-                    ?.first()
-                    ?.fragrance
-                    ?.name,
-            )
-        }
-
-    @Test
-    fun `getUserCollection returns NoConnection on IOException`() =
-        runTest {
-            val api = FakeCollectionApi().apply { exception = IOException("offline") }
-
-            val result = repo(api = api).getUserCollection(userId = 1)
-
-            assertTrue(result.isLeft)
-        }
 }

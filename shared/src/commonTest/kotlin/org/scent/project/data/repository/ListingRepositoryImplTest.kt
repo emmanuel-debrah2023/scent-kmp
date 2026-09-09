@@ -262,36 +262,6 @@ class ListingRepositoryImplTest {
         }
 
     // -------------------------------------------------------------------------
-    // getMyListings
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `getMyListings returns Right with listings on success`() =
-        runTest {
-            val api =
-                FakeListingApi().apply {
-                    myListingsResponse =
-                        ListingListResponseDto(listings = listOf(validListingResponse))
-                }
-
-            val result = repo(api = api).getMyListings()
-
-            assertTrue(result.isRight)
-            assertEquals(1, result.getOrNull()?.size)
-        }
-
-    @Test
-    fun `getMyListings returns Unauthorized when no token`() =
-        runTest {
-            val storage = FakeTokenStorage()
-
-            val result = repo(storage = storage).getMyListings()
-
-            assertTrue(result.isLeft)
-            assertIs<AppError.AuthError.Unauthorized>(result.leftOrNull())
-        }
-
-    // -------------------------------------------------------------------------
     // getListingsFlow / refreshListings / loadMoreListings — Flow SSOT (ADR-0001)
     // -------------------------------------------------------------------------
 

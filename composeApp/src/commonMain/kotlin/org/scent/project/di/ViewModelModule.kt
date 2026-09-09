@@ -10,6 +10,12 @@ import ui.listing.CreateListingViewModel
 import ui.listing.EditListingViewModel
 import ui.marketplace.BrandSuggestionViewModel
 import ui.marketplace.MarketplaceViewModel
+import ui.profile.ProfileCollectionViewModel
+import ui.profile.ProfileFollowersViewModel
+import ui.profile.ProfileFollowingViewModel
+import ui.profile.ProfileListingsViewModel
+import ui.profile.ProfilePostsViewModel
+import ui.profile.ProfileReviewsViewModel
 import ui.profile.ProfileViewModel
 import ui.video.VideoViewModel
 
@@ -19,8 +25,14 @@ val viewModelModule =
         viewModel { SessionViewModel(get(), get()) }
         viewModel { FeedViewModel(get(), get()) }
         viewModel { (authUser: AuthUser) ->
-            ProfileViewModel(authUser, get(), get(), get(), get(), get(), get(), get(), get(), get())
+            ProfileViewModel(authUser, get(), get(), get(), get())
         }
+        viewModel { (userId: Int) -> ProfilePostsViewModel(userId, get()) }
+        viewModel { (userId: Int) -> ProfileCollectionViewModel(userId, get()) }
+        viewModel { (userId: Int) -> ProfileListingsViewModel(userId, get(), get(), get()) }
+        viewModel { (userId: Int) -> ProfileReviewsViewModel(userId, get()) }
+        viewModel { (userId: Int) -> ProfileFollowersViewModel(userId, get()) }
+        viewModel { (userId: Int) -> ProfileFollowingViewModel(userId, get()) }
         viewModel { (url: String) -> VideoViewModel(url) }
         viewModel { MarketplaceViewModel(get()) }
         viewModel { BrandSuggestionViewModel(get()) }
