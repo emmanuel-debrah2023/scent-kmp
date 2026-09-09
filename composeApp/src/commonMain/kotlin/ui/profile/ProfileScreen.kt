@@ -97,20 +97,21 @@ data class ProfileActions(
     val deleteConfirm: DeleteConfirmActions,
 ) {
     companion object {
-        fun noOp() = ProfileActions(
-            onToggleFollow = {},
-            onSelectTab = {},
-            onLogout = {},
-            onRetry = {},
-            onUnlist = {},
-            onRelist = {},
-            onNavigateToFollowers = {},
-            onNavigateToFollowing = {},
-            onNavigateToFragrance = {},
-            onCreateListing = {},
-            onEditListing = {},
-            deleteConfirm = DeleteConfirmActions.noOp(),
-        )
+        fun noOp() =
+            ProfileActions(
+                onToggleFollow = {},
+                onSelectTab = {},
+                onLogout = {},
+                onRetry = {},
+                onUnlist = {},
+                onRelist = {},
+                onNavigateToFollowers = {},
+                onNavigateToFollowing = {},
+                onNavigateToFragrance = {},
+                onCreateListing = {},
+                onEditListing = {},
+                deleteConfirm = DeleteConfirmActions.noOp(),
+            )
     }
 }
 
@@ -120,11 +121,12 @@ data class DeleteConfirmActions(
     val onDismiss: () -> Unit,
 ) {
     companion object {
-        fun noOp() = DeleteConfirmActions(
-            onRequest = {},
-            onConfirm = {},
-            onDismiss = {},
-        )
+        fun noOp() =
+            DeleteConfirmActions(
+                onRequest = {},
+                onConfirm = {},
+                onDismiss = {},
+            )
     }
 }
 
@@ -151,24 +153,26 @@ fun ProfileScreen(
     // onLogout -> SessionViewModel.logout() in App.kt) but nothing in ProfileContent ever
     // dispatches ProfileEvent.Logout — OwnProfileActions below only exposes Edit Profile
     // and Settings, both still TODO stubs. A signed-in user has no way to sign out.
-    val actions = ProfileActions(
-        onToggleFollow = { viewModel.onEvent(ProfileEvent.ToggleFollow) },
-        onSelectTab = { viewModel.onEvent(ProfileEvent.SelectTab(it)) },
-        onLogout = onLogout,
-        onRetry = { viewModel.onEvent(ProfileEvent.Retry) },
-        onUnlist = { listingId -> viewModel.onEvent(ProfileEvent.UnlistListing(listingId)) },
-        onRelist = { listingId -> viewModel.onEvent(ProfileEvent.RelistListing(listingId)) },
-        onNavigateToFollowers = { /* TODO: navigate to followers list when route exists */ },
-        onNavigateToFollowing = { /* TODO: navigate to following list when route exists */ },
-        onNavigateToFragrance = { /* TODO: navigate to fragrance detail when profile route exists */ },
-        onCreateListing = onCreateListing,
-        onEditListing = onEditListing,
-        deleteConfirm = DeleteConfirmActions(
-            onRequest = { listingId -> viewModel.onEvent(ProfileEvent.RequestDelete(listingId)) },
-            onConfirm = { viewModel.onEvent(ProfileEvent.ConfirmDelete) },
-            onDismiss = { viewModel.onEvent(ProfileEvent.DismissConfirm) },
-        ),
-    )
+    val actions =
+        ProfileActions(
+            onToggleFollow = { viewModel.onEvent(ProfileEvent.ToggleFollow) },
+            onSelectTab = { viewModel.onEvent(ProfileEvent.SelectTab(it)) },
+            onLogout = onLogout,
+            onRetry = { viewModel.onEvent(ProfileEvent.Retry) },
+            onUnlist = { listingId -> viewModel.onEvent(ProfileEvent.UnlistListing(listingId)) },
+            onRelist = { listingId -> viewModel.onEvent(ProfileEvent.RelistListing(listingId)) },
+            onNavigateToFollowers = { /* TODO: navigate to followers list when route exists */ },
+            onNavigateToFollowing = { /* TODO: navigate to following list when route exists */ },
+            onNavigateToFragrance = { /* TODO: navigate to fragrance detail when profile route exists */ },
+            onCreateListing = onCreateListing,
+            onEditListing = onEditListing,
+            deleteConfirm =
+                DeleteConfirmActions(
+                    onRequest = { listingId -> viewModel.onEvent(ProfileEvent.RequestDelete(listingId)) },
+                    onConfirm = { viewModel.onEvent(ProfileEvent.ConfirmDelete) },
+                    onDismiss = { viewModel.onEvent(ProfileEvent.DismissConfirm) },
+                ),
+        )
 
     ProfileContent(
         state = state,
@@ -1025,7 +1029,11 @@ private fun LazyListScope.listingsTabContent(
                         text = "+ ADD",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
                         color = ScentThemeExtras.interactive,
-                        modifier = Modifier.accessibleClickable(label = "Create listing", onClick = actions.onCreateListing),
+                        modifier =
+                            Modifier.accessibleClickable(
+                                label = "Create listing",
+                                onClick = actions.onCreateListing,
+                            ),
                     )
                 }
             }
