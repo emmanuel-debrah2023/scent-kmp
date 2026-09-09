@@ -15,7 +15,6 @@ import org.scent.project.data.mapper.ListingEntityMapper.toEntity
 import org.scent.project.data.mapper.ListingEntityMapper.toNoteEntities
 import org.scent.project.data.mapper.ListingMapper.toBrandNames
 import org.scent.project.data.mapper.ListingMapper.toListing
-import org.scent.project.data.mapper.ListingMapper.toListingPage
 import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.dto.CreateListingRequest
 import org.scent.project.data.remote.dto.ListingResponse
@@ -264,27 +263,6 @@ class ListingRepositoryImpl(
             // or every open collector keeps rendering a listing that is gone.
             listingDao.deleteListing(id)
             Unit.asRight()
-        }
-    }
-
-    override suspend fun getMyListings(): Result<List<Listing>> {
-        val token =
-            tokenStorage.getToken().getOrNull()
-                ?: return AppError.AuthError.Unauthorized().asLeft()
-
-        return safeApiCall(
-            onHttpError = { status ->
-                when (status) {
-                    401 -> AppError.AuthError.Unauthorized().asLeft()
-                    else -> AppError.NetworkError.ServerError(statusCode = status).asLeft()
-                }
-            },
-        ) {
-            api
-                .getMyListings(token)
-                .toListingPage()
-                .listings
-                .asRight()
         }
     }
 

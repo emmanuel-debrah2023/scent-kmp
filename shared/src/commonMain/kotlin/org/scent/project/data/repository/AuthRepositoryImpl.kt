@@ -5,7 +5,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.onStart
 import org.scent.project.data.local.TokenStorage
+import org.scent.project.data.local.dao.UserDao
 import org.scent.project.data.mapper.AuthMapper.toAuthUser
+import org.scent.project.data.mapper.toUserEntity
 import org.scent.project.data.remote.api.AuthApi
 import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.RegisterRequest
@@ -22,10 +24,16 @@ import org.scent.project.domain.validation.ValidatorContract
 class AuthRepositoryImpl(
     private val api: AuthApi,
     private val tokenStorage: TokenStorage,
+    private val userDao: UserDao,
     private val validator: ValidatorContract = Validator,
 ) : AuthRepository {
     @Suppress("ktlint:standard:backing-property-naming") // exposed via overridden observeAuthState(), not a property
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
+
+    /** Seeds Room so UserRepository.getProfileFlow resolves for the signed-in user. */
+    private suspend fun cacheProfile(user: AuthUser) {
+        userDao.upsertUser(user.toUserEntity())
+    }
 
     // -------------------------------------------------------------------------
     // observeAuthState
@@ -64,6 +72,7 @@ class AuthRepositoryImpl(
                     _authState.value = AuthState.Unauthenticated
                 },
                 ifRight = { user ->
+                    cacheProfile(user)
                     _authState.value = AuthState.Authenticated(user)
                 },
             )
@@ -121,6 +130,7 @@ class AuthRepositoryImpl(
                 ifLeft = { it.asLeft() },
                 ifRight = { user ->
                     tokenStorage.saveToken(user.token)
+                    cacheProfile(user)
                     _authState.value = AuthState.Authenticated(user)
                     user.asRight()
                 },
@@ -154,6 +164,7 @@ class AuthRepositoryImpl(
                 ifLeft = { it.asLeft() },
                 ifRight = { user ->
                     tokenStorage.saveToken(user.token)
+                    cacheProfile(user)
                     _authState.value = AuthState.Authenticated(user)
                     user.asRight()
                 },
@@ -189,6 +200,7 @@ class AuthRepositoryImpl(
             userResult.fold(
                 ifLeft = { it.asLeft() },
                 ifRight = { user ->
+                    cacheProfile(user)
                     _authState.value = AuthState.Authenticated(user)
                     user.asRight()
                 },

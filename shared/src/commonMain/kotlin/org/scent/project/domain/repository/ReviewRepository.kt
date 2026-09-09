@@ -12,11 +12,4 @@ interface ReviewRepository {
     fun getUserReviewsFlow(userId: Int): Flow<Result<List<Review>>>
 
     suspend fun refreshUserReviews(userId: Int): Result<Unit>
-
-    /**
-     * Transitional suspend read for ProfileViewModel's async/await pattern.
-     *
-     * TODO(chore/profile-viewmodel-split): superseded by [getUserReviewsFlow].
-     */
-    suspend fun getUserReviews(userId: Int): Result<List<Review>>
 }

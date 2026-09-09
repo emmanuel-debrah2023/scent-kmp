@@ -8,7 +8,6 @@ import org.scent.project.data.local.dao.CollectionDao
 import org.scent.project.data.mapper.CollectionEntryEntityMapper.toDomainList
 import org.scent.project.data.mapper.CollectionEntryEntityMapper.toEntity
 import org.scent.project.data.mapper.CollectionEntryEntityMapper.toNoteEntities
-import org.scent.project.data.mapper.ProfileMapper.toCollection
 import org.scent.project.data.remote.api.CollectionApi
 import org.scent.project.data.remote.dto.CollectionEntryDto
 import org.scent.project.domain.error.AppError
@@ -28,16 +27,6 @@ class CollectionRepositoryImpl(
             .getUserCollection(userId)
             .map { it.toDomainList() }
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
-
-    override suspend fun getUserCollection(userId: Int): Result<List<CollectionEntry>> =
-        safeApiCall(
-            onHttpError = { status ->
-                AppError.NetworkError.ServerError(statusCode = status).asLeft()
-            },
-        ) {
-            val token = tokenStorage.getToken().getOrNull()
-            api.getUserCollection(userId, token).toCollection().asRight()
-        }
 
     override suspend fun refreshUserCollection(userId: Int): Result<Unit> =
         safeApiCall(

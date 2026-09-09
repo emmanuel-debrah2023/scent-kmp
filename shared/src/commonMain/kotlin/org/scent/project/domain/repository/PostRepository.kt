@@ -42,13 +42,6 @@ interface PostRepository {
      */
     fun getUserPostsFlow(userId: String): Flow<Result<List<Post>>>
 
-    /**
-     * Transitional suspend read for ProfileViewModel's async/await pattern.
-     *
-     * TODO(chore/profile-viewmodel-split): superseded by [getUserPostsFlow].
-     */
-    suspend fun getUserPosts(userId: String): Result<List<Post>>
-
     companion object {
         const val DEFAULT_PAGE_SIZE: Int = 20
     }
