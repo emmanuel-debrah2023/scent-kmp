@@ -1,5 +1,6 @@
 package ui.profile
 
+import app.cash.turbine.test
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -79,11 +80,16 @@ class ProfileViewModelTest {
     fun `profileState reflects the Flow once the repository resolves it`() =
         runTest {
             val viewModel = viewModel()
-            profileFlow.emit(testUser().asRight())
 
-            val state = viewModel.profileState.value
-            assertIs<UiState.Success<User>>(state)
-            assertEquals("Emmanuel Debrah", state.data.displayName)
+            viewModel.profileState.test {
+                // Initial Loading from init -> collection setup
+                awaitItem()
+                profileFlow.emit(testUser().asRight())
+
+                val state = awaitItem()
+                assertIs<UiState.Success<User>>(state)
+                assertEquals("Emmanuel Debrah", state.data.displayName)
+            }
         }
 
     @Test
@@ -91,11 +97,15 @@ class ProfileViewModelTest {
         runTest {
             val error = AppError.NetworkError.NotFound(message = "User 1 is not cached")
             val viewModel = viewModel()
-            profileFlow.emit(error.asLeft())
 
-            val state = viewModel.profileState.value
-            assertIs<UiState.Error>(state)
-            assertEquals(error, state.error)
+            viewModel.profileState.test {
+                awaitItem() // Initial state
+                profileFlow.emit(error.asLeft())
+
+                val state = awaitItem()
+                assertIs<UiState.Error>(state)
+                assertEquals(error, state.error)
+            }
         }
 
     @Test
@@ -114,12 +124,17 @@ class ProfileViewModelTest {
             val viewModel =
                 ProfileViewModel(sampleAuthUser, userRepository, toggleFollowUseCase, getUserWishlist, getUserLikes)
 
-            val wishlistState = viewModel.wishlistState.value
-            val likesState = viewModel.likesState.value
-            assertIs<UiState.Success<List<CollectionEntry>>>(wishlistState)
-            assertEquals(1, wishlistState.data.size)
-            assertIs<UiState.Success<List<Post>>>(likesState)
-            assertEquals(listOf("p1"), likesState.data.map { it.id })
+            viewModel.wishlistState.test {
+                val wishlistState = awaitItem()
+                assertIs<UiState.Success<List<CollectionEntry>>>(wishlistState)
+                assertEquals(1, wishlistState.data.size)
+            }
+
+            viewModel.likesState.test {
+                val likesState = awaitItem()
+                assertIs<UiState.Success<List<Post>>>(likesState)
+                assertEquals(listOf("p1"), likesState.data.map { it.id })
+            }
         }
 
     @Test
@@ -152,14 +167,20 @@ class ProfileViewModelTest {
     @Test
     fun `retry re-invokes refreshProfile wishlist and likes`() =
         runTest {
-            val viewModel = viewModel()
-
-            viewModel.retry()
-
             coEvery { getUserWishlist(1) } returns emptyList<CollectionEntry>().asRight()
             coEvery { getUserLikes(1) } returns emptyList<Post>().asRight()
-            assertIs<UiState.Success<List<CollectionEntry>>>(viewModel.wishlistState.value)
-            assertIs<UiState.Success<List<Post>>>(viewModel.likesState.value)
+            val viewModel = viewModel()
+
+            viewModel.wishlistState.test {
+                viewModel.retry()
+                val state = awaitItem()
+                assertIs<UiState.Success<List<CollectionEntry>>>(state)
+            }
+
+            viewModel.likesState.test {
+                val state = awaitItem()
+                assertIs<UiState.Success<List<Post>>>(state)
+            }
         }
 
     private fun makePost(id: String) =

@@ -46,8 +46,8 @@ class FeedViewModel(
 
     private fun startCollectingIfNeeded() {
         if (collecting) return
-        collecting = true
         viewModelScope.launch {
+            collecting = true
             val feedAndReady =
                 combine(postRepository.getFeedFlow(), ready) { result, isReady -> result to isReady }
             feedAndReady.collect { (result, isReady) ->
