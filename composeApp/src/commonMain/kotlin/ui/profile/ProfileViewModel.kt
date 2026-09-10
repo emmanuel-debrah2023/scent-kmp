@@ -72,7 +72,7 @@ class ProfileViewModel(
         loadLikes()
     }
 
-    // TODO(fix/follow-toggle-room-writeback): this optimistic write is clobbered by the
+    // TODO(fix/room-optimistic-writeback): this optimistic write is clobbered by the
     // getProfileFlow collector in init — that flow derives follower counts from FollowDao's
     // COUNT(*), and nothing calls FollowDao.upsertFollow, so the toggle visibly reverts on
     // the next Room emission. The toggle needs to persist a FollowEntity.
