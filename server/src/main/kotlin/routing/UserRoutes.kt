@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.CollectionStatus
 import data.schema.FragrancesTable
 import data.schema.PostFragrancesTable
@@ -17,21 +18,21 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
-import models.CollectionEntryResponse
-import models.ErrorResponse
-import models.FragranceResponseDto
-import models.ReviewResponse
-import models.UserCollectionResponse
-import models.UserReviewsResponse
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.scent.project.data.remote.dto.CollectionEntryDto
+import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.FeedResponseDto
+import org.scent.project.data.remote.dto.FragranceNoteDto
+import org.scent.project.data.remote.dto.FragranceResponse
 import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
+import org.scent.project.data.remote.dto.ReviewDto
+import org.scent.project.data.remote.dto.UserCollectionResponseDto
+import org.scent.project.data.remote.dto.UserReviewsResponseDto
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 fun Route.userRoutes() {
@@ -40,7 +41,7 @@ fun Route.userRoutes() {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val posts = transaction { queryUserPosts(userId, likedByUserId = null) }
+            val posts = dbQuery { queryUserPosts(userId, likedByUserId = null) }
             call.respond(HttpStatusCode.OK, FeedResponseDto(posts = posts, nextCursor = null))
         }
 
@@ -48,31 +49,31 @@ fun Route.userRoutes() {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val entries = transaction { queryUserCollection(userId) }
-            call.respond(HttpStatusCode.OK, UserCollectionResponse(entries = entries))
+            val entries = dbQuery { queryUserCollection(userId) }
+            call.respond(HttpStatusCode.OK, UserCollectionResponseDto(entries = entries))
         }
 
         get("/wishlist") {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val entries = transaction { queryUserWishlist(userId) }
-            call.respond(HttpStatusCode.OK, UserCollectionResponse(entries = entries))
+            val entries = dbQuery { queryUserWishlist(userId) }
+            call.respond(HttpStatusCode.OK, UserCollectionResponseDto(entries = entries))
         }
 
         get("/reviews") {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val reviews = transaction { queryUserReviews(userId) }
-            call.respond(HttpStatusCode.OK, UserReviewsResponse(reviews = reviews))
+            val reviews = dbQuery { queryUserReviews(userId) }
+            call.respond(HttpStatusCode.OK, UserReviewsResponseDto(reviews = reviews))
         }
 
         get("/likes") {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
-            val posts = transaction { queryUserLikes(userId) }
+            val posts = dbQuery { queryUserLikes(userId) }
             call.respond(HttpStatusCode.OK, FeedResponseDto(posts = posts, nextCursor = null))
         }
     }
@@ -89,7 +90,7 @@ private fun queryUserPosts(
         .orderBy(PostsTable.id, SortOrder.DESC)
         .map { row -> buildPostDto(row[PostsTable.id].value, row, likedByUserId) }
 
-private fun queryUserCollection(userId: Int): List<CollectionEntryResponse> =
+private fun queryUserCollection(userId: Int): List<CollectionEntryDto> =
     UserFragranceCollectionTable
         .selectAll()
         .where {
@@ -104,7 +105,7 @@ private fun queryUserCollection(userId: Int): List<CollectionEntryResponse> =
             val fragranceRow =
                 FragrancesTable.selectAll().where { FragrancesTable.id eq fragranceId }.singleOrNull()
                     ?: return@mapNotNull null
-            CollectionEntryResponse(
+            CollectionEntryDto(
                 status = row[UserFragranceCollectionTable.status].name,
                 personalNotes = row[UserFragranceCollectionTable.personalNotes],
                 bottleSizeMl = row[UserFragranceCollectionTable.bottleSizeMl],
@@ -112,7 +113,7 @@ private fun queryUserCollection(userId: Int): List<CollectionEntryResponse> =
             )
         }
 
-private fun queryUserWishlist(userId: Int): List<CollectionEntryResponse> =
+private fun queryUserWishlist(userId: Int): List<CollectionEntryDto> =
     UserFragranceCollectionTable
         .selectAll()
         .where {
@@ -123,7 +124,7 @@ private fun queryUserWishlist(userId: Int): List<CollectionEntryResponse> =
             val fragranceRow =
                 FragrancesTable.selectAll().where { FragrancesTable.id eq fragranceId }.singleOrNull()
                     ?: return@mapNotNull null
-            CollectionEntryResponse(
+            CollectionEntryDto(
                 status = row[UserFragranceCollectionTable.status].name,
                 personalNotes = row[UserFragranceCollectionTable.personalNotes],
                 bottleSizeMl = row[UserFragranceCollectionTable.bottleSizeMl],
@@ -132,7 +133,7 @@ private fun queryUserWishlist(userId: Int): List<CollectionEntryResponse> =
         }
 
 @OptIn(kotlin.time.ExperimentalTime::class)
-private fun queryUserReviews(userId: Int): List<ReviewResponse> =
+private fun queryUserReviews(userId: Int): List<ReviewDto> =
     ReviewsTable
         .selectAll()
         .where { ReviewsTable.reviewerId eq userId }
@@ -142,7 +143,7 @@ private fun queryUserReviews(userId: Int): List<ReviewResponse> =
             val fragranceRow =
                 FragrancesTable.selectAll().where { FragrancesTable.id eq fragranceId }.singleOrNull()
                     ?: return@mapNotNull null
-            ReviewResponse(
+            ReviewDto(
                 id = row[ReviewsTable.id].value,
                 rating = row[ReviewsTable.rating],
                 content = row[ReviewsTable.content],
@@ -236,8 +237,8 @@ private fun buildPostDto(
 private fun buildEmbeddedFragrance(
     id: Int,
     row: org.jetbrains.exposed.v1.core.ResultRow,
-): FragranceResponseDto =
-    FragranceResponseDto(
+): FragranceResponse =
+    FragranceResponse(
         id = id,
         sellerId = row[FragrancesTable.sellerId].value,
         name = row[FragrancesTable.name],
@@ -250,8 +251,8 @@ private fun buildEmbeddedFragrance(
         stockQuantity = row[FragrancesTable.stockQuantity],
         isActive = row[FragrancesTable.isActive],
         viewCount = row[FragrancesTable.viewCount],
-        imageUrls = emptyList(),
-        notes = emptyList(),
+        imageUrls = emptyList<String>(),
+        notes = emptyList<FragranceNoteDto>(),
         rating = null,
         reviewCount = 0,
         createdAt = 0L,

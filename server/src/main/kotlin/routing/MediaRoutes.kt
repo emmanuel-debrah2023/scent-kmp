@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.MediaItemsTable
 import data.schema.MediaType
 import io.ktor.http.HttpStatusCode
@@ -17,15 +18,14 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.Json
-import models.CompleteUploadResponse
-import models.ErrorResponse
-import models.UploadUrlResponse
 import models.WebhookPayload
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import org.scent.project.data.remote.dto.CompleteUploadResponseDto
+import org.scent.project.data.remote.dto.ErrorResponse
+import org.scent.project.data.remote.dto.UploadUrlResponseDto
 import providers.ImageProvider
 import providers.StreamProvider
 
@@ -37,13 +37,13 @@ private val lenientJson = Json { ignoreUnknownKeys = true }
  * is issued — pass it here so a PENDING image row is usable the instant it's READY, with
  * no extra column needed to stash it in the meantime.
  */
-private fun insertPendingMediaRow(
+private suspend fun insertPendingMediaRow(
     userId: Int,
     uid: String,
     type: MediaType,
     url: String = "",
 ): Int =
-    transaction {
+    dbQuery {
         MediaItemsTable
             .insertAndGetId {
                 it[MediaItemsTable.uploaderId] = userId
@@ -58,9 +58,9 @@ private fun insertPendingMediaRow(
             }.value
     }
 
-internal fun applyWebhookUpdate(payload: WebhookPayload) {
+internal suspend fun applyWebhookUpdate(payload: WebhookPayload) {
     val newStatus = if (payload.readyToStream) "READY" else payload.status.uppercase().take(10)
-    transaction {
+    dbQuery {
         MediaItemsTable.update({ MediaItemsTable.cloudflareUid eq payload.uid }) {
             it[MediaItemsTable.cfUploadStatus] = newStatus
             if (payload.thumbnail != null) {
@@ -113,7 +113,7 @@ private fun Route.uploadUrlRoute(streamProvider: StreamProvider) {
                 insertPendingMediaRow(userId, upload.uid, MediaType.VIDEO)
                 call.respond(
                     HttpStatusCode.OK,
-                    UploadUrlResponse(uploadUrl = upload.uploadUrl, uid = upload.uid),
+                    UploadUrlResponseDto(uploadUrl = upload.uploadUrl, uid = upload.uid),
                 )
             },
             onFailure = { cause ->
@@ -147,7 +147,7 @@ private fun Route.imageUploadUrlRoute(imageProvider: ImageProvider) {
                 insertPendingMediaRow(userId, signed.uid, MediaType.IMAGE, signed.publicUrl)
                 call.respond(
                     HttpStatusCode.OK,
-                    UploadUrlResponse(uploadUrl = signed.uploadUrl, uid = signed.uid),
+                    UploadUrlResponseDto(uploadUrl = signed.uploadUrl, uid = signed.uid),
                 )
             },
             onFailure = { cause ->
@@ -180,7 +180,7 @@ private fun Route.completeUploadRoute() {
                 ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("uid is required"))
 
         val row =
-            transaction {
+            dbQuery {
                 MediaItemsTable
                     .selectAll()
                     .where { MediaItemsTable.cloudflareUid eq uid }
@@ -197,12 +197,12 @@ private fun Route.completeUploadRoute() {
             )
         }
 
-        transaction {
+        dbQuery {
             MediaItemsTable.update({ MediaItemsTable.cloudflareUid eq uid }) {
                 it[cfUploadStatus] = "READY"
             }
         }
-        call.respond(HttpStatusCode.OK, CompleteUploadResponse(id = row[MediaItemsTable.id].value))
+        call.respond(HttpStatusCode.OK, CompleteUploadResponseDto(id = row[MediaItemsTable.id].value))
     }
 }
 

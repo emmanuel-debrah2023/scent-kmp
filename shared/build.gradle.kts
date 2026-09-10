@@ -28,6 +28,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.contracts)
+
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)

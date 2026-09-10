@@ -1662,6 +1662,113 @@ onOpenFragrance = { id -> searchState.navigateTo(SearchRoute.FragranceDetail(id)
 onOpenFragrance = { id -> marketplaceState.navigateTo(MarketplaceRoute.FragranceDetail(id)) }
 ```
 
+## Actions Bundling Pattern (Composable Callbacks)
+
+**CRITICAL**: If a screen-level composable would take **5 or more** callback
+parameters for a single interaction surface (a screen, a card, a dialog),
+bundle them into a dedicated `Actions` data class instead of declaring them
+individually. Below 5, individual lambda params are fine — don't bundle
+prematurely.
+
+### Why
+
+- Constructor/param lists stop growing unbounded as features are added.
+- Previews collapse from N empty lambdas to one `Actions.noOp()`.
+- Grouping documents intent — related callbacks read as a unit instead of
+  a flat list with no structure.
+
+### Rule
+
+```
+5+ callbacks on one composable → group into a data class named <Screen>Actions
+< 5 callbacks → keep as individual params
+```
+
+### Pattern
+
+```kotlin
+data class ProfileActions(
+    val onToggleFollow: () -> Unit,
+    val onSelectTab: (ProfileTab) -> Unit,
+    val onLogout: () -> Unit,
+    val onUnlist: (listingId: String) -> Unit,
+    val onRelist: (listingId: String) -> Unit,
+    val onNavigateToFollowers: () -> Unit,
+    val onNavigateToFollowing: () -> Unit,
+    val onNavigateToFragrance: (fragranceId: String) -> Unit,
+) {
+    companion object {
+        /** No-op instance for @Preview composables. */
+        fun noOp() = ProfileActions(
+            onToggleFollow = {},
+            onSelectTab = {},
+            onLogout = {},
+            onUnlist = {},
+            onRelist = {},
+            onNavigateToFollowers = {},
+            onNavigateToFollowing = {},
+            onNavigateToFragrance = {},
+        )
+    }
+}
+
+@Composable
+fun ProfileScreen(
+    userId: Int,
+    user: User,
+    // ...other state params stay individual — this pattern only applies to callbacks
+    actions: ProfileActions,
+) { /* ... */ }
+```
+
+### Sub-flow grouping
+
+If a subset of callbacks belongs to a self-contained sub-flow within the
+screen (e.g. a delete-confirmation dialog's request/confirm/dismiss triad),
+give that subset its own nested `Actions` class rather than flattening
+everything into the top-level one:
+
+```kotlin
+data class ProfileActions(
+    val onToggleFollow: () -> Unit,
+    val onSelectTab: (ProfileTab) -> Unit,
+    val onLogout: () -> Unit,
+    val onUnlist: (listingId: String) -> Unit,
+    val onRelist: (listingId: String) -> Unit,
+    val onNavigateToFollowers: () -> Unit,
+    val onNavigateToFollowing: () -> Unit,
+    val onNavigateToFragrance: (fragranceId: String) -> Unit,
+    val deleteConfirm: DeleteConfirmActions,
+)
+
+data class DeleteConfirmActions(
+    val onRequest: (listingId: String) -> Unit,
+    val onConfirm: () -> Unit,
+    val onDismiss: () -> Unit,
+)
+```
+
+Group by "what part of the screen/state machine this belongs to," not just
+"all callbacks on this screen." A dialog's request/confirm/dismiss triad is
+a natural unit; unrelated top-level actions (follow toggle, navigation)
+aren't — but both still belong under the screen's own `Actions` type.
+
+### ✅ DO
+- ✅ Name the class `<ScreenOrComponent>Actions`
+- ✅ Provide a `noOp()` companion factory for previews
+- ✅ Nest sub-flow actions as their own type when they form a natural unit
+  (request/confirm/dismiss, etc.)
+- ✅ Wire each field to a `viewModel::method` reference at the call site for
+  readability
+
+### ❌ DON'T
+- ❌ Don't bundle when there are fewer than 5 callbacks — adds indirection
+  for no benefit
+- ❌ Don't create one giant `Actions` class that mixes unrelated concerns
+  across multiple screens
+- ❌ Don't put non-callback state (UiState, IDs, flags) inside an `Actions`
+  class — it's for function references only
+
 ### 6. Migration Strategy to Official Navigation
 
 The per-tab structure maps cleanly onto official Compose Multiplatform Navigation's **nested graphs** — each `Tab` becomes a nested graph, and each per-tab route becomes a destination within it.

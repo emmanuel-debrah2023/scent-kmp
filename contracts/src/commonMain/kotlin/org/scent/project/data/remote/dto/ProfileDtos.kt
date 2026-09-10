@@ -16,7 +16,7 @@ data class ReviewDto(
     val id: Int? = null, // TODO: server-guaranteed invariant — make non-nullable
     val rating: Int? = null,
     val content: String? = null,
-    @SerialName("created_at") val createdAt: Long,
+    @SerialName("created_at") val createdAt: Long? = null, // TODO: server-guaranteed invariant — make non-nullable
     val fragrance: FragranceResponse? = null,
 )
 

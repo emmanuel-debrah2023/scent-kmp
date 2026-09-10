@@ -1,5 +1,6 @@
 package routing
 
+import data.dbQuery
 import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
@@ -26,13 +27,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import models.BrandListResponse
 import models.CreateListingServerRequest
-import models.ErrorResponse
-import models.FragranceNoteResponseDto
-import models.FragranceResponseDto
-import models.ListingListResponse
-import models.ListingResponseDto
 import models.UpdateListingRequest
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -50,8 +45,13 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import org.scent.project.data.remote.dto.BrandListResponseDto
+import org.scent.project.data.remote.dto.ErrorResponse
+import org.scent.project.data.remote.dto.FragranceNoteDto
+import org.scent.project.data.remote.dto.FragranceResponse
+import org.scent.project.data.remote.dto.ListingListResponseDto
+import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.domain.model.FillSource
 import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.usecase.MAX_LISTING_PHOTOS
@@ -91,7 +91,7 @@ fun Route.listingRoutes() {
             val baseQuery = ListingsTable.innerJoin(FragrancesTable)
 
             val result =
-                transaction {
+                dbQuery {
                     val filterOp: Op<Boolean> =
                         run {
                             val activeFilter: Op<Boolean> = ListingsTable.isActive eq true
@@ -171,7 +171,7 @@ fun Route.listingRoutes() {
             val nextCursor = listings.lastOrNull()?.id?.toString()
             this.call.respond(
                 HttpStatusCode.OK,
-                ListingListResponse(listings, nextCursor, totalCount.toInt()),
+                ListingListResponseDto(listings = listings, nextCursor = nextCursor, totalCount = totalCount.toInt()),
             )
         }
 
@@ -192,11 +192,11 @@ fun Route.listingRoutes() {
 
             // No query means no suggestion intent — answer empty rather than scanning.
             if (query.isEmpty()) {
-                return@get this.call.respond(HttpStatusCode.OK, BrandListResponse(emptyList()))
+                return@get this.call.respond(HttpStatusCode.OK, BrandListResponseDto(brands = emptyList()))
             }
 
             val brands =
-                transaction {
+                dbQuery {
                     ListingsTable
                         .innerJoin(FragrancesTable)
                         .select(FragrancesTable.brand)
@@ -213,7 +213,7 @@ fun Route.listingRoutes() {
                 }.distinctBy { it.lowercase() }
                     .take(limit)
 
-            this.call.respond(HttpStatusCode.OK, BrandListResponse(brands))
+            this.call.respond(HttpStatusCode.OK, BrandListResponseDto(brands = brands))
         }
 
         authenticate("auth-jwt") {
@@ -228,7 +228,7 @@ fun Route.listingRoutes() {
                         )
 
                 val listings =
-                    transaction {
+                    dbQuery {
                         ListingsTable
                             .selectAll()
                             .where {
@@ -237,7 +237,7 @@ fun Route.listingRoutes() {
                             .mapNotNull { row -> buildListingDto(row[ListingsTable.id].value, row) }
                     }
 
-                this.call.respond(HttpStatusCode.OK, ListingListResponse(listings, null, listings.size))
+                this.call.respond(HttpStatusCode.OK, ListingListResponseDto(listings, null, listings.size))
             }
         }
 
@@ -250,13 +250,13 @@ fun Route.listingRoutes() {
                     )
 
             val listing =
-                transaction {
+                dbQuery {
                     val row =
                         ListingsTable
                             .selectAll()
                             .where { ListingsTable.id eq listingId and ListingsTable.deletedAt.isNull() }
                             .singleOrNull()
-                            ?: return@transaction null
+                            ?: return@dbQuery null
                     buildListingDto(listingId, row)
                 }
 
@@ -300,7 +300,7 @@ fun Route.listingRoutes() {
 
                 // Verify fragrance exists
                 val fragranceExists =
-                    transaction {
+                    dbQuery {
                         FragrancesTable
                             .selectAll()
                             .where { FragrancesTable.id eq request.fragranceId }
@@ -337,7 +337,7 @@ fun Route.listingRoutes() {
                 }
 
                 val listingId =
-                    transaction {
+                    dbQuery {
                         val id =
                             ListingsTable
                                 .insertAndGetId {
@@ -361,7 +361,7 @@ fun Route.listingRoutes() {
                     }
 
                 val created =
-                    transaction {
+                    dbQuery {
                         val row =
                             ListingsTable
                                 .selectAll()
@@ -405,7 +405,7 @@ fun Route.listingRoutes() {
                         }
 
                 val listing =
-                    transaction {
+                    dbQuery {
                         ListingsTable
                             .selectAll()
                             .where { ListingsTable.id eq listingId }
@@ -487,7 +487,7 @@ fun Route.listingRoutes() {
                         request.kind != null ||
                         normalizedFill != null
 
-                transaction {
+                dbQuery {
                     if (touchesScalarField) {
                         ListingsTable.update({ ListingsTable.id eq listingId }) {
                             request.price?.let { p -> it[price] = p.toBigDecimal() }
@@ -509,7 +509,7 @@ fun Route.listingRoutes() {
 
                 // Return updated listing
                 val updated =
-                    transaction {
+                    dbQuery {
                         val row =
                             ListingsTable
                                 .selectAll()
@@ -544,7 +544,7 @@ fun Route.listingRoutes() {
                         )
 
                 val listing =
-                    transaction {
+                    dbQuery {
                         ListingsTable
                             .selectAll()
                             .where { ListingsTable.id eq listingId }
@@ -568,7 +568,7 @@ fun Route.listingRoutes() {
                 // Soft delete only — there is no permanent delete. Order history (once
                 // orders reference listing_id — see chore/listing-versioning-order-snapshot)
                 // stays intact because the row is never removed.
-                transaction {
+                dbQuery {
                     ListingsTable.update({ ListingsTable.id eq listingId }) {
                         it[deletedAt] =
                             Clock.System
@@ -598,14 +598,14 @@ private fun ApplicationCall.requireUserId(): Int? =
  * is trivially true — the 1..6 count check happens separately at the call site, so this
  * function only needs to answer "are these specific ids usable".
  */
-private fun mediaIdsOwnedAndReady(
+private suspend fun mediaIdsOwnedAndReady(
     mediaIds: List<Int>,
     userId: Int,
 ): Boolean {
     val distinctIds = mediaIds.distinct()
     if (distinctIds.isEmpty()) return true
     val readyOwnedCount =
-        transaction {
+        dbQuery {
             MediaItemsTable
                 .selectAll()
                 .where {
@@ -676,7 +676,7 @@ private fun normalizeFill(
 private fun buildListingDto(
     id: Int,
     row: org.jetbrains.exposed.v1.core.ResultRow,
-): ListingResponseDto? {
+): ListingResponse? {
     val fragranceId = row[ListingsTable.fragranceId].value
     val sellerId = row[ListingsTable.sellerId].value
 
@@ -697,7 +697,7 @@ private fun buildListingDto(
             .selectAll()
             .where { FragranceNotesTable.fragranceId eq fragranceId }
             .map { noteRow ->
-                FragranceNoteResponseDto(
+                FragranceNoteDto(
                     note = noteRow[FragranceNotesTable.note],
                     noteType = noteRow[FragranceNotesTable.noteType].name,
                 )
@@ -737,7 +737,7 @@ private fun buildListingDto(
     val reviewCount = reviewRows.size
 
     val fragranceDto =
-        FragranceResponseDto(
+        FragranceResponse(
             id = fragranceId,
             sellerId = fragranceRow[FragrancesTable.sellerId].value,
             name = fragranceRow[FragrancesTable.name],
@@ -760,7 +760,7 @@ private fun buildListingDto(
                     .toEpochMilliseconds(),
         )
 
-    return ListingResponseDto(
+    return ListingResponse(
         id = id,
         fragrance = fragranceDto,
         sellerId = sellerId,

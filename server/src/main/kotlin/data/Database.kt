@@ -41,7 +41,7 @@ fun initDatabase(config: ApplicationConfig) {
 
             // Conservative pooling for Render free tier & Supabase free tier
             // Render free tier has limited memory; Supabase free tier has connection caps.
-            maximumPoolSize = 3
+            maximumPoolSize = DB_POOL_SIZE
             minimumIdle = 1
 
             // Timeouts and resilience
