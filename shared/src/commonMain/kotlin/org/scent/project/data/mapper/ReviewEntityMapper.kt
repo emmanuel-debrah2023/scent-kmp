@@ -33,7 +33,10 @@ object ReviewEntityMapper {
             fragranceId = fragranceId,
             rating = rating,
             content = content ?: "",
-            createdAt = createdAt,
+            // Defaulted rather than dropped: a missing timestamp only costs correct ordering
+            // in the reviews query, and 0L is already Review.createdAt's domain default —
+            // discarding a review the server did send would be the worse trade.
+            createdAt = createdAt ?: 0L,
         )
     }
 
