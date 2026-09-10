@@ -56,7 +56,9 @@ class ProfileViewModel(
                 )
             }
         }
-        retry()
+        viewModelScope.launch {
+            retry()
+        }
     }
 
     fun selectTab(tab: ProfileTab) {
