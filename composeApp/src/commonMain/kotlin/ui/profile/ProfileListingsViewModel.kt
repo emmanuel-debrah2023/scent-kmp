@@ -1,6 +1,7 @@
 package ui.profile
 
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,38 +56,41 @@ class ProfileListingsViewModel(
 
     init {
         viewModelScope.launch {
+            // Launch collector and refresh sequentially to avoid race: ensure collection
+            // is subscribed before ready signal can be emitted.
             val listingsAndReady =
                 combine(
                     listingRepository.getUserListingsFlow(userId),
                     ready,
                 ) { result, isReady -> result to isReady }
 
-            combine(
-                listingsAndReady,
-                pendingDeleteId,
-                actionInFlightId,
-                actionError,
-            ) { (result, isReady), pending, inFlight, error ->
-                CollectedProfileListings(result, isReady, pending, inFlight, error)
-            }.collect { collected ->
-                if (!collected.isReady) return@collect
-                collected.listingsResult.handleResult(
-                    onSuccess = { listings ->
-                        _uiState.value =
-                            UiState.Success(
-                                ProfileListingsUiState(
-                                    listings = listings,
-                                    pendingDeleteId = collected.pendingDeleteId,
-                                    actionInFlightId = collected.actionInFlightId,
-                                    actionError = collected.actionError,
-                                ),
-                            )
-                    },
-                    onError = { error -> _uiState.value = UiState.Error(error) },
-                )
+            async {
+                combine(
+                    listingsAndReady,
+                    pendingDeleteId,
+                    actionInFlightId,
+                    actionError,
+                ) { (result, isReady), pending, inFlight, error ->
+                    CollectedProfileListings(result, isReady, pending, inFlight, error)
+                }.collect { collected ->
+                    if (!collected.isReady) return@collect
+                    collected.listingsResult.handleResult(
+                        onSuccess = { listings ->
+                            _uiState.value =
+                                UiState.Success(
+                                    ProfileListingsUiState(
+                                        listings = listings,
+                                        pendingDeleteId = collected.pendingDeleteId,
+                                        actionInFlightId = collected.actionInFlightId,
+                                        actionError = collected.actionError,
+                                    ),
+                                )
+                        },
+                        onError = { error -> _uiState.value = UiState.Error(error) },
+                    )
+                }
             }
-        }
-        viewModelScope.launch {
+            // Trigger initial refresh after collector is set up
             listingRepository.refreshMyListings().handleResult(
                 onSuccess = { ready.value = true },
                 onError = { error -> _uiState.value = UiState.Error(error) },

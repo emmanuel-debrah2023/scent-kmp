@@ -46,7 +46,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -137,16 +139,18 @@ fun ProfileScreen(
             // of this screen's lifetime, so switching away and back doesn't reload it.
             // Resolved here, not inside ProfileLoaded, so that composable stays a pure
             // function of already-loaded state and remains @Preview-safe.
-            var postsState: UiState<List<Post>>? = null
-            var collectionState: UiState<List<CollectionEntry>>? = null
-            var reviewsState: UiState<List<Review>>? = null
-            var listingsState: UiState<ProfileListingsUiState>? = null
+            var postsState: UiState<List<Post>>? by remember { mutableStateOf(null) }
+            var collectionState: UiState<List<CollectionEntry>>? by remember { mutableStateOf(null) }
+            var reviewsState: UiState<List<Review>>? by remember { mutableStateOf(null) }
+            var listingsState: UiState<ProfileListingsUiState>? by remember { mutableStateOf(null) }
             var listingsViewModel: ProfileListingsViewModel? = null
 
             when (selectedTab) {
                 ProfileTab.Posts -> {
                     val vm: ProfilePostsViewModel = koinViewModel { parametersOf(userId) }
-                    postsState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.uiState.collect { postsState = it }
+                    }
                     LaunchedEffect(vm) {
                         vm.error.collect { error ->
                             snackbarHostState.showSnackbar(error.message)
@@ -155,7 +159,9 @@ fun ProfileScreen(
                 }
                 ProfileTab.Collection -> {
                     val vm: ProfileCollectionViewModel = koinViewModel { parametersOf(userId) }
-                    collectionState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.uiState.collect { collectionState = it }
+                    }
                     LaunchedEffect(vm) {
                         vm.error.collect { error ->
                             snackbarHostState.showSnackbar(error.message)
@@ -164,7 +170,9 @@ fun ProfileScreen(
                 }
                 ProfileTab.Reviews -> {
                     val vm: ProfileReviewsViewModel = koinViewModel { parametersOf(userId) }
-                    reviewsState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.uiState.collect { reviewsState = it }
+                    }
                     LaunchedEffect(vm) {
                         vm.error.collect { error ->
                             snackbarHostState.showSnackbar(error.message)
@@ -174,7 +182,9 @@ fun ProfileScreen(
                 ProfileTab.Listings -> {
                     val vm: ProfileListingsViewModel = koinViewModel { parametersOf(userId) }
                     listingsViewModel = vm
-                    listingsState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.uiState.collect { listingsState = it }
+                    }
                     LaunchedEffect(vm) {
                         vm.error.collect { error ->
                             snackbarHostState.showSnackbar(error.message)
