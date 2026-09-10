@@ -82,6 +82,54 @@ import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 import kotlin.math.roundToInt
 
+data class ProfileActions(
+    val onToggleFollow: () -> Unit,
+    val onSelectTab: (ProfileTab) -> Unit,
+    val onLogout: () -> Unit,
+    val onRetry: () -> Unit,
+    val onUnlist: (Int) -> Unit,
+    val onRelist: (Int) -> Unit,
+    val onNavigateToFollowers: () -> Unit,
+    val onNavigateToFollowing: () -> Unit,
+    val onNavigateToFragrance: (Int) -> Unit,
+    val onCreateListing: () -> Unit,
+    val onEditListing: (Int) -> Unit,
+    val deleteConfirm: DeleteConfirmActions,
+) {
+    companion object {
+        fun noOp() =
+            ProfileActions(
+                onToggleFollow = {},
+                onSelectTab = {},
+                onLogout = {},
+                onRetry = {},
+                onUnlist = {},
+                onRelist = {},
+                onNavigateToFollowers = {},
+                onNavigateToFollowing = {},
+                onNavigateToFragrance = {},
+                onCreateListing = {},
+                onEditListing = {},
+                deleteConfirm = DeleteConfirmActions.noOp(),
+            )
+    }
+}
+
+data class DeleteConfirmActions(
+    val onRequest: (listingId: Int) -> Unit,
+    val onConfirm: () -> Unit,
+    val onDismiss: () -> Unit,
+) {
+    companion object {
+        fun noOp() =
+            DeleteConfirmActions(
+                onRequest = {},
+                onConfirm = {},
+                onDismiss = {},
+            )
+    }
+}
+
 @Composable
 fun ProfileScreen(
     authUser: AuthUser,
@@ -105,21 +153,30 @@ fun ProfileScreen(
     // onLogout -> SessionViewModel.logout() in App.kt) but nothing in ProfileContent ever
     // dispatches ProfileEvent.Logout — OwnProfileActions below only exposes Edit Profile
     // and Settings, both still TODO stubs. A signed-in user has no way to sign out.
+    val actions =
+        ProfileActions(
+            onToggleFollow = { viewModel.onEvent(ProfileEvent.ToggleFollow) },
+            onSelectTab = { viewModel.onEvent(ProfileEvent.SelectTab(it)) },
+            onLogout = onLogout,
+            onRetry = { viewModel.onEvent(ProfileEvent.Retry) },
+            onUnlist = { listingId -> viewModel.onEvent(ProfileEvent.UnlistListing(listingId)) },
+            onRelist = { listingId -> viewModel.onEvent(ProfileEvent.RelistListing(listingId)) },
+            onNavigateToFollowers = { /* TODO: navigate to followers list when route exists */ },
+            onNavigateToFollowing = { /* TODO: navigate to following list when route exists */ },
+            onNavigateToFragrance = { /* TODO: navigate to fragrance detail when profile route exists */ },
+            onCreateListing = onCreateListing,
+            onEditListing = onEditListing,
+            deleteConfirm =
+                DeleteConfirmActions(
+                    onRequest = { listingId -> viewModel.onEvent(ProfileEvent.RequestDelete(listingId)) },
+                    onConfirm = { viewModel.onEvent(ProfileEvent.ConfirmDelete) },
+                    onDismiss = { viewModel.onEvent(ProfileEvent.DismissConfirm) },
+                ),
+        )
+
     ProfileContent(
         state = state,
-        onEvent = { event ->
-            when (event) {
-                ProfileEvent.Logout -> onLogout()
-                else -> viewModel.onEvent(event)
-            }
-        },
-        // TODO(feature/profile-actions-wiring): followers/following/fragrance navigation
-        // still has no destination route.
-        onNavigateToFollowers = { /* TODO: navigate to followers list when route exists */ },
-        onNavigateToFollowing = { /* TODO: navigate to following list when route exists */ },
-        onNavigateToFragrance = { /* TODO: navigate to fragrance detail when profile route exists */ },
-        onCreateListing = onCreateListing,
-        onEditListing = onEditListing,
+        actions = actions,
         modifier = modifier,
     )
 
@@ -130,8 +187,8 @@ fun ProfileScreen(
             title = "Delete ${pendingListing.fragrance.name}?",
             message = "This cannot be undone.",
             confirmLabel = "DELETE",
-            onConfirm = { viewModel.onEvent(ProfileEvent.ConfirmDelete) },
-            onDismiss = { viewModel.onEvent(ProfileEvent.DismissConfirm) },
+            onConfirm = { actions.deleteConfirm.onConfirm() },
+            onDismiss = { actions.deleteConfirm.onDismiss() },
             isDestructive = true,
         )
     }
@@ -140,12 +197,7 @@ fun ProfileScreen(
 @Composable
 fun ProfileContent(
     state: ProfileUiState,
-    onEvent: (ProfileEvent) -> Unit,
-    onNavigateToFollowers: () -> Unit,
-    onNavigateToFollowing: () -> Unit,
-    onNavigateToFragrance: (Int) -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    actions: ProfileActions,
     modifier: Modifier = Modifier,
 ) {
     when (val profileState = state.profile) {
@@ -167,7 +219,7 @@ fun ProfileContent(
                     title = "Something went wrong",
                     message = profileState.error.message ?: "Could not load profile.",
                     actionLabel = "RETRY",
-                    onAction = { onEvent(ProfileEvent.Retry) },
+                    onAction = { actions.onRetry() },
                 )
             }
         }
@@ -180,12 +232,7 @@ fun ProfileContent(
                 selectedTab = state.selectedTab,
                 actionInFlightId = state.actionInFlightId,
                 actionError = state.actionError,
-                onEvent = onEvent,
-                onNavigateToFollowers = onNavigateToFollowers,
-                onNavigateToFollowing = onNavigateToFollowing,
-                onNavigateToFragrance = onNavigateToFragrance,
-                onCreateListing = onCreateListing,
-                onEditListing = onEditListing,
+                actions = actions,
                 modifier = modifier,
             )
         }
@@ -199,12 +246,7 @@ private fun ProfileLoaded(
     selectedTab: ProfileTab,
     actionInFlightId: Int?,
     actionError: AppError?,
-    onEvent: (ProfileEvent) -> Unit,
-    onNavigateToFollowers: () -> Unit,
-    onNavigateToFollowing: () -> Unit,
-    onNavigateToFragrance: (Int) -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    actions: ProfileActions,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -242,16 +284,14 @@ private fun ProfileLoaded(
                 ProfileHeader(
                     data = data,
                     isFollowing = isFollowing,
-                    onEvent = onEvent,
-                    onNavigateToFollowers = onNavigateToFollowers,
-                    onNavigateToFollowing = onNavigateToFollowing,
+                    actions = actions,
                 )
             }
             stickyHeader {
                 ProfileTabRow(
                     tabs = tabs,
                     selected = selectedTab,
-                    onTabSelected = { onEvent(ProfileEvent.SelectTab(it)) },
+                    onTabSelected = { actions.onSelectTab(it) },
                 )
             }
             profileTabContent(
@@ -259,10 +299,7 @@ private fun ProfileLoaded(
                 selectedTab = selectedTab,
                 actionInFlightId = actionInFlightId,
                 actionError = actionError,
-                onEvent = onEvent,
-                onNavigateToFragrance = onNavigateToFragrance,
-                onCreateListing = onCreateListing,
-                onEditListing = onEditListing,
+                actions = actions,
             )
         }
 
@@ -272,7 +309,7 @@ private fun ProfileLoaded(
             exit = fadeOut(tween(durationMillis = 300)),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
-            CollapsingTopBar(data = data, isFollowing = isFollowing, onEvent = onEvent)
+            CollapsingTopBar(data = data, isFollowing = isFollowing, actions = actions)
         }
     }
 }
@@ -281,7 +318,7 @@ private fun ProfileLoaded(
 private fun CollapsingTopBar(
     data: ProfileData,
     isFollowing: Boolean,
-    onEvent: (ProfileEvent) -> Unit,
+    actions: ProfileActions,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -315,7 +352,7 @@ private fun CollapsingTopBar(
             if (!data.isOwnProfile) {
                 FollowPillButton(
                     isFollowing = isFollowing,
-                    onClick = { onEvent(ProfileEvent.ToggleFollow) },
+                    onClick = { actions.onToggleFollow() },
                 )
             }
         }
@@ -363,9 +400,7 @@ private fun FollowPillButton(
 private fun ProfileHeader(
     data: ProfileData,
     isFollowing: Boolean,
-    onEvent: (ProfileEvent) -> Unit,
-    onNavigateToFollowers: () -> Unit,
-    onNavigateToFollowing: () -> Unit,
+    actions: ProfileActions,
     modifier: Modifier = Modifier,
 ) {
     val accent = ScentThemeExtras.accent
@@ -445,8 +480,8 @@ private fun ProfileHeader(
             horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             ProfileStat(count = data.user.postCount, label = "Posts", onClick = null)
-            ProfileStat(count = data.user.followerCount, label = "Followers", onClick = onNavigateToFollowers)
-            ProfileStat(count = data.user.followingCount, label = "Following", onClick = onNavigateToFollowing)
+            ProfileStat(count = data.user.followerCount, label = "Followers", onClick = actions.onNavigateToFollowers)
+            ProfileStat(count = data.user.followingCount, label = "Following", onClick = actions.onNavigateToFollowing)
             ProfileStat(count = ownsCount, label = "Owns", onClick = null)
         }
 
@@ -463,7 +498,7 @@ private fun ProfileHeader(
             // TODO(feature/profile-actions-wiring): overflow menu (report/block/share) is a no-op.
             OtherProfileActions(
                 isFollowing = isFollowing,
-                onFollowToggle = { onEvent(ProfileEvent.ToggleFollow) },
+                onFollowToggle = { actions.onToggleFollow() },
                 onMore = { /* TODO */ },
             )
         }
@@ -743,24 +778,19 @@ private fun LazyListScope.profileTabContent(
     selectedTab: ProfileTab,
     actionInFlightId: Int?,
     actionError: AppError?,
-    onEvent: (ProfileEvent) -> Unit,
-    onNavigateToFragrance: (Int) -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    actions: ProfileActions,
 ) {
     when (selectedTab) {
         ProfileTab.Posts -> postsTabContent(data.posts, data.isOwnProfile)
-        ProfileTab.Collection -> collectionTabContent(data.collection, data.isOwnProfile, onNavigateToFragrance)
-        ProfileTab.Wishlist -> wishlistTabContent(data.wishlist, data.isOwnProfile, onNavigateToFragrance)
+        ProfileTab.Collection -> collectionTabContent(data.collection, data.isOwnProfile, actions.onNavigateToFragrance)
+        ProfileTab.Wishlist -> wishlistTabContent(data.wishlist, data.isOwnProfile, actions.onNavigateToFragrance)
         ProfileTab.Listings ->
             listingsTabContent(
                 listings = data.listings,
                 isOwnProfile = data.isOwnProfile,
                 actionInFlightId = actionInFlightId,
                 actionError = actionError,
-                onEvent = onEvent,
-                onCreateListing = onCreateListing,
-                onEditListing = onEditListing,
+                actions = actions,
             )
         ProfileTab.Reviews -> reviewsTabContent(data.reviews, data.isOwnProfile)
         ProfileTab.Likes -> likesTabContent(data.likes)
@@ -945,9 +975,7 @@ private fun LazyListScope.listingsTabContent(
     isOwnProfile: Boolean,
     actionInFlightId: Int?,
     actionError: AppError?,
-    onEvent: (ProfileEvent) -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    actions: ProfileActions,
 ) {
     if (listings.isEmpty()) {
         item {
@@ -957,7 +985,7 @@ private fun LazyListScope.listingsTabContent(
                 actionLabel = if (isOwnProfile) "CREATE LISTING" else null,
                 onAction =
                     if (isOwnProfile) {
-                        onCreateListing
+                        actions.onCreateListing
                     } else {
                         null
                     },
@@ -1001,7 +1029,11 @@ private fun LazyListScope.listingsTabContent(
                         text = "+ ADD",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
                         color = ScentThemeExtras.interactive,
-                        modifier = Modifier.accessibleClickable(label = "Create listing", onClick = onCreateListing),
+                        modifier =
+                            Modifier.accessibleClickable(
+                                label = "Create listing",
+                                onClick = actions.onCreateListing,
+                            ),
                     )
                 }
             }
@@ -1023,18 +1055,16 @@ private fun LazyListScope.listingsTabContent(
     items(listings, key = { it.id }) { listing ->
         ProfileListingRow(
             listing = listing.toProfileListingRowUiModel(),
-            onEdit = { onEditListing(listing.id) },
+            onEdit = { actions.onEditListing(listing.id) },
             onUnlist = {
-                val event =
-                    if (listing.isActive) {
-                        ProfileEvent.UnlistListing(listing.id)
-                    } else {
-                        ProfileEvent.RelistListing(listing.id)
-                    }
-                onEvent(event)
+                if (listing.isActive) {
+                    actions.onUnlist(listing.id)
+                } else {
+                    actions.onRelist(listing.id)
+                }
             },
-            onDelete = { onEvent(ProfileEvent.RequestDelete(listing.id)) },
-            onClick = { onEditListing(listing.id) },
+            onDelete = { actions.deleteConfirm.onRequest(listing.id) },
+            onClick = { actions.onEditListing(listing.id) },
             showActions = isOwnProfile,
             isActionInFlight = actionInFlightId == listing.id,
             modifier = Modifier.padding(horizontal = ScentThemeExtras.spacing.profileRowHorizontalPadding),
@@ -1198,12 +1228,7 @@ private fun OwnProfilePreview() {
                             ),
                         ),
                 ),
-            onEvent = {},
-            onNavigateToFollowers = {},
-            onNavigateToFollowing = {},
-            onNavigateToFragrance = {},
-            onCreateListing = {},
-            onEditListing = {},
+            actions = ProfileActions.noOp(),
         )
     }
 }
@@ -1234,12 +1259,7 @@ private fun OtherProfilePreview() {
                         ),
                     isFollowing = false,
                 ),
-            onEvent = {},
-            onNavigateToFollowers = {},
-            onNavigateToFollowing = {},
-            onNavigateToFragrance = {},
-            onCreateListing = {},
-            onEditListing = {},
+            actions = ProfileActions.noOp(),
         )
     }
 }
@@ -1250,12 +1270,7 @@ private fun ProfileLoadingPreview() {
     ScentTheme {
         ProfileContent(
             state = ProfileUiState(profile = UiState.Loading),
-            onEvent = {},
-            onNavigateToFollowers = {},
-            onNavigateToFollowing = {},
-            onNavigateToFragrance = {},
-            onCreateListing = {},
-            onEditListing = {},
+            actions = ProfileActions.noOp(),
         )
     }
 }
