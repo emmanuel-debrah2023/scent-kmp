@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,8 +84,15 @@ fun HomeFullBleedScreen(
 ) {
     val feedViewModel: FeedViewModel = koinViewModel()
     val feedUiState by feedViewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { feedViewModel.loadFeed() }
+
+    LaunchedEffect(Unit) {
+        feedViewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
+    }
 
     var topTab by remember { mutableIntStateOf(initialTab) }
     // TODO(chore/unify-home-nav-tab-state): duplicates MainNavState.selectedTab — this
@@ -117,6 +125,7 @@ fun HomeFullBleedScreen(
         actions = {
             NotificationsAction(tint = MaterialTheme.colorScheme.primary)
         },
+        snackbarHostState = snackbarHostState,
     ) { innerPadding ->
         LazyColumn(
             state = listState,
