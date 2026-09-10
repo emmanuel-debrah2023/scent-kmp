@@ -403,6 +403,11 @@ private fun MarketplaceBody(
                         SkeletonListingCard()
                     }
                 }
+                // TODO(fix/marketplace-end-of-results-footer): hasMore is
+                // `totalCount == null || listings.size < totalCount`, so when the server omits
+                // totalCount this branch is unreachable — the user hits the end of an
+                // exhausted list with no terminator and the scroll trigger keeps re-firing
+                // loadNextPage(). The repository's browseExhausted is the real signal.
             } else if (!state.hasMore) {
                 item(key = "end-of-results") {
                     Column(

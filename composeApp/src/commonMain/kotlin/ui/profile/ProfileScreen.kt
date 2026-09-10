@@ -871,6 +871,11 @@ private fun LazyListScope.profileTabContent(
     onEditListing: (Int) -> Unit,
 ) {
     when (selectedTab) {
+        // TODO(fix/profile-tabs-lazy-composition): Posts, Collection and Reviews each wrap a
+        // whole @Composable in one item { } with an inner Column, so every row is composed
+        // and measured up front — a profile with hundreds of posts composes all of them on
+        // tab selection. Wishlist and Listings below keep the LazyListScope-extension form
+        // that emits items(...); these three need restoring to it.
         ProfileTab.Posts -> postsState?.let { tabResult(it) { posts -> item { PostsGrid(posts, isOwnProfile) } } }
         ProfileTab.Collection ->
             collectionState?.let {

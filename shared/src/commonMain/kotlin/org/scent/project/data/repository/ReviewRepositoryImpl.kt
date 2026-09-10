@@ -38,6 +38,11 @@ class ReviewRepositoryImpl(
             val response = api.getUserReviews(userId, token)
             val dtos = response.reviews.orEmpty()
 
+            // TODO(fix/review-collection-fk-orphan-filter): toEntity() only requires
+            // fragrance?.id but fragranceEntities() also requires a non-blank name and brand,
+            // so a fragrance with a blank brand yields a review row whose fragranceId has no
+            // parent. ReviewEntity's ForeignKey then throws, @Transaction rolls the whole
+            // refresh back, and one bad row errors the entire tab. Filter to mapped ids.
             reviewDao.replaceUserReviews(
                 userId = userId,
                 reviews = dtos.mapNotNull { it.toEntity()?.copy(reviewerId = userId) },

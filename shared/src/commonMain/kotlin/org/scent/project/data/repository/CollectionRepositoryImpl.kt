@@ -38,6 +38,11 @@ class CollectionRepositoryImpl(
             val response = api.getUserCollection(userId, token)
             val dtos = response.entries.orEmpty()
 
+            // TODO(fix/review-collection-fk-orphan-filter): toEntity() only requires
+            // fragrance?.id but fragranceEntities() also requires a non-blank name and brand,
+            // so a fragrance with a blank brand yields an entry whose fragranceId has no
+            // parent. CollectionEntryEntity's ForeignKey then throws, @Transaction rolls the
+            // whole refresh back, and one bad row errors the entire tab. Filter to mapped ids.
             collectionDao.replaceUserCollection(
                 userId = userId,
                 entries = dtos.mapNotNull { it.toEntity(userId) },

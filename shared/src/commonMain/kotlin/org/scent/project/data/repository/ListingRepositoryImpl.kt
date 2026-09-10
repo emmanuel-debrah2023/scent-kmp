@@ -74,6 +74,10 @@ class ListingRepositoryImpl(
         limit: Int,
     ): Result<Unit> =
         browseLock.withLock {
+            // TODO(fix/browse-cursor-reset-on-refresh): browseCursor and browseExhausted are
+            // only updated on a *successful* fetchBrowsePage, so a failed refresh after a
+            // filter change leaves the new query paired with the old query's cursor. Both
+            // need resetting here, before the fetch is attempted.
             browseQuery = query
             fetchBrowsePage(query, limit, cursor = null, append = false)
         }
@@ -152,6 +156,11 @@ class ListingRepositoryImpl(
     /**
      * Caches listings without touching browse membership — used by the detail
      * and My Listings paths, which must not reorder or evict the browse list.
+     *
+     * TODO(fix/cache-listings-browse-position): that does NOT hold — browsePosition = null
+     * goes through Room's `@Upsert`, whose conflict path is a full-row `@Update`, so every
+     * cached listing is dropped from `getBrowseListings()` (WHERE browsePosition IS NOT NULL).
+     * Needs a partial update that preserves the existing position.
      */
     private suspend fun cacheListings(dtos: List<ListingResponse>) {
         listingDao.writeListings(
