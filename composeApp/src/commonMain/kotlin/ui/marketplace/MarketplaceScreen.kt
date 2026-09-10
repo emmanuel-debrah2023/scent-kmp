@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,6 +70,7 @@ fun MarketplaceScreen(
     onListingClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onSearchClick: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     viewModel: MarketplaceViewModel = koinViewModel(),
     brandSuggestionViewModel: BrandSuggestionViewModel = koinViewModel(),
 ) {
@@ -77,6 +79,18 @@ fun MarketplaceScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadListings()
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        brandSuggestionViewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
     }
 
     val data = (uiState as? UiState.Success)?.data

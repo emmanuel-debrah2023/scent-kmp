@@ -39,6 +39,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,6 +90,7 @@ fun ProfileScreen(
     onCreateListing: () -> Unit,
     onEditListing: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val viewModel: ProfileViewModel = koinViewModel(parameters = { parametersOf(authUser) })
     val profileState by viewModel.profileState.collectAsState()
@@ -103,6 +105,12 @@ fun ProfileScreen(
     // Retry here re-fetches so an edit's changes actually show up on return.
     LaunchedEffect(Unit) {
         viewModel.retry()
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
     }
 
     when (val profile = profileState) {
@@ -139,19 +147,39 @@ fun ProfileScreen(
                 ProfileTab.Posts -> {
                     val vm: ProfilePostsViewModel = koinViewModel { parametersOf(userId) }
                     postsState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.error.collect { error ->
+                            snackbarHostState.showSnackbar(error.message)
+                        }
+                    }
                 }
                 ProfileTab.Collection -> {
                     val vm: ProfileCollectionViewModel = koinViewModel { parametersOf(userId) }
                     collectionState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.error.collect { error ->
+                            snackbarHostState.showSnackbar(error.message)
+                        }
+                    }
                 }
                 ProfileTab.Reviews -> {
                     val vm: ProfileReviewsViewModel = koinViewModel { parametersOf(userId) }
                     reviewsState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.error.collect { error ->
+                            snackbarHostState.showSnackbar(error.message)
+                        }
+                    }
                 }
                 ProfileTab.Listings -> {
                     val vm: ProfileListingsViewModel = koinViewModel { parametersOf(userId) }
                     listingsViewModel = vm
                     listingsState = vm.uiState.collectAsState().value
+                    LaunchedEffect(vm) {
+                        vm.error.collect { error ->
+                            snackbarHostState.showSnackbar(error.message)
+                        }
+                    }
                 }
                 ProfileTab.Wishlist, ProfileTab.Likes -> Unit
             }

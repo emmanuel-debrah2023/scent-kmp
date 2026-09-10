@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +58,7 @@ fun BlendedScaffold(
     selectedHeaderTab: Int = 0,
     onHeaderTabSelected: (Int) -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     content: @Composable BoxScope.(PaddingValues) -> Unit,
 ) {
     var headerHeight by remember { mutableStateOf(0.dp) }
@@ -83,6 +87,14 @@ fun BlendedScaffold(
             onTabSelected = onTabSelected,
             onHeightMeasured = { bottomNavHeight = it },
             modifier = Modifier.align(Alignment.BottomStart),
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = bottomNavHeight),
         )
     }
 }
