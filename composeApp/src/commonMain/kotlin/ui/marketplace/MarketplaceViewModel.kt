@@ -11,6 +11,8 @@ import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.ListingQuery
 import org.scent.project.domain.repository.ListingRepository
 import org.scent.project.domain.util.Result
+import org.scent.project.domain.util.asLeft
+import org.scent.project.domain.util.asRight
 import ui.base.BaseViewModel
 import ui.base.UiState
 import kotlin.math.roundToInt
@@ -74,6 +76,22 @@ fun List<ActiveFilter>.priceRange(): PriceRange? {
     val max = filter.secondaryValue?.takeIf { it.isNotBlank() }?.toDoubleOrNull()
     return if (min == null && max == null) null else PriceRange(min, max)
 }
+
+/**
+ * Rejects a negative bound, and an inverted range only when *both* bounds are present —
+ * an open-ended range ("Over £50") has nothing to compare against, so coercing its absent
+ * side to a number and comparing would fail every such filter.
+ */
+fun PriceRange.validate(): Result<PriceRange> =
+    when {
+        min != null && min < 0 ->
+            AppError.ValidationError.InvalidMinPrice(rawValue = min.toChipAmount()).asLeft()
+        max != null && max < 0 ->
+            AppError.ValidationError.InvalidMaxPrice(rawValue = max.toChipAmount()).asLeft()
+        min != null && max != null && min > max ->
+            AppError.ValidationError.MinPriceExceedsMax(min = min, max = max).asLeft()
+        else -> asRight()
+    }
 
 /** Encodes bounds into a chip, or null when the price section is empty (nothing to apply).
  *  Called from the filter sheet's Apply. */
@@ -213,10 +231,9 @@ class MarketplaceViewModel(
         _uiState.value = UiState.Loading
         viewModelScope.launch {
             val price = filters.priceRange()
-            val minPrice = (price?.min ?: 0).toDouble()
-            val maxPrice = (price?.max ?: 0).toDouble()
-            if (minPrice < 0 || maxPrice < 0 || minPrice > maxPrice) {
-                _uiState.value = UiState.Error(AppError.ValidationError.MinPriceExceedsMax(minPrice, maxPrice))
+            val priceError = price?.validate()?.leftOrNull()
+            if (priceError != null) {
+                _uiState.value = UiState.Error(priceError)
                 return@launch
             }
             val query =
