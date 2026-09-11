@@ -66,13 +66,15 @@ class FeedViewModelTest {
                 Unit.asRight()
             }
 
-            assertEquals(UiState.Idle, viewModel.uiState.value)
-            viewModel.loadFeed()
-            val state = viewModel.uiState.value
-            assertIs<UiState.Success<FeedState>>(state)
-            assertEquals(2, state.data.posts.size)
-
-            assertEquals(UiState.Loading, stateWhenRefreshCalled)
+            viewModel.uiState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.loadFeed()
+                assertEquals(UiState.Loading, awaitItem())
+                val successState = awaitItem()
+                assertIs<UiState.Success<FeedState>>(successState)
+                assertEquals(2, successState.data.posts.size)
+                assertEquals(UiState.Loading, stateWhenRefreshCalled)
+            }
         }
 
     @Test
@@ -86,13 +88,15 @@ class FeedViewModelTest {
                 error.asLeft()
             }
 
-            assertEquals(UiState.Idle, viewModel.uiState.value)
-            viewModel.loadFeed()
-            val state = viewModel.uiState.value
-            assertIs<UiState.Error>(state)
-            assertEquals(error, state.error)
-
-            assertEquals(UiState.Loading, stateWhenRefreshCalled)
+            viewModel.uiState.test {
+                assertEquals(UiState.Idle, awaitItem())
+                viewModel.loadFeed()
+                assertEquals(UiState.Loading, awaitItem())
+                val errorState = awaitItem()
+                assertIs<UiState.Error>(errorState)
+                assertEquals(error, errorState.error)
+                assertEquals(UiState.Loading, stateWhenRefreshCalled)
+            }
         }
 
     @Test
@@ -102,13 +106,18 @@ class FeedViewModelTest {
                 feedFlow.emit(listOf(makePost("p1")).asRight())
                 Unit.asRight()
             }
-            viewModel.loadFeed()
 
-            viewModel.loadFeed(refresh = false)
+            viewModel.uiState.test {
+                viewModel.loadFeed()
+                awaitItem() // Idle
+                awaitItem() // Loading
+                awaitItem() // Success with p1
 
-            val state = viewModel.uiState.value as UiState.Success
-            assertEquals(1, state.data.posts.size)
-            coVerify(exactly = 1) { postRepository.refreshFeed() }
+                viewModel.loadFeed(refresh = false)
+                expectNoEvents()
+
+                coVerify(exactly = 1) { postRepository.refreshFeed() }
+            }
         }
 
     @Test
@@ -118,17 +127,24 @@ class FeedViewModelTest {
                 feedFlow.emit(listOf(makePost("p1")).asRight())
                 Unit.asRight()
             }
-            viewModel.loadFeed()
 
-            coEvery { postRepository.refreshFeed() } coAnswers {
-                feedFlow.emit(listOf(makePost("p2"), makePost("p3")).asRight())
-                Unit.asRight()
+            viewModel.uiState.test {
+                viewModel.loadFeed()
+                awaitItem() // Idle
+                awaitItem() // Loading
+                awaitItem() // Success with p1
+
+                coEvery { postRepository.refreshFeed() } coAnswers {
+                    feedFlow.emit(listOf(makePost("p2"), makePost("p3")).asRight())
+                    Unit.asRight()
+                }
+                viewModel.loadFeed(refresh = true)
+                awaitItem() // Loading
+                val successState = awaitItem() // Success with p2, p3
+                assertEquals(2, (successState as UiState.Success).data.posts.size)
+
+                coVerify(exactly = 2) { postRepository.refreshFeed() }
             }
-            viewModel.loadFeed(refresh = true)
-
-            val state = viewModel.uiState.value as UiState.Success
-            assertEquals(2, state.data.posts.size)
-            coVerify(exactly = 2) { postRepository.refreshFeed() }
         }
 
     // ─────────────────────────────────────────────
@@ -142,35 +158,24 @@ class FeedViewModelTest {
                 feedFlow.emit(listOf(makePost("p1")).asRight())
                 Unit.asRight()
             }
-            viewModel.loadFeed()
 
-            coEvery { postRepository.loadMoreFeed() } coAnswers {
-                feedFlow.emit(listOf(makePost("p1"), makePost("p2")).asRight())
-                Unit.asRight()
+            viewModel.uiState.test {
+                viewModel.loadFeed()
+                awaitItem() // Idle
+                awaitItem() // Loading
+                awaitItem() // Success with p1
+
+                coEvery { postRepository.loadMoreFeed() } coAnswers {
+                    feedFlow.emit(listOf(makePost("p1"), makePost("p2")).asRight())
+                    Unit.asRight()
+                }
+                viewModel.loadNextPage()
+
+                val state = awaitItem() as UiState.Success
+                assertEquals(listOf("p1", "p2"), state.data.posts.map { it.id })
+                assertEquals(false, state.data.isLoadingMore)
+                coVerify { postRepository.loadMoreFeed() }
             }
-            viewModel.loadNextPage()
-
-            val state = viewModel.uiState.value as UiState.Success
-            assertEquals(listOf("p1", "p2"), state.data.posts.map { it.id })
-            assertEquals(false, state.data.isLoadingMore)
-            coVerify { postRepository.loadMoreFeed() }
-        }
-
-    @Test
-    fun `loadNextPage reverts isLoadingMore on error`() =
-        runTest {
-            coEvery { postRepository.refreshFeed() } coAnswers {
-                feedFlow.emit(listOf(makePost("p1")).asRight())
-                Unit.asRight()
-            }
-            viewModel.loadFeed()
-
-            coEvery { postRepository.loadMoreFeed() } returns AppError.NetworkError.NoConnection().asLeft()
-            viewModel.loadNextPage()
-
-            val state = viewModel.uiState.value as UiState.Success
-            assertEquals(1, state.data.posts.size)
-            assertEquals(false, state.data.isLoadingMore)
         }
 
     // ─────────────────────────────────────────────

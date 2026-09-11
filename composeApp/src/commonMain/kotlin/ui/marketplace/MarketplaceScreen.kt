@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,6 +70,7 @@ fun MarketplaceScreen(
     onListingClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onSearchClick: () -> Unit = {},
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     viewModel: MarketplaceViewModel = koinViewModel(),
     brandSuggestionViewModel: BrandSuggestionViewModel = koinViewModel(),
 ) {
@@ -77,6 +79,18 @@ fun MarketplaceScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadListings()
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        brandSuggestionViewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
     }
 
     val data = (uiState as? UiState.Success)?.data
@@ -389,6 +403,11 @@ private fun MarketplaceBody(
                         SkeletonListingCard()
                     }
                 }
+                // TODO(fix/marketplace-end-of-results-footer): hasMore is
+                // `totalCount == null || listings.size < totalCount`, so when the server omits
+                // totalCount this branch is unreachable — the user hits the end of an
+                // exhausted list with no terminator and the scroll trigger keeps re-firing
+                // loadNextPage(). The repository's browseExhausted is the real signal.
             } else if (!state.hasMore) {
                 item(key = "end-of-results") {
                     Column(
