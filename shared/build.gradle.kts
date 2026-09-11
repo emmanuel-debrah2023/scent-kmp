@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -21,8 +22,14 @@ kotlin {
         }
     }
 
-    iosArm64()
-    iosSimulatorArm64()
+    // Apple targets only exist on an Apple host. Room's KSP tasks for them are skipped on
+    // a non-Apple host while the JVM/Android ones still run, so the native compile would
+    // then fail on a missing generated `actual` — see the iOS CI job, which is the only
+    // place these targets are meant to be built.
+    if (HostManager.hostIsMac) {
+        iosArm64()
+        iosSimulatorArm64()
+    }
 
     jvm()
 
@@ -55,8 +62,10 @@ kotlin {
             implementation(libs.androidx.datastore.preferences)
         }
 
-        iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
+        if (HostManager.hostIsMac) {
+            iosMain.dependencies {
+                implementation(libs.ktor.client.darwin)
+            }
         }
 
         jvmMain.dependencies {
@@ -73,19 +82,16 @@ kotlin {
 }
 
 // Room's KSP processor runs per target, so each one is registered explicitly.
-// Adding a Kotlin target above means adding its ksp configuration here too.
-// TODO(fix/ios-arm64-ksp-ordering): these are correctly ordered before their compile
-// tasks, but on a non-Apple host kspKotlinIosArm64 and kspKotlinIosSimulatorArm64 are
-// SKIPPED while the JVM and Android ones run — so Room never generates the `actual` for
-// ScentDatabaseConstructor and :shared:compileKotlinIosArm64 fails with "Expected
-// ScentDatabaseConstructor has no actual declaration ... for Native". CI's lint job runs
-// on ubuntu-latest and its detekt step pulls that native compile into the graph. Invisible
-// on macOS, where the native ksp tasks run normally.
+// Adding a Kotlin target above means adding its ksp configuration here too — and keeping
+// the Apple ones inside the same host guard, since their configurations only exist when
+// the targets are declared.
 dependencies {
     add("kspAndroid", libs.room.compiler)
-    add("kspIosArm64", libs.room.compiler)
-    add("kspIosSimulatorArm64", libs.room.compiler)
     add("kspJvm", libs.room.compiler)
+    if (HostManager.hostIsMac) {
+        add("kspIosArm64", libs.room.compiler)
+        add("kspIosSimulatorArm64", libs.room.compiler)
+    }
 }
 
 android {
