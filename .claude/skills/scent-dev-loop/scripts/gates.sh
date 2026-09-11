@@ -82,10 +82,11 @@ fail() { set_field "$1" '"fail"'; set_field last_failure "\"$2\""; echo "FAIL: $
 
 echo "--- Gate 1: compile"
 # TODO(fix/ios-arm64-ksp-ordering): this compiles JVM and Android only, and Gate 4's
-# allTests covers iosSimulatorArm64Test but never the iOS *device* target. A tree that
-# fails :shared:compileKotlinIosArm64 can therefore record five green gates and pass the
-# pre-push hook, which is exactly what happened on PR #86 before CI caught it. Add the
-# device-target compile here once the KSP ordering bug it exposes is fixed.
+# allTests covers iosSimulatorArm64Test but never the iOS *device* target, so a tree that
+# fails :shared:compileKotlinIosArm64 can still record five green gates and pass the
+# pre-push hook. Worth closing — but note it would NOT have caught the PR #86 CI failure:
+# that one only reproduces on a non-Apple host, and these gates run on macOS. Local gates
+# can never be full CI parity while CI lints on Linux; say so rather than implying it.
 if ! ./gradlew --quiet :shared:compileKotlinJvm :composeApp:compileDebugKotlinAndroid; then
   fail gate1 "compile"
 fi

@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,8 +14,12 @@ kotlin {
         }
     }
 
-    iosArm64()
-    iosSimulatorArm64()
+    // Guarded to match :shared — a consumer cannot declare Apple targets that its
+    // dependency does not also publish, so all three modules gate on the same condition.
+    if (HostManager.hostIsMac) {
+        iosArm64()
+        iosSimulatorArm64()
+    }
     jvm()
 
     sourceSets {
