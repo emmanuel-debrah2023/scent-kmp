@@ -74,12 +74,13 @@ kotlin {
 
 // Room's KSP processor runs per target, so each one is registered explicitly.
 // Adding a Kotlin target above means adding its ksp configuration here too.
-// TODO(fix/ios-arm64-ksp-ordering): registering the configuration is not enough —
-// kspKotlinIosArm64 is not ordered before compileKotlinIosArm64, so on a cold cache the
-// native compile runs before Room generates the `actual` for ScentDatabaseConstructor and
-// fails with "Expected ScentDatabaseConstructor has no actual declaration ... for Native".
-// Masked locally because the ksp output is usually FROM-CACHE; CI hits it on a clean
-// checkout. Every declared native target needs the ordering, not just iosArm64.
+// TODO(fix/ios-arm64-ksp-ordering): these are correctly ordered before their compile
+// tasks, but on a non-Apple host kspKotlinIosArm64 and kspKotlinIosSimulatorArm64 are
+// SKIPPED while the JVM and Android ones run — so Room never generates the `actual` for
+// ScentDatabaseConstructor and :shared:compileKotlinIosArm64 fails with "Expected
+// ScentDatabaseConstructor has no actual declaration ... for Native". CI's lint job runs
+// on ubuntu-latest and its detekt step pulls that native compile into the graph. Invisible
+// on macOS, where the native ksp tasks run normally.
 dependencies {
     add("kspAndroid", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
