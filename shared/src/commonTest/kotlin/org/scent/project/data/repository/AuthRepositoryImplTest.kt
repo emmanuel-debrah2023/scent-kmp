@@ -9,6 +9,7 @@ import org.scent.project.domain.model.AuthState
 import org.scent.project.domain.util.asLeft
 import org.scent.project.fakes.FakeAuthApi
 import org.scent.project.fakes.FakeTokenStorage
+import org.scent.project.fakes.FakeUserDao
 import org.scent.project.fakes.FakeValidator
 import kotlin.test.Test
 import kotlin.test.assertIs
@@ -24,7 +25,8 @@ class AuthRepositoryImplTest {
         api: FakeAuthApi = FakeAuthApi(),
         storage: FakeTokenStorage = FakeTokenStorage(),
         validator: FakeValidator = FakeValidator(),
-    ) = AuthRepositoryImpl(api = api, tokenStorage = storage, validator = validator)
+        userDao: FakeUserDao = FakeUserDao(),
+    ) = AuthRepositoryImpl(api = api, tokenStorage = storage, userDao = userDao, validator = validator)
 
     private val validAuthResponse =
         AuthResponse(
@@ -57,6 +59,19 @@ class AuthRepositoryImplTest {
 
             assertTrue(result.isRight)
             assertTrue(storage.storedToken == "jwt-token")
+        }
+
+    @Test
+    fun `login seeds UserDao so getProfileFlow resolves without a dedicated endpoint`() =
+        runTest {
+            val userDao = FakeUserDao()
+            val api = FakeAuthApi().apply { loginResponse = validAuthResponse }
+
+            repo(api = api, userDao = userDao).login("john@example.com", "password123")
+
+            val cached = userDao.getUser(1).first()
+            assertTrue(cached != null)
+            assertTrue(cached.username == "johndoe")
         }
 
     @Test

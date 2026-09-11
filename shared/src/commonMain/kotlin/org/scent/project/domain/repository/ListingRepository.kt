@@ -73,15 +73,6 @@ interface ListingRepository {
     /** Soft delete — sets `deletedAt` server-side. There is no hard delete. */
     suspend fun deleteListing(id: Int): Result<Unit>
 
-    /**
-     * The caller's own listings, including inactive ones, excluding deleted ones.
-     *
-     * TODO(chore/profile-viewmodel-split): superseded by
-     * [getUserListingsFlow] + [refreshMyListings]. Removed once ProfileViewModel
-     * stops calling it through GetMyListingsUseCase.
-     */
-    suspend fun getMyListings(): Result<List<Listing>>
-
     companion object {
         const val DEFAULT_PAGE_SIZE: Int = 20
     }

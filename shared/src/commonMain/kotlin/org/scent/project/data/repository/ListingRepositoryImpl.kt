@@ -15,7 +15,6 @@ import org.scent.project.data.mapper.ListingEntityMapper.toEntity
 import org.scent.project.data.mapper.ListingEntityMapper.toNoteEntities
 import org.scent.project.data.mapper.ListingMapper.toBrandNames
 import org.scent.project.data.mapper.ListingMapper.toListing
-import org.scent.project.data.mapper.ListingMapper.toListingPage
 import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.dto.CreateListingRequest
 import org.scent.project.data.remote.dto.ListingResponse
@@ -75,6 +74,10 @@ class ListingRepositoryImpl(
         limit: Int,
     ): Result<Unit> =
         browseLock.withLock {
+            // TODO(fix/browse-cursor-reset-on-refresh): browseCursor and browseExhausted are
+            // only updated on a *successful* fetchBrowsePage, so a failed refresh after a
+            // filter change leaves the new query paired with the old query's cursor. Both
+            // need resetting here, before the fetch is attempted.
             browseQuery = query
             fetchBrowsePage(query, limit, cursor = null, append = false)
         }
@@ -153,6 +156,11 @@ class ListingRepositoryImpl(
     /**
      * Caches listings without touching browse membership — used by the detail
      * and My Listings paths, which must not reorder or evict the browse list.
+     *
+     * TODO(fix/cache-listings-browse-position): that does NOT hold — browsePosition = null
+     * goes through Room's `@Upsert`, whose conflict path is a full-row `@Update`, so every
+     * cached listing is dropped from `getBrowseListings()` (WHERE browsePosition IS NOT NULL).
+     * Needs a partial update that preserves the existing position.
      */
     private suspend fun cacheListings(dtos: List<ListingResponse>) {
         listingDao.writeListings(
@@ -264,27 +272,6 @@ class ListingRepositoryImpl(
             // or every open collector keeps rendering a listing that is gone.
             listingDao.deleteListing(id)
             Unit.asRight()
-        }
-    }
-
-    override suspend fun getMyListings(): Result<List<Listing>> {
-        val token =
-            tokenStorage.getToken().getOrNull()
-                ?: return AppError.AuthError.Unauthorized().asLeft()
-
-        return safeApiCall(
-            onHttpError = { status ->
-                when (status) {
-                    401 -> AppError.AuthError.Unauthorized().asLeft()
-                    else -> AppError.NetworkError.ServerError(statusCode = status).asLeft()
-                }
-            },
-        ) {
-            api
-                .getMyListings(token)
-                .toListingPage()
-                .listings
-                .asRight()
         }
     }
 

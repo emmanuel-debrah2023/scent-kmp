@@ -50,11 +50,7 @@ import org.scent.project.domain.usecase.GetBrandSuggestionsUseCase
 import org.scent.project.domain.usecase.GetCurrentUserUseCase
 import org.scent.project.domain.usecase.GetFragranceDetailUseCase
 import org.scent.project.domain.usecase.GetListingUseCase
-import org.scent.project.domain.usecase.GetMyListingsUseCase
-import org.scent.project.domain.usecase.GetUserCollectionUseCase
 import org.scent.project.domain.usecase.GetUserLikesUseCase
-import org.scent.project.domain.usecase.GetUserPostsUseCase
-import org.scent.project.domain.usecase.GetUserReviewsUseCase
 import org.scent.project.domain.usecase.GetUserWishlistUseCase
 import org.scent.project.domain.usecase.LikePostUseCase
 import org.scent.project.domain.usecase.LoginUseCase
@@ -95,7 +91,9 @@ fun sharedModule(
     single { MediaApiImpl(httpClient = get(), baseUrl = baseUrl) } bind MediaApi::class
 
     // Repositories
-    single { AuthRepositoryImpl(api = get(), tokenStorage = get(), validator = get()) } bind AuthRepository::class
+    single {
+        AuthRepositoryImpl(api = get(), tokenStorage = get(), userDao = get(), validator = get())
+    } bind AuthRepository::class
 
     single {
         PostRepositoryImpl(api = get(), tokenStorage = get(), postDao = get())
@@ -188,20 +186,12 @@ fun sharedModule(
 
     factory { DeleteListingUseCase(repository = get()) }
 
-    factory { GetMyListingsUseCase(repository = get()) }
-
     factory { UploadListingPhotoUseCase(repository = get()) }
 
     factory { ToggleFollowUseCase() }
 
     // Profile
-    factory { GetUserPostsUseCase(repository = get<PostRepository>()) }
-
-    factory { GetUserCollectionUseCase(repository = get<CollectionRepository>()) }
-
     factory { GetUserWishlistUseCase(repository = get()) }
-
-    factory { GetUserReviewsUseCase(repository = get<ReviewRepository>()) }
 
     factory { GetUserLikesUseCase(repository = get()) }
 }

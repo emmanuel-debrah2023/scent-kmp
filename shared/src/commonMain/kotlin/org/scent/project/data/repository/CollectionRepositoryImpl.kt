@@ -8,7 +8,6 @@ import org.scent.project.data.local.dao.CollectionDao
 import org.scent.project.data.mapper.CollectionEntryEntityMapper.toDomainList
 import org.scent.project.data.mapper.CollectionEntryEntityMapper.toEntity
 import org.scent.project.data.mapper.CollectionEntryEntityMapper.toNoteEntities
-import org.scent.project.data.mapper.ProfileMapper.toCollection
 import org.scent.project.data.remote.api.CollectionApi
 import org.scent.project.data.remote.dto.CollectionEntryDto
 import org.scent.project.domain.error.AppError
@@ -29,16 +28,6 @@ class CollectionRepositoryImpl(
             .map { it.toDomainList() }
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
 
-    override suspend fun getUserCollection(userId: Int): Result<List<CollectionEntry>> =
-        safeApiCall(
-            onHttpError = { status ->
-                AppError.NetworkError.ServerError(statusCode = status).asLeft()
-            },
-        ) {
-            val token = tokenStorage.getToken().getOrNull()
-            api.getUserCollection(userId, token).toCollection().asRight()
-        }
-
     override suspend fun refreshUserCollection(userId: Int): Result<Unit> =
         safeApiCall(
             onHttpError = { status ->
@@ -49,6 +38,11 @@ class CollectionRepositoryImpl(
             val response = api.getUserCollection(userId, token)
             val dtos = response.entries.orEmpty()
 
+            // TODO(fix/review-collection-fk-orphan-filter): toEntity() only requires
+            // fragrance?.id but fragranceEntities() also requires a non-blank name and brand,
+            // so a fragrance with a blank brand yields an entry whose fragranceId has no
+            // parent. CollectionEntryEntity's ForeignKey then throws, @Transaction rolls the
+            // whole refresh back, and one bad row errors the entire tab. Filter to mapped ids.
             collectionDao.replaceUserCollection(
                 userId = userId,
                 entries = dtos.mapNotNull { it.toEntity(userId) },

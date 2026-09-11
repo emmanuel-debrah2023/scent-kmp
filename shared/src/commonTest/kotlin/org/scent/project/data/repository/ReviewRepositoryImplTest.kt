@@ -120,33 +120,4 @@ class ReviewRepositoryImplTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
-
-    @Test
-    fun `getUserReviews returns Right on success`() =
-        runTest {
-            val api = FakeReviewApi()
-            val fragrance = FragranceResponse(id = 1, name = "Oud", brand = "Creed")
-            api.response =
-                UserReviewsResponseDto(
-                    reviews =
-                        listOf(
-                            ReviewDto(id = 101, rating = 4, content = "Nice", createdAt = 1000L, fragrance = fragrance),
-                        ),
-                )
-
-            val result = repo(api = api).getUserReviews(userId = 1)
-
-            assertTrue(result.isRight)
-            assertEquals(1, result.getOrNull()?.size)
-        }
-
-    @Test
-    fun `getUserReviews returns NoConnection on IOException`() =
-        runTest {
-            val api = FakeReviewApi().apply { exception = IOException("offline") }
-
-            val result = repo(api = api).getUserReviews(userId = 1)
-
-            assertTrue(result.isLeft)
-        }
 }

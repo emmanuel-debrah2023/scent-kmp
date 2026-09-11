@@ -326,6 +326,54 @@ class MarketplaceViewModelTest {
         }
 
     @Test
+    fun `applyFilters rejects an inverted range where both bounds are present`() =
+        runTest {
+            stubRefresh(listings = listOf(makeListing(1)))
+            viewModel.loadListings()
+
+            val filters = listOf(ActiveFilter(FilterCategory.PRICE, "200", "£200 – £50", "50"))
+
+            viewModel.applyFilters(filters)
+
+            val error = (viewModel.uiState.value as UiState.Error).error
+            assertTrue(error is AppError.ValidationError.MinPriceExceedsMax)
+            assertEquals(200.0, error.min)
+            assertEquals(50.0, error.max)
+            // Only the initial loadListings() call — the invalid filter never reached the repo.
+            coVerify(exactly = 1) { listingRepository.refreshListings(any(), any()) }
+        }
+
+    @Test
+    fun `applyFilters rejects a negative minimum bound`() =
+        runTest {
+            stubRefresh(listings = listOf(makeListing(1)))
+            viewModel.loadListings()
+
+            val filters = listOf(ActiveFilter(FilterCategory.PRICE, "-10", "Over £-10", null))
+
+            viewModel.applyFilters(filters)
+
+            val error = (viewModel.uiState.value as UiState.Error).error
+            assertTrue(error is AppError.ValidationError.InvalidMinPrice)
+            coVerify(exactly = 1) { listingRepository.refreshListings(any(), any()) }
+        }
+
+    @Test
+    fun `applyFilters rejects a negative maximum bound`() =
+        runTest {
+            stubRefresh(listings = listOf(makeListing(1)))
+            viewModel.loadListings()
+
+            val filters = listOf(ActiveFilter(FilterCategory.PRICE, "", "Under £-10", "-10"))
+
+            viewModel.applyFilters(filters)
+
+            val error = (viewModel.uiState.value as UiState.Error).error
+            assertTrue(error is AppError.ValidationError.InvalidMaxPrice)
+            coVerify(exactly = 1) { listingRepository.refreshListings(any(), any()) }
+        }
+
+    @Test
     fun `removeFilter PRICE drops both bounds`() =
         runTest {
             val priceFilter = listOf(ActiveFilter(FilterCategory.PRICE, "50", "£50 – £200", "200"))

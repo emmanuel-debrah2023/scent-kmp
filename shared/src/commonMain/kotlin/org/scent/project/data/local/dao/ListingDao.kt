@@ -77,6 +77,10 @@ interface ListingDao {
         if (resetBrowse) clearBrowsePositions()
         // Fragrances first: a listing row referencing a missing fragrance would
         // read back with a null join and be dropped.
+        // TODO(fix/fragrance-cache-cross-feature-clobber): upsertFragrances blanks
+        // description/imageUrls/rating when this endpoint's payload is leaner than what
+        // another feature cached, and the delete-then-insert below wipes a fragrance's whole
+        // note pyramid whenever this payload carried no notes for it.
         upsertFragrances(fragrances)
         deleteNotesFor(fragrances.map { it.id })
         upsertFragranceNotes(notes)

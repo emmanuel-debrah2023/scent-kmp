@@ -261,15 +261,8 @@ class FakePostRepository : PostRepository {
 
     /** Drive the SSOT user-posts read by emitting into this from a test. */
     val userPostsFlow = MutableStateFlow<Result<List<Post>>>(emptyList<Post>().asRight())
-    var getUserPostsResult: Result<List<Post>> = AppError.Unknown().asLeft()
-    var lastUserPostsUserId: String? = null
 
     override fun getUserPostsFlow(userId: String): Flow<Result<List<Post>>> = userPostsFlow
-
-    override suspend fun getUserPosts(userId: String): Result<List<Post>> {
-        lastUserPostsUserId = userId
-        return getUserPostsResult
-    }
 }
 
 // -------------------------------------------------------------------------
@@ -382,7 +375,6 @@ class FakeListingRepository : ListingRepository {
     var updateListingResult: Result<Listing> = AppError.Unknown().asLeft()
     var setActiveResult: Result<Listing> = AppError.Unknown().asLeft()
     var deleteListingResult: Result<Unit> = AppError.Unknown().asLeft()
-    var myListingsResult: Result<List<Listing>> = emptyList<Listing>().asRight()
 
     var lastGetListingId: Int? = null
     var lastUpdateListingId: Int? = null
@@ -418,8 +410,6 @@ class FakeListingRepository : ListingRepository {
         lastDeleteListingId = id
         return deleteListingResult
     }
-
-    override suspend fun getMyListings(): Result<List<Listing>> = myListingsResult
 }
 
 // -------------------------------------------------------------------------

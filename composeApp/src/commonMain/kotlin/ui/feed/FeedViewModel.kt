@@ -96,6 +96,10 @@ class FeedViewModel(
         }
     }
 
+    // TODO(fix/room-optimistic-writeback): both the optimistic and the confirmed like land in
+    // _uiState only — PostRepositoryImpl.likePost never writes to postDao. Since getFeedFlow()
+    // re-emits the whole list on any posts-table change, the next refresh/loadMore replaces
+    // these rows with pre-like Room state and every like on screen undoes itself.
     fun likePost(postId: String) {
         val current = (_uiState.value as? UiState.Success)?.data ?: return
         // Optimistic update

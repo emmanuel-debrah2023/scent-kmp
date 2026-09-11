@@ -134,3 +134,22 @@ raised this was explicitly asking for the ad-hoc pattern to be reconsidered, not
 - The set of screens needing live updates grows past Feed/Marketplace/Profile to the
   point where maintaining two repository shapes costs more than standardizing on
   Flow everywhere.
+
+## Amendment (2026-09-10)
+
+Three implementation deviations from the Decision section's literal signatures:
+
+1. **userId parameterization.** The ADR specifies `userId: String` (line 41 et seq.);
+   the actual `CollectionRepositoryImpl` and `ProfileRepositoryImpl` implementations use
+   `userId: Int`. Domain types are Int-based throughout (e.g. `User.id: Int`). String
+   would require conversion at every call site and was a spec error; Int is correct.
+
+2. **Collection element type.** The ADR specifies `List<UserFragrance>` (line 45);
+   the actual implementation uses `List<CollectionEntry>`, the domain model representing
+   a fragrance in the user's collection (with ownership, status, timestamps). `UserFragrance`
+   was a placeholder name that was never created; `CollectionEntry` is the correct type.
+
+3. **Result wrapper alias.** The ADR specifies `Either<AppError, T>` return wrappers (line 45
+   et seq.); the actual implementation uses `Result<T>`, which is a typealias for
+   `Either<AppError, T>` (see `shared/.../domain/util/Either.kt`). The names are equivalent;
+   this notes it for clarity so the ADR text is not misread as unimplemented.
