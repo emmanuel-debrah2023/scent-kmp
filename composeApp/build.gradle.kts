@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.konan.target.HostManager
 import java.util.Properties
 
 plugins {
@@ -52,13 +53,17 @@ kotlin {
         }
     }
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64(),
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
+    // Guarded to match :shared and :contracts. The framework link needs Xcode anyway, so
+    // these targets are only ever built by the macOS CI job.
+    if (HostManager.hostIsMac) {
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64(),
+        ).forEach { iosTarget ->
+            iosTarget.binaries.framework {
+                baseName = "ComposeApp"
+                isStatic = true
+            }
         }
     }
 
