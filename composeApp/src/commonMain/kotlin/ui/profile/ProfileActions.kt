@@ -11,6 +11,8 @@ data class ProfileActions(
     val onToggleFollow: () -> Unit,
     val onSelectTab: (ProfileTab) -> Unit,
     val onLogout: () -> Unit,
+    val onEditProfile: () -> Unit,
+    val onSettings: () -> Unit,
     val onNavigateToFollowers: () -> Unit,
     val onNavigateToFollowing: () -> Unit,
     val onNavigateToFragrance: (fragranceId: Int) -> Unit,
@@ -23,10 +25,43 @@ data class ProfileActions(
                 onToggleFollow = {},
                 onSelectTab = {},
                 onLogout = {},
+                onEditProfile = {},
+                onSettings = {},
                 onNavigateToFollowers = {},
                 onNavigateToFollowing = {},
                 onNavigateToFragrance = {},
                 listings = ListingActions.noOp(),
+            )
+    }
+}
+
+/**
+ * Cross-route navigation callbacks [ui.navigation.MainNavGraph]'s ProfileNavHost supplies
+ * to [ProfileScreen] — the screen's own destinations, distinct from [ProfileActions], which
+ * wraps these plus ViewModel-bound behaviour for [ProfileLoaded]. Grouped per the Actions
+ * Bundling Pattern: all seven share one source (the nav host) and one destination
+ * (`ProfileScreen`'s parameter list).
+ */
+data class ProfileNavActions(
+    val onNavigateToSettings: () -> Unit,
+    val onNavigateToEditProfile: () -> Unit,
+    val onNavigateToFollowers: () -> Unit,
+    val onNavigateToFollowing: () -> Unit,
+    val onNavigateToFragrance: (fragranceId: Int) -> Unit,
+    val onCreateListing: () -> Unit,
+    val onEditListing: (listingId: Int) -> Unit,
+) {
+    companion object {
+        /** No-op instance for @Preview composables. */
+        fun noOp() =
+            ProfileNavActions(
+                onNavigateToSettings = {},
+                onNavigateToEditProfile = {},
+                onNavigateToFollowers = {},
+                onNavigateToFollowing = {},
+                onNavigateToFragrance = {},
+                onCreateListing = {},
+                onEditListing = {},
             )
     }
 }

@@ -72,6 +72,7 @@ import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.Review
 import org.scent.project.domain.model.User
 import ui.accessibility.accessibleClickable
+import ui.accessibility.mergedGroup
 import ui.base.UiState
 import ui.components.BottleItem
 import ui.components.EmptyState
@@ -89,8 +90,7 @@ import kotlin.math.roundToInt
 fun ProfileScreen(
     authUser: AuthUser,
     onLogout: () -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    navActions: ProfileNavActions,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -212,18 +212,17 @@ fun ProfileScreen(
                         onToggleFollow = viewModel::toggleFollow,
                         onSelectTab = viewModel::selectTab,
                         onLogout = onLogout,
-                        // TODO(feature/profile-actions-wiring): no destination route yet.
-                        onNavigateToFollowers = {},
-                        // TODO(feature/profile-actions-wiring): no destination route yet.
-                        onNavigateToFollowing = {},
-                        // TODO(feature/profile-actions-wiring): no destination route yet.
-                        onNavigateToFragrance = {},
+                        onEditProfile = navActions.onNavigateToEditProfile,
+                        onSettings = navActions.onNavigateToSettings,
+                        onNavigateToFollowers = navActions.onNavigateToFollowers,
+                        onNavigateToFollowing = navActions.onNavigateToFollowing,
+                        onNavigateToFragrance = navActions.onNavigateToFragrance,
                         listings =
                             ListingActions(
                                 onUnlist = { listingsViewModel?.unlist(it) },
                                 onRelist = { listingsViewModel?.relist(it) },
-                                onCreate = onCreateListing,
-                                onEdit = onEditListing,
+                                onCreate = navActions.onCreateListing,
+                                onEdit = navActions.onEditListing,
                                 deleteConfirm =
                                     DeleteConfirmActions(
                                         onRequest = { listingsViewModel?.requestDelete(it) },
@@ -303,6 +302,8 @@ private fun ProfileLoaded(
                     isOwnProfile = isOwnProfile,
                     isFollowing = isFollowing,
                     onToggleFollow = actions.onToggleFollow,
+                    onEditProfile = actions.onEditProfile,
+                    onSettings = actions.onSettings,
                     onNavigateToFollowers = actions.onNavigateToFollowers,
                     onNavigateToFollowing = actions.onNavigateToFollowing,
                 )
@@ -448,6 +449,8 @@ private fun ProfileHeader(
     isOwnProfile: Boolean,
     isFollowing: Boolean,
     onToggleFollow: () -> Unit,
+    onEditProfile: () -> Unit,
+    onSettings: () -> Unit,
     onNavigateToFollowers: () -> Unit,
     onNavigateToFollowing: () -> Unit,
     modifier: Modifier = Modifier,
@@ -525,6 +528,8 @@ private fun ProfileHeader(
 
         // Stats — sourced entirely from User, so this header never depends on any
         // per-tab ViewModel's data (those are only instantiated on tab selection).
+        // Each stat is its own mergedGroup: "1.2k Followers" announces as one node,
+        // separate from its sibling stats and from the (independently clickable) row.
         Row(
             horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
@@ -537,11 +542,7 @@ private fun ProfileHeader(
 
         // Action buttons
         if (isOwnProfile) {
-            // TODO(feature/profile-actions-wiring): Edit Profile and Settings are both
-            // no-ops. Settings is also the natural home for the missing Logout affordance
-            // — see fix/profile-logout-unreachable — rather than adding a separate entry
-            // point.
-            OwnProfileActions(onEditProfile = { /* TODO */ }, onSettings = { /* TODO */ })
+            OwnProfileActions(onEditProfile = onEditProfile, onSettings = onSettings)
         } else {
             // TODO(feature/profile-actions-wiring): overflow menu (report/block/share) is a no-op.
             OtherProfileActions(
@@ -574,7 +575,9 @@ private fun ProfileStat(
         }
 
     Row(
-        modifier = baseModifier,
+        // Merges the count and label Text children into one announcement
+        // ("1.2k Followers") instead of two separate nodes.
+        modifier = baseModifier.mergedGroup(),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -706,8 +709,9 @@ private fun OtherProfileActions(
     }
 }
 
+/** Package-visible: reused by [ProfileFollowersScreen] and [ProfileFollowingScreen]. */
 @Composable
-private fun ProfileAvatar(
+fun ProfileAvatar(
     displayName: String,
     avatarUrl: String,
     size: Dp,
@@ -868,12 +872,12 @@ private fun LazyListScope.profileTabContent(
         // and measured up front — a profile with hundreds of posts composes all of them on
         // tab selection. Wishlist and Listings below keep the LazyListScope-extension form
         // that emits items(...); these three need restoring to it.
-        ProfileTab.Posts -> postsState?.let { tabResult(it) { posts -> item { PostsGrid(posts, isOwnProfile) } } }
+        ProfileTab.Posts -> postsState?.let { tabResult(it) { posts -> item { PostsGrid(posts) } } }
         ProfileTab.Collection ->
             collectionState?.let {
-                tabResult(it) { entries -> item { CollectionSections(entries, isOwnProfile, onNavigateToFragrance) } }
+                tabResult(it) { entries -> item { CollectionSections(entries, onNavigateToFragrance) } }
             }
-        ProfileTab.Wishlist -> tabResult(wishlistState) { wishlistTabContent(it, isOwnProfile, onNavigateToFragrance) }
+        ProfileTab.Wishlist -> tabResult(wishlistState) { wishlistTabContent(it, onNavigateToFragrance) }
         ProfileTab.Listings ->
             listingsState?.let {
                 tabResult(it) { state ->
@@ -890,28 +894,22 @@ private fun LazyListScope.profileTabContent(
             reviewsState?.let {
                 tabResult(
                     it,
-                ) { reviews -> item { ReviewsList(reviews, isOwnProfile) } }
+                ) { reviews -> item { ReviewsList(reviews) } }
             }
         ProfileTab.Likes -> tabResult(likesState) { likesTabContent(it) }
     }
 }
 
 @Composable
-private fun PostsGrid(
-    posts: List<Post>,
-    isOwnProfile: Boolean,
-) {
+private fun PostsGrid(posts: List<Post>) {
     if (posts.isEmpty()) {
+        // TODO(feature/profile-empty-state-post-cta): no create-post flow exists yet to
+        // route this to, so the CTA is dropped rather than left as a no-op button.
         EmptyState(
             title = "No posts yet",
             message = "Share a bottle, a note, or a shelf shot to start your feed.",
-            actionLabel = if (isOwnProfile) "CREATE POST" else null,
-            onAction =
-                if (isOwnProfile) {
-                    {}
-                } else {
-                    null
-                },
+            actionLabel = null,
+            onAction = null,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         return
@@ -945,7 +943,6 @@ private fun PostGridRow(
 @Composable
 private fun CollectionSections(
     collection: List<CollectionEntry>,
-    isOwnProfile: Boolean,
     onNavigateToFragrance: (Int) -> Unit,
 ) {
     val sections =
@@ -954,16 +951,13 @@ private fun CollectionSections(
             .filter { (_, entries) -> entries.isNotEmpty() }
 
     if (sections.isEmpty()) {
+        // TODO(feature/profile-empty-state-collection-cta): no add-to-collection flow
+        // exists yet to route this to, so the CTA is dropped rather than left as a no-op.
         EmptyState(
             title = "Your collection is empty",
             message = "Add what you own, what you've tried, and what you've moved on.",
-            actionLabel = if (isOwnProfile) "ADD A FRAGRANCE" else null,
-            onAction =
-                if (isOwnProfile) {
-                    {}
-                } else {
-                    null
-                },
+            actionLabel = null,
+            onAction = null,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         return
@@ -982,21 +976,18 @@ private fun CollectionSections(
 
 private fun LazyListScope.wishlistTabContent(
     wishlist: List<CollectionEntry>,
-    isOwnProfile: Boolean,
     onNavigateToFragrance: (Int) -> Unit,
 ) {
     if (wishlist.isEmpty()) {
         item {
+            // TODO(feature/profile-empty-state-wishlist-cta): switching to the Marketplace
+            // tab from here needs a callback threaded from MainGraph down through
+            // ProfileScreen; out of scope here, so the CTA is dropped rather than a no-op.
             EmptyState(
                 title = "Nothing saved yet",
                 message = "Save fragrances you're hunting and we'll flag them in the marketplace.",
-                actionLabel = if (isOwnProfile) "BROWSE FRAGRANCES" else null,
-                onAction =
-                    if (isOwnProfile) {
-                        {}
-                    } else {
-                        null
-                    },
+                actionLabel = null,
+                onAction = null,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -1245,21 +1236,15 @@ private fun listingRowAccessibilityDescription(
 
 // Reviews
 @Composable
-private fun ReviewsList(
-    reviews: List<Review>,
-    isOwnProfile: Boolean,
-) {
+private fun ReviewsList(reviews: List<Review>) {
     if (reviews.isEmpty()) {
+        // TODO(feature/profile-empty-state-review-cta): no write-a-review flow exists yet
+        // to route this to, so the CTA is dropped rather than left as a no-op button.
         EmptyState(
             title = "No reviews yet",
             message = "Rate a fragrance you've worn and it shows up here.",
-            actionLabel = if (isOwnProfile) "WRITE A REVIEW" else null,
-            onAction =
-                if (isOwnProfile) {
-                    {}
-                } else {
-                    null
-                },
+            actionLabel = null,
+            onAction = null,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         return

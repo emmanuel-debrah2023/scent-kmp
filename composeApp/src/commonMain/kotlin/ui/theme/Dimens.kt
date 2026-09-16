@@ -41,6 +41,9 @@ data class ScentSpacing(
     val profileRowPillPaddingV: Dp = 3.dp,
     val profileRowPillTopOffset: Dp = 2.dp,
     val profileRowHorizontalPadding: Dp = 22.dp,
+    // Small avatar for a compact list row (Followers/Following) — distinct from the
+    // profile header's larger avatar.
+    val avatarSizeSmall: Dp = 44.dp,
     val thumbnailGridMinSize: Dp = 96.dp,
     // Skeleton placeholder line heights, mirroring the text styles they stand in for.
     val skeletonLineSmall: Dp = 12.dp,
