@@ -17,7 +17,12 @@ import ui.home.ScentHomeHost
 import ui.listing.CreateListingScreen
 import ui.listing.EditListingScreen
 import ui.marketplace.MarketplaceScreen
+import ui.profile.EditProfileScreen
+import ui.profile.ProfileFollowersScreen
+import ui.profile.ProfileFollowingScreen
+import ui.profile.ProfileNavActions
 import ui.profile.ProfileScreen
+import ui.profile.SettingsScreen
 
 @Composable
 fun MainGraph(
@@ -81,8 +86,16 @@ private fun ProfileNavHost(
             ProfileScreen(
                 authUser = user,
                 onLogout = onLogout,
-                onCreateListing = { nav.navigateTo(ProfileRoute.CreateListing) },
-                onEditListing = { listingId -> nav.navigateTo(ProfileRoute.EditListing(listingId)) },
+                navActions =
+                    ProfileNavActions(
+                        onNavigateToSettings = { nav.navigateTo(ProfileRoute.Settings) },
+                        onNavigateToEditProfile = { nav.navigateTo(ProfileRoute.EditProfile) },
+                        onNavigateToFollowers = { nav.navigateTo(ProfileRoute.Followers) },
+                        onNavigateToFollowing = { nav.navigateTo(ProfileRoute.Following) },
+                        onNavigateToFragrance = { id -> nav.navigateTo(ProfileRoute.FragranceDetail(id)) },
+                        onCreateListing = { nav.navigateTo(ProfileRoute.CreateListing) },
+                        onEditListing = { listingId -> nav.navigateTo(ProfileRoute.EditListing(listingId)) },
+                    ),
                 snackbarHostState = snackbarHostState,
             )
 
@@ -97,6 +110,28 @@ private fun ProfileNavHost(
                 onBack = { nav.goBack() },
                 onSaved = { nav.goBack() },
             )
+        is ProfileRoute.Settings ->
+            SettingsScreen(
+                onLogout = onLogout,
+                onBack = { nav.goBack() },
+            )
+        is ProfileRoute.EditProfile ->
+            EditProfileScreen(
+                userId = user.id,
+                onBack = { nav.goBack() },
+                snackbarHostState = snackbarHostState,
+            )
+        is ProfileRoute.Followers ->
+            ProfileFollowersScreen(
+                userId = user.id,
+                onBack = { nav.goBack() },
+            )
+        is ProfileRoute.Following ->
+            ProfileFollowingScreen(
+                userId = user.id,
+                onBack = { nav.goBack() },
+            )
+        is ProfileRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
     }
 }
 
