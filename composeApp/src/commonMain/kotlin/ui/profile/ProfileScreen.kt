@@ -125,7 +125,7 @@ fun ProfileScreen(
             ProfileFullScreenState(modifier = modifier) {
                 EmptyState(
                     title = "Something went wrong",
-                    message = profile.error.message ?: "Could not load profile.",
+                    message = profile.error.message,
                     actionLabel = "RETRY",
                     onAction = { viewModel.retry() },
                 )
@@ -853,7 +853,7 @@ private inline fun <T> LazyListScope.tabResult(
             item {
                 EmptyState(
                     title = "Something went wrong",
-                    message = state.error.message ?: "Could not load this tab.",
+                    message = state.error.message,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
