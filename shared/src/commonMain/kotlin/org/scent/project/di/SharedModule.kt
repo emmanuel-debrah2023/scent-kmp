@@ -5,6 +5,8 @@ import org.koin.dsl.module
 import org.scent.project.data.local.TokenStorageFactory
 import org.scent.project.data.remote.api.AuthApi
 import org.scent.project.data.remote.api.AuthApiImpl
+import org.scent.project.data.remote.api.CollectionApi
+import org.scent.project.data.remote.api.CollectionApiImpl
 import org.scent.project.data.remote.api.FragranceApi
 import org.scent.project.data.remote.api.FragranceApiImpl
 import org.scent.project.data.remote.api.ListingApi
@@ -15,32 +17,40 @@ import org.scent.project.data.remote.api.PostApi
 import org.scent.project.data.remote.api.PostApiImpl
 import org.scent.project.data.remote.api.ProfileApi
 import org.scent.project.data.remote.api.ProfileApiImpl
+import org.scent.project.data.remote.api.ReviewApi
+import org.scent.project.data.remote.api.ReviewApiImpl
+import org.scent.project.data.remote.api.SocialApi
+import org.scent.project.data.remote.api.SocialApiImpl
+import org.scent.project.data.remote.api.UserApi
+import org.scent.project.data.remote.api.UserApiImpl
 import org.scent.project.data.remote.createHttpClient
 import org.scent.project.data.repository.AuthRepositoryImpl
+import org.scent.project.data.repository.CollectionRepositoryImpl
 import org.scent.project.data.repository.FragranceRepositoryImpl
 import org.scent.project.data.repository.ListingRepositoryImpl
 import org.scent.project.data.repository.MediaRepositoryImpl
 import org.scent.project.data.repository.PostRepositoryImpl
 import org.scent.project.data.repository.ProfileRepositoryImpl
+import org.scent.project.data.repository.ReviewRepositoryImpl
+import org.scent.project.data.repository.SocialRepositoryImpl
+import org.scent.project.data.repository.UserRepositoryImpl
 import org.scent.project.domain.repository.AuthRepository
+import org.scent.project.domain.repository.CollectionRepository
 import org.scent.project.domain.repository.FragranceRepository
 import org.scent.project.domain.repository.ListingRepository
 import org.scent.project.domain.repository.MediaRepository
 import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.repository.ProfileRepository
+import org.scent.project.domain.repository.ReviewRepository
+import org.scent.project.domain.repository.SocialRepository
+import org.scent.project.domain.repository.UserRepository
 import org.scent.project.domain.usecase.CreateListingUseCase
 import org.scent.project.domain.usecase.DeleteListingUseCase
 import org.scent.project.domain.usecase.GetBrandSuggestionsUseCase
 import org.scent.project.domain.usecase.GetCurrentUserUseCase
-import org.scent.project.domain.usecase.GetFeedUseCase
 import org.scent.project.domain.usecase.GetFragranceDetailUseCase
 import org.scent.project.domain.usecase.GetListingUseCase
-import org.scent.project.domain.usecase.GetListingsUseCase
-import org.scent.project.domain.usecase.GetMyListingsUseCase
-import org.scent.project.domain.usecase.GetUserCollectionUseCase
 import org.scent.project.domain.usecase.GetUserLikesUseCase
-import org.scent.project.domain.usecase.GetUserPostsUseCase
-import org.scent.project.domain.usecase.GetUserReviewsUseCase
 import org.scent.project.domain.usecase.GetUserWishlistUseCase
 import org.scent.project.domain.usecase.LikePostUseCase
 import org.scent.project.domain.usecase.LoginUseCase
@@ -81,19 +91,64 @@ fun sharedModule(
     single { MediaApiImpl(httpClient = get(), baseUrl = baseUrl) } bind MediaApi::class
 
     // Repositories
-    single { AuthRepositoryImpl(api = get(), tokenStorage = get(), validator = get()) } bind AuthRepository::class
+    single {
+        AuthRepositoryImpl(api = get(), tokenStorage = get(), userDao = get(), validator = get())
+    } bind AuthRepository::class
 
-    single { PostRepositoryImpl(api = get(), tokenStorage = get()) } bind PostRepository::class
+    single {
+        PostRepositoryImpl(api = get(), tokenStorage = get(), postDao = get())
+    } bind PostRepository::class
 
     single { FragranceRepositoryImpl(api = get()) } bind FragranceRepository::class
 
-    single { ListingRepositoryImpl(api = get(), tokenStorage = get()) } bind ListingRepository::class
+    single { ListingRepositoryImpl(api = get(), tokenStorage = get(), listingDao = get()) } bind
+        ListingRepository::class
 
     single { MediaRepositoryImpl(api = get(), tokenStorage = get()) } bind MediaRepository::class
 
     single { ProfileApiImpl(httpClient = get(), baseUrl = baseUrl) } bind ProfileApi::class
 
     single { ProfileRepositoryImpl(api = get(), tokenStorage = get()) } bind ProfileRepository::class
+
+    single { CollectionApiImpl(httpClient = get(), baseUrl = baseUrl) } bind CollectionApi::class
+
+    single {
+        CollectionRepositoryImpl(
+            api = get(),
+            tokenStorage = get(),
+            collectionDao = get(),
+        )
+    } bind CollectionRepository::class
+
+    single { ReviewApiImpl(httpClient = get(), baseUrl = baseUrl) } bind ReviewApi::class
+
+    single {
+        ReviewRepositoryImpl(
+            api = get(),
+            tokenStorage = get(),
+            reviewDao = get(),
+        )
+    } bind ReviewRepository::class
+
+    single { UserApiImpl(httpClient = get(), baseUrl = baseUrl) } bind UserApi::class
+
+    single {
+        UserRepositoryImpl(
+            api = get(),
+            tokenStorage = get(),
+            userDao = get(),
+            followDao = get(),
+        )
+    } bind UserRepository::class
+
+    single { SocialApiImpl(httpClient = get(), baseUrl = baseUrl) } bind SocialApi::class
+
+    single {
+        SocialRepositoryImpl(
+            api = get(),
+            followDao = get(),
+        )
+    } bind SocialRepository::class
 
     // -------------------------------------------------------------------------
     // Factories — use cases
@@ -111,8 +166,6 @@ fun sharedModule(
     factory { ObserveAuthStateUseCase(repository = get()) }
 
     // Feed / Posts
-    factory { GetFeedUseCase(repository = get()) }
-
     factory { LikePostUseCase(repository = get()) }
 
     // Fragrances
@@ -121,8 +174,6 @@ fun sharedModule(
     factory { GetFragranceDetailUseCase(repository = get()) }
 
     // Listings
-    factory { GetListingsUseCase(repository = get()) }
-
     factory { GetBrandSuggestionsUseCase(repository = get()) }
 
     factory { CreateListingUseCase(repository = get(), validator = get()) }
@@ -135,20 +186,12 @@ fun sharedModule(
 
     factory { DeleteListingUseCase(repository = get()) }
 
-    factory { GetMyListingsUseCase(repository = get()) }
-
     factory { UploadListingPhotoUseCase(repository = get()) }
 
     factory { ToggleFollowUseCase() }
 
     // Profile
-    factory { GetUserPostsUseCase(repository = get()) }
-
-    factory { GetUserCollectionUseCase(repository = get()) }
-
     factory { GetUserWishlistUseCase(repository = get()) }
-
-    factory { GetUserReviewsUseCase(repository = get()) }
 
     factory { GetUserLikesUseCase(repository = get()) }
 }

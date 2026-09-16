@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -6,6 +7,12 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 kotlin {
@@ -15,8 +22,14 @@ kotlin {
         }
     }
 
-    iosArm64()
-    iosSimulatorArm64()
+    // Apple targets only exist on an Apple host. Room's KSP tasks for them are skipped on
+    // a non-Apple host while the JVM/Android ones still run, so the native compile would
+    // then fail on a missing generated `actual` — see the iOS CI job, which is the only
+    // place these targets are meant to be built.
+    if (HostManager.hostIsMac) {
+        iosArm64()
+        iosSimulatorArm64()
+    }
 
     jvm()
 
@@ -39,6 +52,9 @@ kotlin {
             implementation(libs.kotlinx.datetime)
 
             implementation(libs.koin.core)
+
+            implementation(libs.room.runtime)
+            implementation(libs.sqlite.bundled)
         }
 
         androidMain.dependencies {
@@ -46,8 +62,10 @@ kotlin {
             implementation(libs.androidx.datastore.preferences)
         }
 
-        iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
+        if (HostManager.hostIsMac) {
+            iosMain.dependencies {
+                implementation(libs.ktor.client.darwin)
+            }
         }
 
         jvmMain.dependencies {
@@ -60,6 +78,19 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
         }
+    }
+}
+
+// Room's KSP processor runs per target, so each one is registered explicitly.
+// Adding a Kotlin target above means adding its ksp configuration here too — and keeping
+// the Apple ones inside the same host guard, since their configurations only exist when
+// the targets are declared.
+dependencies {
+    add("kspAndroid", libs.room.compiler)
+    add("kspJvm", libs.room.compiler)
+    if (HostManager.hostIsMac) {
+        add("kspIosArm64", libs.room.compiler)
+        add("kspIosSimulatorArm64", libs.room.compiler)
     }
 }
 

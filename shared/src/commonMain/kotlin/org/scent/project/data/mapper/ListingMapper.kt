@@ -2,25 +2,16 @@ package org.scent.project.data.mapper
 
 import org.scent.project.data.mapper.FragranceMapper.toFragrance
 import org.scent.project.data.remote.dto.BrandListResponseDto
-import org.scent.project.data.remote.dto.ListingListResponseDto
 import org.scent.project.data.remote.dto.ListingResponse
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.FillSource
 import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.ListingKind
-import org.scent.project.domain.model.ListingPage
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 
 object ListingMapper {
-    fun ListingListResponseDto.toListingPage(): ListingPage =
-        ListingPage(
-            listings = listings?.toDomainList() ?: emptyList(),
-            nextCursor = nextCursor,
-            totalCount = totalCount,
-        )
-
     /** Suggestions are advisory: a missing or partly-blank list is 'no suggestions',
      *  not a parse failure, so this returns a plain List rather than Result. */
     fun BrandListResponseDto.toBrandNames(): List<String> = brands?.filter { it.isNotBlank() } ?: emptyList()

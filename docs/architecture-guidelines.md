@@ -159,7 +159,7 @@ enum class FragranceGender {
 }
 
 data class User(
-    val id: String,
+    val id: Int,
     val username: String,
     val displayName: String,
     val email: String,
@@ -524,7 +524,7 @@ fun FragranceDto.toDomain(): Result<Fragrance> {
 ```kotlin
 // ✅ CORRECT: Non-null with defaults
 data class User(
-    val id: String,
+    val id: Int,
     val username: String,
     val bio: String = "",                    // Default empty string
     val profileImageUrl: String = "",        // Default empty string
@@ -1292,6 +1292,88 @@ object Validator {
 
 ---
 
+## Repository Layer: Two Shapes for Two Patterns
+
+**See ADR 0001** for the complete architectural decision. Scent's repository layer supports two valid method shapes; both return `Either<AppError, T>`. The shape decision only changes the outer wrapper, never the error boundary (see §2 above).
+
+### Two Repository Shapes: Suspend vs Flow SSOT
+
+| Shape | Signature | Use for |
+|-------|-----------|---------|
+| **Suspend (one-shot)** | `suspend fun ...(): Either<AppError, T>` | Auth, search, mutations (create, update, delete, follow/unfollow, purchase). Anything with a clear start and end triggered by the user once. |
+| **Flow SSOT** | `fun get<X>Flow(...): Flow<Either<AppError, T>>` | Feed, Marketplace (listings + detail), all Profile tabs (Posts, Collection, My Listings, Reviews, Followers/Following). Reads where a user watches the same data change on-screen, or another screen's write should reflect without a manual re-fetch. |
+
+### Naming Convention
+- Flow-returning methods **end in Flow suffix** — `getFeedFlow`, `getListingsFlow`, `getUserReviewsFlow` — not an observe-prefix. This keeps the verb consistent with existing `get...` convention; the suffix signals the return type differs.
+
+### Mechanics: Flow SSOT Architecture
+
+For Flow SSOT methods:
+
+1. **Room is the single source of truth** — the only thing the UI observes.
+2. **Network calls are writers, not readers** — a fetch upserts into Room; Room's Flow-returning DAO query re-emits to every collector automatically.
+3. **Never return data from a network call directly** — write it to Room and let the existing Flow carry it.
+
+#### Example: Feed Flow SSOT
+
+```kotlin
+// shared/src/commonMain/kotlin/domain/repository/PostRepository.kt
+interface PostRepository {
+    // Mutation — stays suspend, one-shot
+    suspend fun createPost(request: CreatePostRequest): Result<Post>
+
+    // Live-sensitive read — Flow SSOT, Room-backed
+    fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>>
+}
+
+// Implementation sketch
+class PostRepositoryImpl(
+    private val apiClient: ApiClient,
+    private val postDao: PostDao
+) : PostRepository {
+
+    override suspend fun createPost(request: CreatePostRequest): Result<Post> {
+        // Unchanged: suspend + Either (see §2)
+        val response = apiClient.createPost(request)
+        return if (response.isSuccessful && response.data != null) {
+            response.data.toDomain().asRight()
+        } else {
+            AppError.Network(response.error).asLeft()
+        }
+    }
+
+    override fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>> =
+        postDao.getFeed(page, limit) // Room Flow query — local DB is the only reader
+            .map { entities -> entities.map { it.toDomain() }.asRight() }
+            .onStart { refreshFeedFromNetwork(page, limit) } // network only ever writes
+            .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
+
+    private suspend fun refreshFeedFromNetwork(page: Int, limit: Int) {
+        val response = apiClient.getFeed(page, limit)
+        if (response.isSuccessful && response.data != null) {
+            postDao.upsertAll(response.data.map { it.toEntity() }) // triggers re-emission
+        }
+        // Network failure here is silent to the Flow by design — the last good
+        // Room state keeps rendering; surface the failure via a separate side channel
+        // (e.g. a SharedFlow<AppError>) if the screen needs to show a toast/snackbar.
+    }
+}
+```
+
+### Discipline: When NOT to Convert to Flow SSOT
+
+Don't convert a method to Flow SSOT just for consistency with a neighboring method — the two-shape split is intentional. If a method is genuinely one-shot (a mutation, or a read no other screen needs to see update live), it stays suspend. Mixing shapes intentionally is correct; mixing them accidentally is an antipattern.
+
+#### Room Cache-Invalidation Rules
+
+When using Flow SSOT, Room's correctness depends entirely on upsert logic. **Critical rules:**
+
+1. **Upsert must be exhaustive** — `insertOrReplace` or `insertOrUpdate` replaces the entire old entity; use `insertOrReplace` for list views where you're paginating, never do a partial column update that leaves old data behind.
+2. **Deletion must be explicit** — if a network fetch returns a list of 10 items but last time had 15, explicitly delete the 5 missing ones or they'll render stale. (Corollary: pagination with `LIMIT` and `OFFSET` requires careful ordering and deduplication.)
+3. **Cascade deletes** — if you delete a Post, decide whether Comments/Likes stay or cascade; document the rule at the DAO level.
+
+---
+
 ## Navigation Architecture for Compose Multiplatform
 
 **CRITICAL**: Since official Compose Multiplatform Navigation is not yet stable, use simple state-based navigation for now, designed for easy migration to official navigation later. The app uses a **bottom-nav / tabbed** structure: each tab owns an isolated back stack, and switching tabs preserves each tab's position.
@@ -1579,6 +1661,113 @@ onOpenFragrance = { id -> searchState.navigateTo(SearchRoute.FragranceDetail(id)
 // Inside Marketplace, the same tap uses Marketplace's own route:
 onOpenFragrance = { id -> marketplaceState.navigateTo(MarketplaceRoute.FragranceDetail(id)) }
 ```
+
+## Actions Bundling Pattern (Composable Callbacks)
+
+**CRITICAL**: If a screen-level composable would take **5 or more** callback
+parameters for a single interaction surface (a screen, a card, a dialog),
+bundle them into a dedicated `Actions` data class instead of declaring them
+individually. Below 5, individual lambda params are fine — don't bundle
+prematurely.
+
+### Why
+
+- Constructor/param lists stop growing unbounded as features are added.
+- Previews collapse from N empty lambdas to one `Actions.noOp()`.
+- Grouping documents intent — related callbacks read as a unit instead of
+  a flat list with no structure.
+
+### Rule
+
+```
+5+ callbacks on one composable → group into a data class named <Screen>Actions
+< 5 callbacks → keep as individual params
+```
+
+### Pattern
+
+```kotlin
+data class ProfileActions(
+    val onToggleFollow: () -> Unit,
+    val onSelectTab: (ProfileTab) -> Unit,
+    val onLogout: () -> Unit,
+    val onUnlist: (listingId: String) -> Unit,
+    val onRelist: (listingId: String) -> Unit,
+    val onNavigateToFollowers: () -> Unit,
+    val onNavigateToFollowing: () -> Unit,
+    val onNavigateToFragrance: (fragranceId: String) -> Unit,
+) {
+    companion object {
+        /** No-op instance for @Preview composables. */
+        fun noOp() = ProfileActions(
+            onToggleFollow = {},
+            onSelectTab = {},
+            onLogout = {},
+            onUnlist = {},
+            onRelist = {},
+            onNavigateToFollowers = {},
+            onNavigateToFollowing = {},
+            onNavigateToFragrance = {},
+        )
+    }
+}
+
+@Composable
+fun ProfileScreen(
+    userId: Int,
+    user: User,
+    // ...other state params stay individual — this pattern only applies to callbacks
+    actions: ProfileActions,
+) { /* ... */ }
+```
+
+### Sub-flow grouping
+
+If a subset of callbacks belongs to a self-contained sub-flow within the
+screen (e.g. a delete-confirmation dialog's request/confirm/dismiss triad),
+give that subset its own nested `Actions` class rather than flattening
+everything into the top-level one:
+
+```kotlin
+data class ProfileActions(
+    val onToggleFollow: () -> Unit,
+    val onSelectTab: (ProfileTab) -> Unit,
+    val onLogout: () -> Unit,
+    val onUnlist: (listingId: String) -> Unit,
+    val onRelist: (listingId: String) -> Unit,
+    val onNavigateToFollowers: () -> Unit,
+    val onNavigateToFollowing: () -> Unit,
+    val onNavigateToFragrance: (fragranceId: String) -> Unit,
+    val deleteConfirm: DeleteConfirmActions,
+)
+
+data class DeleteConfirmActions(
+    val onRequest: (listingId: String) -> Unit,
+    val onConfirm: () -> Unit,
+    val onDismiss: () -> Unit,
+)
+```
+
+Group by "what part of the screen/state machine this belongs to," not just
+"all callbacks on this screen." A dialog's request/confirm/dismiss triad is
+a natural unit; unrelated top-level actions (follow toggle, navigation)
+aren't — but both still belong under the screen's own `Actions` type.
+
+### ✅ DO
+- ✅ Name the class `<ScreenOrComponent>Actions`
+- ✅ Provide a `noOp()` companion factory for previews
+- ✅ Nest sub-flow actions as their own type when they form a natural unit
+  (request/confirm/dismiss, etc.)
+- ✅ Wire each field to a `viewModel::method` reference at the call site for
+  readability
+
+### ❌ DON'T
+- ❌ Don't bundle when there are fewer than 5 callbacks — adds indirection
+  for no benefit
+- ❌ Don't create one giant `Actions` class that mixes unrelated concerns
+  across multiple screens
+- ❌ Don't put non-callback state (UiState, IDs, flags) inside an `Actions`
+  class — it's for function references only
 
 ### 6. Migration Strategy to Official Navigation
 

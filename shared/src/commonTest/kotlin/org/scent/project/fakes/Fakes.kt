@@ -2,11 +2,31 @@ package org.scent.project.fakes
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import org.scent.project.data.local.TokenStorage
+import org.scent.project.data.local.dao.CollectionDao
+import org.scent.project.data.local.dao.FollowDao
+import org.scent.project.data.local.dao.ReviewDao
+import org.scent.project.data.local.dao.UserDao
+import org.scent.project.data.local.entity.CollectionEntryEntity
+import org.scent.project.data.local.entity.CollectionEntryWithFragrance
+import org.scent.project.data.local.entity.FollowEntity
+import org.scent.project.data.local.entity.FragranceEntity
+import org.scent.project.data.local.entity.FragranceNoteEntity
+import org.scent.project.data.local.entity.FragranceWithNotes
+import org.scent.project.data.local.entity.ReviewEntity
+import org.scent.project.data.local.entity.ReviewWithFragrance
+import org.scent.project.data.local.entity.UserEntity
 import org.scent.project.data.remote.api.AuthApi
+import org.scent.project.data.remote.api.CollectionApi
 import org.scent.project.data.remote.api.FragranceApi
 import org.scent.project.data.remote.api.ListingApi
 import org.scent.project.data.remote.api.PostApi
+import org.scent.project.data.remote.api.ProfileApi
+import org.scent.project.data.remote.api.ReviewApi
+import org.scent.project.data.remote.api.SocialApi
+import org.scent.project.data.remote.api.UserApi
 import org.scent.project.data.remote.dto.AuthResponse
 import org.scent.project.data.remote.dto.BrandListResponseDto
 import org.scent.project.data.remote.dto.CreateListingRequest
@@ -22,17 +42,20 @@ import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
 import org.scent.project.data.remote.dto.UpdateListingRequestDto
+import org.scent.project.data.remote.dto.UserCollectionResponseDto
+import org.scent.project.data.remote.dto.UserListResponseDto
+import org.scent.project.data.remote.dto.UserResponse
+import org.scent.project.data.remote.dto.UserReviewsResponseDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.AuthState
 import org.scent.project.domain.model.AuthUser
 import org.scent.project.domain.model.CreateListingParams
 import org.scent.project.domain.model.CreatePostParams
-import org.scent.project.domain.model.FeedPage
 import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.LikeResult
 import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.ListingKind
-import org.scent.project.domain.model.ListingPage
+import org.scent.project.domain.model.ListingQuery
 import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.UpdateListingParams
 import org.scent.project.domain.repository.AuthRepository
@@ -198,22 +221,32 @@ class FakeValidator(
 // -------------------------------------------------------------------------
 
 class FakePostRepository : PostRepository {
-    var getFeedResult: Result<FeedPage> = AppError.Unknown().asLeft()
     var likePostResult: Result<LikeResult> = AppError.Unknown().asLeft()
     var createPostResult: Result<Post> = AppError.Unknown().asLeft()
 
-    var lastFeedCursor: String? = null
     var lastFeedLimit: Int? = null
     var lastLikePostId: String? = null
     var lastCreatePostParams: CreatePostParams? = null
 
-    override suspend fun getFeed(
-        cursor: String?,
-        limit: Int,
-    ): Result<FeedPage> {
-        lastFeedCursor = cursor
+    /** Drive the SSOT read by emitting into this from a test. */
+    val feedFlow = MutableStateFlow<Result<List<Post>>>(emptyList<Post>().asRight())
+    var refreshFeedResult: Result<Unit> = Unit.asRight()
+    var loadMoreFeedResult: Result<Unit> = Unit.asRight()
+    var refreshFeedCallCount: Int = 0
+    var loadMoreFeedCallCount: Int = 0
+
+    override fun getFeedFlow(): Flow<Result<List<Post>>> = feedFlow
+
+    override suspend fun refreshFeed(limit: Int): Result<Unit> {
+        refreshFeedCallCount++
         lastFeedLimit = limit
-        return getFeedResult
+        return refreshFeedResult
+    }
+
+    override suspend fun loadMoreFeed(limit: Int): Result<Unit> {
+        loadMoreFeedCallCount++
+        lastFeedLimit = limit
+        return loadMoreFeedResult
     }
 
     override suspend fun likePost(postId: String): Result<LikeResult> {
@@ -225,6 +258,11 @@ class FakePostRepository : PostRepository {
         lastCreatePostParams = params
         return createPostResult
     }
+
+    /** Drive the SSOT user-posts read by emitting into this from a test. */
+    val userPostsFlow = MutableStateFlow<Result<List<Post>>>(emptyList<Post>().asRight())
+
+    override fun getUserPostsFlow(userId: String): Flow<Result<List<Post>>> = userPostsFlow
 }
 
 // -------------------------------------------------------------------------
@@ -262,39 +300,62 @@ class FakeFragranceRepository : FragranceRepository {
 // -------------------------------------------------------------------------
 
 class FakeListingRepository : ListingRepository {
-    var getListingsResult: Result<ListingPage> = AppError.Unknown().asLeft()
+    /** Drive the SSOT reads by emitting into these from a test. */
+    val listingsFlow = MutableStateFlow<Result<List<Listing>>>(emptyList<Listing>().asRight())
+    val userListingsFlow = MutableStateFlow<Result<List<Listing>>>(emptyList<Listing>().asRight())
+    val listingDetailFlow = MutableStateFlow<Result<Listing>>(AppError.Unknown().asLeft())
+
+    var refreshListingsResult: Result<Unit> = Unit.asRight()
+    var loadMoreListingsResult: Result<Unit> = Unit.asRight()
+    var refreshListingResult: Result<Unit> = Unit.asRight()
+    var refreshMyListingsResult: Result<Unit> = Unit.asRight()
+
+    var refreshListingsCallCount: Int = 0
+    var loadMoreListingsCallCount: Int = 0
+    var refreshMyListingsCallCount: Int = 0
+    var lastQuery: ListingQuery? = null
+    var lastRefreshedListingId: Int? = null
+
+    val browseTotalCountFlow = MutableStateFlow<Result<Int?>>(null.asRight())
+
+    override fun getListingsFlow(): Flow<Result<List<Listing>>> = listingsFlow
+
+    override fun getListingDetailFlow(id: Int): Flow<Result<Listing>> = listingDetailFlow
+
+    override fun getUserListingsFlow(sellerId: Int): Flow<Result<List<Listing>>> = userListingsFlow
+
+    override fun getBrowseTotalCountFlow(): Flow<Result<Int?>> = browseTotalCountFlow
+
+    override suspend fun refreshListings(
+        query: ListingQuery,
+        limit: Int,
+    ): Result<Unit> {
+        refreshListingsCallCount++
+        lastQuery = query
+        return refreshListingsResult
+    }
+
+    override suspend fun loadMoreListings(limit: Int): Result<Unit> {
+        loadMoreListingsCallCount++
+        return loadMoreListingsResult
+    }
+
+    override suspend fun refreshListing(id: Int): Result<Unit> {
+        lastRefreshedListingId = id
+        return refreshListingResult
+    }
+
+    override suspend fun refreshMyListings(): Result<Unit> {
+        refreshMyListingsCallCount++
+        return refreshMyListingsResult
+    }
+
     var brandSuggestionsResult: Result<List<String>> = emptyList<String>().asRight()
     var createListingResult: Result<Listing> = AppError.Unknown().asLeft()
 
-    var lastListingsCursor: String? = null
-    var lastListingsLimit: Int? = null
-    var lastListingsBrand: String? = null
-    var lastListingsCondition: String? = null
-    var lastListingsVolume: Int? = null
-    var lastListingsMinPrice: Double? = null
-    var lastListingsMaxPrice: Double? = null
     var lastBrandQuery: String? = null
     var lastBrandLimit: Int? = null
     var lastCreateParams: CreateListingParams? = null
-
-    override suspend fun getListings(
-        cursor: String?,
-        limit: Int,
-        brand: String?,
-        condition: String?,
-        volume: Int?,
-        minPrice: Double?,
-        maxPrice: Double?,
-    ): Result<ListingPage> {
-        lastListingsCursor = cursor
-        lastListingsLimit = limit
-        lastListingsBrand = brand
-        lastListingsCondition = condition
-        lastListingsVolume = volume
-        lastListingsMinPrice = minPrice
-        lastListingsMaxPrice = maxPrice
-        return getListingsResult
-    }
 
     override suspend fun getBrandSuggestions(
         query: String,
@@ -314,7 +375,6 @@ class FakeListingRepository : ListingRepository {
     var updateListingResult: Result<Listing> = AppError.Unknown().asLeft()
     var setActiveResult: Result<Listing> = AppError.Unknown().asLeft()
     var deleteListingResult: Result<Unit> = AppError.Unknown().asLeft()
-    var myListingsResult: Result<List<Listing>> = emptyList<Listing>().asRight()
 
     var lastGetListingId: Int? = null
     var lastUpdateListingId: Int? = null
@@ -350,8 +410,6 @@ class FakeListingRepository : ListingRepository {
         lastDeleteListingId = id
         return deleteListingResult
     }
-
-    override suspend fun getMyListings(): Result<List<Listing>> = myListingsResult
 }
 
 // -------------------------------------------------------------------------
@@ -361,6 +419,9 @@ class FakeListingRepository : ListingRepository {
 class FakePostApi : PostApi {
     var feedResponse: FeedResponseDto? = null
     var feedException: Exception? = null
+
+    var userPostsResponse: FeedResponseDto? = null
+    var userPostsException: Exception? = null
 
     var likeResponse: LikeResponseDto? = null
     var likeException: Exception? = null
@@ -375,6 +436,14 @@ class FakePostApi : PostApi {
     ): FeedResponseDto {
         feedException?.let { throw it }
         return feedResponse ?: error("FakePostApi.feedResponse not set")
+    }
+
+    override suspend fun getUserPosts(
+        userId: Int,
+        token: String?,
+    ): FeedResponseDto {
+        userPostsException?.let { throw it }
+        return userPostsResponse ?: error("FakePostApi.userPostsResponse not set")
     }
 
     override suspend fun likePost(
@@ -554,5 +623,319 @@ class FakeMediaRepository : MediaRepository {
     override suspend fun completeUpload(uid: String): Result<Int> {
         lastCompletedUid = uid
         return completeUploadResult
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeProfileApi
+// -------------------------------------------------------------------------
+
+class FakeProfileApi : ProfileApi {
+    var userCollectionResponse: UserCollectionResponseDto? = null
+    var userCollectionException: Exception? = null
+    var feedResponse: FeedResponseDto? = null
+    var feedException: Exception? = null
+
+    override suspend fun getUserWishlist(
+        userId: Int,
+        token: String?,
+    ): UserCollectionResponseDto {
+        userCollectionException?.let { throw it }
+        return userCollectionResponse ?: error("FakeProfileApi.userCollectionResponse not set")
+    }
+
+    override suspend fun getUserLikes(
+        userId: Int,
+        token: String?,
+    ): FeedResponseDto {
+        feedException?.let { throw it }
+        return feedResponse ?: error("FakeProfileApi.feedResponse not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeCollectionApi
+// -------------------------------------------------------------------------
+
+class FakeCollectionApi : CollectionApi {
+    var response: UserCollectionResponseDto? = null
+    var exception: Exception? = null
+
+    override suspend fun getUserCollection(
+        userId: Int,
+        token: String?,
+    ): UserCollectionResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeCollectionApi.response not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeReviewApi
+// -------------------------------------------------------------------------
+
+class FakeReviewApi : ReviewApi {
+    var response: UserReviewsResponseDto? = null
+    var exception: Exception? = null
+
+    override suspend fun getUserReviews(
+        userId: Int,
+        token: String?,
+    ): UserReviewsResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeReviewApi.response not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeUserApi
+// -------------------------------------------------------------------------
+
+class FakeUserApi : UserApi {
+    var response: UserResponse? = null
+    var exception: Exception? = null
+
+    override suspend fun getProfile(
+        userId: Int,
+        token: String?,
+    ): UserResponse {
+        exception?.let { throw it }
+        return response ?: error("FakeUserApi.response not set")
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeCollectionDao
+// -------------------------------------------------------------------------
+
+class FakeCollectionDao : CollectionDao {
+    private val entries = MutableStateFlow<List<CollectionEntryEntity>>(emptyList())
+    private val fragrances = MutableStateFlow<List<FragranceEntity>>(emptyList())
+    private val notes = MutableStateFlow<List<FragranceNoteEntity>>(emptyList())
+
+    /** Set to make reads fail, covering the Flow's error path. */
+    var readException: Throwable? = null
+
+    private fun CollectionEntryEntity.join(): CollectionEntryWithFragrance {
+        val fragrance = fragrances.value.firstOrNull { it.id == fragranceId }
+        return CollectionEntryWithFragrance(
+            entry = this,
+            fragrance =
+                fragrance?.let { f ->
+                    FragranceWithNotes(f, notes.value.filter { it.fragranceId == f.id })
+                },
+        )
+    }
+
+    override fun getUserCollection(userId: Int): Flow<List<CollectionEntryWithFragrance>> =
+        entries.map { rows ->
+            readException?.let { throw it }
+            rows
+                .filter { it.userId == userId && it.status != "WISHLIST" }
+                .sortedByDescending { it.addedAt }
+                .map { it.join() }
+        }
+
+    override suspend fun upsertEntries(entries: List<CollectionEntryEntity>) {
+        val incoming = entries.associateBy { it.userId to it.fragranceId }
+        this.entries.value = this.entries.value.filterNot { (it.userId to it.fragranceId) in incoming.keys } + entries
+    }
+
+    override suspend fun upsertFragrances(fragrances: List<FragranceEntity>) {
+        val incoming = fragrances.associateBy { it.id }
+        this.fragrances.value = this.fragrances.value.filterNot { it.id in incoming.keys } + fragrances
+    }
+
+    override suspend fun upsertFragranceNotes(notes: List<FragranceNoteEntity>) {
+        val incoming = notes.map { it.fragranceId to it.position }.toSet()
+        this.notes.value = this.notes.value.filterNot { (it.fragranceId to it.position) in incoming } + notes
+    }
+
+    override suspend fun deleteNotesFor(fragranceIds: List<Int>) {
+        notes.value = notes.value.filterNot { it.fragranceId in fragranceIds }
+    }
+
+    override suspend fun deleteUserCollection(userId: Int) {
+        entries.value = entries.value.filterNot { it.userId == userId }
+    }
+
+    override suspend fun replaceUserCollection(
+        userId: Int,
+        entries: List<CollectionEntryEntity>,
+        fragrances: List<FragranceEntity>,
+        notes: List<FragranceNoteEntity>,
+    ) {
+        deleteUserCollection(userId)
+        upsertFragrances(fragrances)
+        deleteNotesFor(fragrances.map { it.id })
+        upsertFragranceNotes(notes)
+        upsertEntries(entries)
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeReviewDao
+// -------------------------------------------------------------------------
+
+class FakeReviewDao : ReviewDao {
+    private val reviews = MutableStateFlow<List<ReviewEntity>>(emptyList())
+    private val fragrances = MutableStateFlow<List<FragranceEntity>>(emptyList())
+    private val notes = MutableStateFlow<List<FragranceNoteEntity>>(emptyList())
+
+    /** Set to make reads fail, covering the Flow's error path. */
+    var readException: Throwable? = null
+
+    private fun ReviewEntity.join(): ReviewWithFragrance {
+        val fragrance = fragrances.value.firstOrNull { it.id == fragranceId }
+        return ReviewWithFragrance(
+            review = this,
+            fragrance =
+                fragrance?.let { f ->
+                    FragranceWithNotes(f, notes.value.filter { it.fragranceId == f.id })
+                },
+        )
+    }
+
+    override fun getUserReviews(userId: Int): Flow<List<ReviewWithFragrance>> =
+        reviews.map { rows ->
+            readException?.let { throw it }
+            rows
+                .filter { it.reviewerId == userId }
+                .sortedByDescending { it.createdAt }
+                .map { it.join() }
+        }
+
+    override suspend fun upsertReviews(reviews: List<ReviewEntity>) {
+        val incoming = reviews.associateBy { it.id }
+        this.reviews.value = this.reviews.value.filterNot { it.id in incoming.keys } + reviews
+    }
+
+    override suspend fun upsertFragrances(fragrances: List<FragranceEntity>) {
+        val incoming = fragrances.associateBy { it.id }
+        this.fragrances.value = this.fragrances.value.filterNot { it.id in incoming.keys } + fragrances
+    }
+
+    override suspend fun upsertFragranceNotes(notes: List<FragranceNoteEntity>) {
+        val incoming = notes.map { it.fragranceId to it.position }.toSet()
+        this.notes.value = this.notes.value.filterNot { (it.fragranceId to it.position) in incoming } + notes
+    }
+
+    override suspend fun deleteNotesFor(fragranceIds: List<Int>) {
+        notes.value = notes.value.filterNot { it.fragranceId in fragranceIds }
+    }
+
+    override suspend fun deleteUserReviews(userId: Int) {
+        reviews.value = reviews.value.filterNot { it.reviewerId == userId }
+    }
+
+    override suspend fun replaceUserReviews(
+        userId: Int,
+        reviews: List<ReviewEntity>,
+        fragrances: List<FragranceEntity>,
+        notes: List<FragranceNoteEntity>,
+    ) {
+        deleteUserReviews(userId)
+        upsertFragrances(fragrances)
+        deleteNotesFor(fragrances.map { it.id })
+        upsertFragranceNotes(notes)
+        upsertReviews(reviews)
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeUserDao
+// -------------------------------------------------------------------------
+
+class FakeUserDao : UserDao {
+    private val user = MutableStateFlow<UserEntity?>(null)
+
+    override fun getUser(userId: Int): Flow<UserEntity?> = user
+
+    override suspend fun upsertUser(user: UserEntity) {
+        this.user.value = user
+    }
+
+    fun insertUser(user: UserEntity) {
+        this.user.value = user
+    }
+}
+
+// -------------------------------------------------------------------------
+// FakeFollowDao
+// -------------------------------------------------------------------------
+
+class FakeFollowDao : FollowDao {
+    private val followerCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
+    private val followingCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
+    private val follows = MutableStateFlow<List<FollowEntity>>(emptyList())
+    private val users = MutableStateFlow<List<UserEntity>>(emptyList())
+
+    /** Set to make reads fail, covering the Flow's error path. */
+    var readException: Throwable? = null
+
+    override fun getFollowerCount(userId: Int): Flow<Int> = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
+
+    override fun getFollowingCount(userId: Int): Flow<Int> = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
+
+    override fun getFollowers(userId: Int): Flow<List<UserEntity>> =
+        combine(follows, users) { fs, us ->
+            readException?.let { throw it }
+            fs.filter { it.followingId == userId }.mapNotNull { f -> us.firstOrNull { it.id == f.followerId } }
+        }
+
+    override fun getFollowing(userId: Int): Flow<List<UserEntity>> =
+        combine(follows, users) { fs, us ->
+            readException?.let { throw it }
+            fs.filter { it.followerId == userId }.mapNotNull { f -> us.firstOrNull { it.id == f.followingId } }
+        }
+
+    override suspend fun upsertFollow(follow: FollowEntity) {
+        follows.value =
+            follows.value.filterNot { it.followerId == follow.followerId && it.followingId == follow.followingId } +
+            follow
+    }
+
+    fun addFollower(userId: Int) {
+        val flow = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
+        flow.value = (flow.value) + 1
+    }
+
+    fun addFollowing(userId: Int) {
+        val flow = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
+        flow.value = (flow.value) + 1
+    }
+
+    fun seedUser(user: UserEntity) {
+        users.value = users.value.filterNot { it.id == user.id } + user
+    }
+
+    fun seedFollow(
+        followerId: Int,
+        followingId: Int,
+        createdAt: Long = 0L,
+    ) {
+        follows.value =
+            follows.value + FollowEntity(followerId = followerId, followingId = followingId, createdAt = createdAt)
+    }
+}
+
+class FakeSocialApi : SocialApi {
+    var response: UserListResponseDto? = null
+    var exception: Exception? = null
+
+    override suspend fun getFollowers(
+        userId: Int,
+        token: String?,
+    ): UserListResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeSocialApi.response not set")
+    }
+
+    override suspend fun getFollowing(
+        userId: Int,
+        token: String?,
+    ): UserListResponseDto {
+        exception?.let { throw it }
+        return response ?: error("FakeSocialApi.response not set")
     }
 }

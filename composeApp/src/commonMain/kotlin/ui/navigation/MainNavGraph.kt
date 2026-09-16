@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.scent.project.domain.model.AuthUser
@@ -28,20 +30,24 @@ fun MainGraph(
             ScentHomeHost(
                 onNavTabSelected = { nav.selectedTab = Tab.entries[it] },
             )
-        else ->
+        else -> {
+            val snackbarHostState = remember { SnackbarHostState() }
             BlendedScaffold(
                 selectedTab = nav.selectedTab.ordinal,
                 onTabSelected = { nav.selectedTab = Tab.entries[it] },
+                snackbarHostState = snackbarHostState,
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)) {
                     when (nav.selectedTab) {
                         Tab.HOME -> Unit
                         Tab.SEARCH -> SearchNavHost(nav.searchNav)
-                        Tab.PROFILE -> ProfileNavHost(nav.profileNav, user, onLogout)
-                        Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav)
+                        Tab.PROFILE ->
+                            ProfileNavHost(nav.profileNav, user, onLogout, snackbarHostState)
+                        Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav, snackbarHostState)
                     }
                 }
             }
+        }
     }
 }
 
@@ -67,6 +73,7 @@ private fun ProfileNavHost(
     nav: NavigationState<ProfileRoute>,
     user: AuthUser,
     onLogout: () -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     val current by nav.current
     when (val route = current) {
@@ -76,6 +83,7 @@ private fun ProfileNavHost(
                 onLogout = onLogout,
                 onCreateListing = { nav.navigateTo(ProfileRoute.CreateListing) },
                 onEditListing = { listingId -> nav.navigateTo(ProfileRoute.EditListing(listingId)) },
+                snackbarHostState = snackbarHostState,
             )
 
         is ProfileRoute.CreateListing ->
@@ -93,12 +101,16 @@ private fun ProfileNavHost(
 }
 
 @Composable
-private fun MarketplaceNavHost(nav: NavigationState<MarketplaceRoute>) {
+private fun MarketplaceNavHost(
+    nav: NavigationState<MarketplaceRoute>,
+    snackbarHostState: SnackbarHostState,
+) {
     val current by nav.current
     when (current) {
         is MarketplaceRoute.Listings ->
             MarketplaceScreen(
                 onListingClick = { id -> nav.navigateTo(MarketplaceRoute.ListingDetail(id)) },
+                snackbarHostState = snackbarHostState,
             )
         is MarketplaceRoute.ListingDetail -> PlaceholderScreen("Listing Detail")
         is MarketplaceRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")

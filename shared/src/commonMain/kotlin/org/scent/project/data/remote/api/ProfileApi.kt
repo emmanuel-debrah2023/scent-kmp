@@ -7,28 +7,12 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import org.scent.project.data.remote.dto.FeedResponseDto
 import org.scent.project.data.remote.dto.UserCollectionResponseDto
-import org.scent.project.data.remote.dto.UserReviewsResponseDto
 
 interface ProfileApi {
-    suspend fun getUserPosts(
-        userId: Int,
-        token: String?,
-    ): FeedResponseDto
-
-    suspend fun getUserCollection(
-        userId: Int,
-        token: String?,
-    ): UserCollectionResponseDto
-
     suspend fun getUserWishlist(
         userId: Int,
         token: String?,
     ): UserCollectionResponseDto
-
-    suspend fun getUserReviews(
-        userId: Int,
-        token: String?,
-    ): UserReviewsResponseDto
 
     suspend fun getUserLikes(
         userId: Int,
@@ -42,39 +26,12 @@ class ProfileApiImpl(
 ) : ProfileApi {
     private fun userUrl(userId: Int) = "$baseUrl/api/v1/users/$userId"
 
-    override suspend fun getUserPosts(
-        userId: Int,
-        token: String?,
-    ): FeedResponseDto =
-        httpClient
-            .get("${userUrl(userId)}/posts") {
-                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
-            }.body()
-
-    override suspend fun getUserCollection(
-        userId: Int,
-        token: String?,
-    ): UserCollectionResponseDto =
-        httpClient
-            .get("${userUrl(userId)}/collection") {
-                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
-            }.body()
-
     override suspend fun getUserWishlist(
         userId: Int,
         token: String?,
     ): UserCollectionResponseDto =
         httpClient
             .get("${userUrl(userId)}/wishlist") {
-                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
-            }.body()
-
-    override suspend fun getUserReviews(
-        userId: Int,
-        token: String?,
-    ): UserReviewsResponseDto =
-        httpClient
-            .get("${userUrl(userId)}/reviews") {
                 token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
             }.body()
 
