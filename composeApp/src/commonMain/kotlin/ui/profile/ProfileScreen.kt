@@ -194,8 +194,6 @@ fun ProfileScreen(
                 ProfileTab.Wishlist, ProfileTab.Likes -> Unit
             }
 
-            // TODO(chore/profile-actions-on-per-tab-vms): callbacks below collapse into
-            // ProfileActions once the bundling is re-applied on the per-tab ViewModels.
             ProfileLoaded(
                 user = profile.data,
                 // Only the authenticated user's own profile is reachable today — there is
@@ -209,19 +207,31 @@ fun ProfileScreen(
                 listingsState = listingsState,
                 reviewsState = reviewsState,
                 likesState = likesState,
-                onToggleFollow = viewModel::toggleFollow,
-                onSelectTab = viewModel::selectTab,
-                onLogout = onLogout,
-                onUnlist = { listingsViewModel?.unlist(it) },
-                onRelist = { listingsViewModel?.relist(it) },
-                onRequestDelete = { listingsViewModel?.requestDelete(it) },
-                onConfirmDelete = { listingsViewModel?.confirmDelete() },
-                onDismissDeleteConfirm = { listingsViewModel?.dismissDeleteConfirm() },
-                onNavigateToFollowers = { /* TODO(feature/profile-actions-wiring): no destination route yet */ },
-                onNavigateToFollowing = { /* TODO(feature/profile-actions-wiring): no destination route yet */ },
-                onNavigateToFragrance = { /* TODO(feature/profile-actions-wiring): no destination route yet */ },
-                onCreateListing = onCreateListing,
-                onEditListing = onEditListing,
+                actions =
+                    ProfileActions(
+                        onToggleFollow = viewModel::toggleFollow,
+                        onSelectTab = viewModel::selectTab,
+                        onLogout = onLogout,
+                        // TODO(feature/profile-actions-wiring): no destination route yet.
+                        onNavigateToFollowers = {},
+                        // TODO(feature/profile-actions-wiring): no destination route yet.
+                        onNavigateToFollowing = {},
+                        // TODO(feature/profile-actions-wiring): no destination route yet.
+                        onNavigateToFragrance = {},
+                        listings =
+                            ListingActions(
+                                onUnlist = { listingsViewModel?.unlist(it) },
+                                onRelist = { listingsViewModel?.relist(it) },
+                                onCreate = onCreateListing,
+                                onEdit = onEditListing,
+                                deleteConfirm =
+                                    DeleteConfirmActions(
+                                        onRequest = { listingsViewModel?.requestDelete(it) },
+                                        onConfirm = { listingsViewModel?.confirmDelete() },
+                                        onDismiss = { listingsViewModel?.dismissDeleteConfirm() },
+                                    ),
+                            ),
+                    ),
                 modifier = modifier,
             )
         }
@@ -241,12 +251,6 @@ private fun ProfileFullScreenState(
     }
 }
 
-// TODO(chore/profile-actions-on-per-tab-vms): 13 flat callbacks here exceeds the
-// 5+ bundling threshold in ADS-STE100, which uses this screen as its worked example.
-// PR #84 introduced ProfileActions/DeleteConfirmActions; PR #86 reverted it because
-// #84 was written against the single-ProfileUiState design that Phase 6's per-tab
-// ViewModels replaced. Re-apply the bundling on the per-tab design — #84's spec in
-// docs/architecture-guidelines.md survives and is authoritative.
 @Composable
 private fun ProfileLoaded(
     user: User,
@@ -259,19 +263,7 @@ private fun ProfileLoaded(
     listingsState: UiState<ProfileListingsUiState>?,
     reviewsState: UiState<List<Review>>?,
     likesState: UiState<List<Post>>,
-    onToggleFollow: () -> Unit,
-    onSelectTab: (ProfileTab) -> Unit,
-    onLogout: () -> Unit,
-    onUnlist: (Int) -> Unit,
-    onRelist: (Int) -> Unit,
-    onRequestDelete: (Int) -> Unit,
-    onConfirmDelete: () -> Unit,
-    onDismissDeleteConfirm: () -> Unit,
-    onNavigateToFollowers: () -> Unit,
-    onNavigateToFollowing: () -> Unit,
-    onNavigateToFragrance: (Int) -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    actions: ProfileActions,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -310,16 +302,16 @@ private fun ProfileLoaded(
                     user = user,
                     isOwnProfile = isOwnProfile,
                     isFollowing = isFollowing,
-                    onToggleFollow = onToggleFollow,
-                    onNavigateToFollowers = onNavigateToFollowers,
-                    onNavigateToFollowing = onNavigateToFollowing,
+                    onToggleFollow = actions.onToggleFollow,
+                    onNavigateToFollowers = actions.onNavigateToFollowers,
+                    onNavigateToFollowing = actions.onNavigateToFollowing,
                 )
             }
             stickyHeader {
                 ProfileTabRow(
                     tabs = tabs,
                     selected = selectedTab,
-                    onTabSelected = onSelectTab,
+                    onTabSelected = actions.onSelectTab,
                 )
             }
             profileTabContent(
@@ -331,12 +323,8 @@ private fun ProfileLoaded(
                 listingsState = listingsState,
                 reviewsState = reviewsState,
                 likesState = likesState,
-                onUnlist = onUnlist,
-                onRelist = onRelist,
-                onRequestDelete = onRequestDelete,
-                onNavigateToFragrance = onNavigateToFragrance,
-                onCreateListing = onCreateListing,
-                onEditListing = onEditListing,
+                onNavigateToFragrance = actions.onNavigateToFragrance,
+                listingActions = actions.listings,
             )
         }
 
@@ -350,7 +338,7 @@ private fun ProfileLoaded(
                 user = user,
                 isOwnProfile = isOwnProfile,
                 isFollowing = isFollowing,
-                onToggleFollow = onToggleFollow,
+                onToggleFollow = actions.onToggleFollow,
             )
         }
     }
@@ -364,8 +352,8 @@ private fun ProfileLoaded(
             title = "Delete ${pendingListing.fragrance.name}?",
             message = "This cannot be undone.",
             confirmLabel = "DELETE",
-            onConfirm = onConfirmDelete,
-            onDismiss = onDismissDeleteConfirm,
+            onConfirm = actions.listings.deleteConfirm.onConfirm,
+            onDismiss = actions.listings.deleteConfirm.onDismiss,
             isDestructive = true,
         )
     }
@@ -871,12 +859,8 @@ private fun LazyListScope.profileTabContent(
     listingsState: UiState<ProfileListingsUiState>?,
     reviewsState: UiState<List<Review>>?,
     likesState: UiState<List<Post>>,
-    onUnlist: (Int) -> Unit,
-    onRelist: (Int) -> Unit,
-    onRequestDelete: (Int) -> Unit,
     onNavigateToFragrance: (Int) -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    listingActions: ListingActions,
 ) {
     when (selectedTab) {
         // TODO(fix/profile-tabs-lazy-composition): Posts, Collection and Reviews each wrap a
@@ -898,11 +882,7 @@ private fun LazyListScope.profileTabContent(
                         isOwnProfile = isOwnProfile,
                         actionInFlightId = state.actionInFlightId,
                         actionError = state.actionError,
-                        onUnlist = onUnlist,
-                        onRelist = onRelist,
-                        onRequestDelete = onRequestDelete,
-                        onCreateListing = onCreateListing,
-                        onEditListing = onEditListing,
+                        actions = listingActions,
                     )
                 }
             }
@@ -1092,11 +1072,7 @@ private fun LazyListScope.listingsTabContent(
     isOwnProfile: Boolean,
     actionInFlightId: Int?,
     actionError: AppError?,
-    onUnlist: (Int) -> Unit,
-    onRelist: (Int) -> Unit,
-    onRequestDelete: (Int) -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    actions: ListingActions,
 ) {
     if (listings.isEmpty()) {
         item {
@@ -1106,7 +1082,7 @@ private fun LazyListScope.listingsTabContent(
                 actionLabel = if (isOwnProfile) "CREATE LISTING" else null,
                 onAction =
                     if (isOwnProfile) {
-                        onCreateListing
+                        actions.onCreate
                     } else {
                         null
                     },
@@ -1150,7 +1126,7 @@ private fun LazyListScope.listingsTabContent(
                         text = "+ ADD",
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
                         color = ScentThemeExtras.interactive,
-                        modifier = Modifier.accessibleClickable(label = "Create listing", onClick = onCreateListing),
+                        modifier = Modifier.accessibleClickable(label = "Create listing", onClick = actions.onCreate),
                     )
                 }
             }
@@ -1172,12 +1148,12 @@ private fun LazyListScope.listingsTabContent(
     items(listings, key = { it.id }) { listing ->
         ProfileListingRow(
             listing = listing.toProfileListingRowUiModel(),
-            onEdit = { onEditListing(listing.id) },
+            onEdit = { actions.onEdit(listing.id) },
             onUnlist = {
-                if (listing.isActive) onUnlist(listing.id) else onRelist(listing.id)
+                if (listing.isActive) actions.onUnlist(listing.id) else actions.onRelist(listing.id)
             },
-            onDelete = { onRequestDelete(listing.id) },
-            onClick = { onEditListing(listing.id) },
+            onDelete = { actions.deleteConfirm.onRequest(listing.id) },
+            onClick = { actions.onEdit(listing.id) },
             showActions = isOwnProfile,
             isActionInFlight = actionInFlightId == listing.id,
             modifier = Modifier.padding(horizontal = ScentThemeExtras.spacing.profileRowHorizontalPadding),
@@ -1342,19 +1318,7 @@ private fun OwnProfilePreview() {
             listingsState = null,
             reviewsState = null,
             likesState = UiState.Success(emptyList()),
-            onToggleFollow = {},
-            onSelectTab = {},
-            onLogout = {},
-            onUnlist = {},
-            onRelist = {},
-            onRequestDelete = {},
-            onConfirmDelete = {},
-            onDismissDeleteConfirm = {},
-            onNavigateToFollowers = {},
-            onNavigateToFollowing = {},
-            onNavigateToFragrance = {},
-            onCreateListing = {},
-            onEditListing = {},
+            actions = ProfileActions.noOp(),
         )
     }
 }
@@ -1384,19 +1348,7 @@ private fun OtherProfilePreview() {
             listingsState = null,
             reviewsState = null,
             likesState = UiState.Success(emptyList()),
-            onToggleFollow = {},
-            onSelectTab = {},
-            onLogout = {},
-            onUnlist = {},
-            onRelist = {},
-            onRequestDelete = {},
-            onConfirmDelete = {},
-            onDismissDeleteConfirm = {},
-            onNavigateToFollowers = {},
-            onNavigateToFollowing = {},
-            onNavigateToFragrance = {},
-            onCreateListing = {},
-            onEditListing = {},
+            actions = ProfileActions.noOp(),
         )
     }
 }

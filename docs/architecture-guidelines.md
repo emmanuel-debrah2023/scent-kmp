@@ -1691,11 +1691,9 @@ data class ProfileActions(
     val onToggleFollow: () -> Unit,
     val onSelectTab: (ProfileTab) -> Unit,
     val onLogout: () -> Unit,
-    val onUnlist: (listingId: String) -> Unit,
-    val onRelist: (listingId: String) -> Unit,
     val onNavigateToFollowers: () -> Unit,
     val onNavigateToFollowing: () -> Unit,
-    val onNavigateToFragrance: (fragranceId: String) -> Unit,
+    val onNavigateToFragrance: (fragranceId: Int) -> Unit,
 ) {
     companion object {
         /** No-op instance for @Preview composables. */
@@ -1703,8 +1701,6 @@ data class ProfileActions(
             onToggleFollow = {},
             onSelectTab = {},
             onLogout = {},
-            onUnlist = {},
-            onRelist = {},
             onNavigateToFollowers = {},
             onNavigateToFollowing = {},
             onNavigateToFragrance = {},
@@ -1724,34 +1720,48 @@ fun ProfileScreen(
 ### Sub-flow grouping
 
 If a subset of callbacks belongs to a self-contained sub-flow within the
-screen (e.g. a delete-confirmation dialog's request/confirm/dismiss triad),
+screen — not just "callbacks that happen to live on this screen," but ones
+that share a source (one ViewModel) and a destination (one sub-composable) —
 give that subset its own nested `Actions` class rather than flattening
-everything into the top-level one:
+everything into the top-level one. Scent's own profile screen is the worked
+example: the listings tab's unlist/relist/create/edit calls all originate
+from `ProfileListingsViewModel` and all flow into `listingsTabContent`, so
+they nest as `ListingActions` — which itself nests the delete-confirmation
+dialog's request/confirm/dismiss triad, since that's a sub-flow of a
+sub-flow:
 
 ```kotlin
 data class ProfileActions(
     val onToggleFollow: () -> Unit,
     val onSelectTab: (ProfileTab) -> Unit,
     val onLogout: () -> Unit,
-    val onUnlist: (listingId: String) -> Unit,
-    val onRelist: (listingId: String) -> Unit,
     val onNavigateToFollowers: () -> Unit,
     val onNavigateToFollowing: () -> Unit,
-    val onNavigateToFragrance: (fragranceId: String) -> Unit,
+    val onNavigateToFragrance: (fragranceId: Int) -> Unit,
+    val listings: ListingActions,
+)
+
+data class ListingActions(
+    val onUnlist: (listingId: Int) -> Unit,
+    val onRelist: (listingId: Int) -> Unit,
+    val onCreate: () -> Unit,
+    val onEdit: (listingId: Int) -> Unit,
     val deleteConfirm: DeleteConfirmActions,
 )
 
 data class DeleteConfirmActions(
-    val onRequest: (listingId: String) -> Unit,
+    val onRequest: (listingId: Int) -> Unit,
     val onConfirm: () -> Unit,
     val onDismiss: () -> Unit,
 )
 ```
 
 Group by "what part of the screen/state machine this belongs to," not just
-"all callbacks on this screen." A dialog's request/confirm/dismiss triad is
-a natural unit; unrelated top-level actions (follow toggle, navigation)
-aren't — but both still belong under the screen's own `Actions` type.
+"all callbacks on this screen." A sub-flow with its own source ViewModel and
+destination composable — the listings tab, a dialog's request/confirm/dismiss
+triad — is a natural unit; unrelated top-level actions (follow toggle,
+navigation) aren't — but both still belong under the screen's own `Actions`
+type.
 
 ### ✅ DO
 - ✅ Name the class `<ScreenOrComponent>Actions`
