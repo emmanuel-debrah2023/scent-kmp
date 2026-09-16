@@ -194,6 +194,8 @@ fun ProfileScreen(
                 ProfileTab.Wishlist, ProfileTab.Likes -> Unit
             }
 
+            // TODO(chore/profile-actions-on-per-tab-vms): callbacks below collapse into
+            // ProfileActions once the bundling is re-applied on the per-tab ViewModels.
             ProfileLoaded(
                 user = profile.data,
                 // Only the authenticated user's own profile is reachable today — there is
@@ -239,6 +241,12 @@ private fun ProfileFullScreenState(
     }
 }
 
+// TODO(chore/profile-actions-on-per-tab-vms): 13 flat callbacks here exceeds the
+// 5+ bundling threshold in ADS-STE100, which uses this screen as its worked example.
+// PR #84 introduced ProfileActions/DeleteConfirmActions; PR #86 reverted it because
+// #84 was written against the single-ProfileUiState design that Phase 6's per-tab
+// ViewModels replaced. Re-apply the bundling on the per-tab design — #84's spec in
+// docs/architecture-guidelines.md survives and is authoritative.
 @Composable
 private fun ProfileLoaded(
     user: User,
