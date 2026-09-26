@@ -112,8 +112,10 @@ private fun ProfileNavHost(
             )
         is ProfileRoute.Settings ->
             SettingsScreen(
+                userId = user.id,
                 onLogout = onLogout,
                 onBack = { nav.goBack() },
+                onEditProfile = { nav.navigateTo(ProfileRoute.EditProfile) },
             )
         is ProfileRoute.EditProfile ->
             EditProfileScreen(

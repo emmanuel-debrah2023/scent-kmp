@@ -38,7 +38,6 @@ fun ScentConfirmDialog(
     modifier: Modifier = Modifier,
     isDestructive: Boolean = false,
 ) {
-    val spacing = ScentThemeExtras.spacing
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = modifier.fillMaxWidth().accessiblePane(title),
@@ -47,8 +46,8 @@ fun ScentConfirmDialog(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         ) {
             Column(
-                modifier = Modifier.padding(spacing.md),
-                verticalArrangement = Arrangement.spacedBy(spacing.sm),
+                modifier = Modifier.padding(ScentThemeExtras.spacing.md),
+                verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm),
             ) {
                 Text(
                     text = title,
@@ -61,8 +60,8 @@ fun ScentConfirmDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = spacing.xs),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                    modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
                 ) {
                     ScentSecondaryButton(
                         text = "Cancel",
@@ -110,6 +109,21 @@ private fun ScentConfirmDialogDeletePreview() {
             title = "Delete Aventus?",
             message = "This cannot be undone.",
             confirmLabel = "DELETE",
+            onConfirm = {},
+            onDismiss = {},
+            isDestructive = true,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ScentConfirmDialogLogoutPreview() {
+    ScentTheme {
+        ScentConfirmDialog(
+            title = "Log out of scent?",
+            message = "You'll need to sign in again to buy, sell or message sellers.",
+            confirmLabel = "LOG OUT",
             onConfirm = {},
             onDismiss = {},
             isDestructive = true,

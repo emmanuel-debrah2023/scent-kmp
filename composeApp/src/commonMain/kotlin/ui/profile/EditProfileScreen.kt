@@ -4,13 +4,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -18,18 +20,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import org.scent.project.domain.model.User
 import ui.accessibility.accessiblePane
 import ui.base.UiState
 import ui.components.EmptyState
+import ui.components.ScentDivider
 import ui.components.ScentTextField
+import ui.components.StackedTopBar
 import ui.components.buttons.ScentPrimaryButton
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
@@ -43,6 +46,7 @@ fun EditProfileScreen(
 ) {
     val viewModel: EditProfileViewModel = koinViewModel(parameters = { parametersOf(userId) })
     val uiState by viewModel.uiState.collectAsState()
+    val formState by viewModel.formState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { error ->
@@ -63,8 +67,10 @@ fun EditProfileScreen(
 
         is UiState.Success ->
             EditProfileForm(
-                initialDisplayName = state.data.displayName,
-                initialBio = state.data.bio,
+                user = state.data,
+                formState = formState,
+                onDisplayNameChange = viewModel::onDisplayNameChange,
+                onBioChange = viewModel::onBioChange,
                 onSave = viewModel::save,
                 onBack = onBack,
                 modifier = modifier,
@@ -74,46 +80,91 @@ fun EditProfileScreen(
 
 @Composable
 private fun EditProfileForm(
-    initialDisplayName: String,
-    initialBio: String,
-    onSave: (displayName: String, bio: String) -> Unit,
+    user: User,
+    formState: EditProfileFormState,
+    onDisplayNameChange: (String) -> Unit,
+    onBioChange: (String) -> Unit,
+    onSave: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var displayName by remember { mutableStateOf(initialDisplayName) }
-    var bio by remember { mutableStateOf(initialBio) }
+    Column(modifier = modifier.fillMaxSize().accessiblePane("Edit profile")) {
+        StackedTopBar(title = "Edit profile", onBack = onBack)
 
-    Column(
-        modifier = modifier.fillMaxSize().accessiblePane("Edit profile"),
-        verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.lg),
-    ) {
-        // TODO(fix/edit-profile-screen-layout): title sits flush against the back button —
-        // needs spacing token between them.
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = ScentThemeExtras.spacing.authMaxWidth)
+                        .padding(horizontal = ScentThemeExtras.spacing.md),
+                verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xl),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // TODO(feature/settings-suite): "Change photo" — users.avatar_url and
+                    // /api/v1/media/image-upload-url exist, but no endpoint writes a user's
+                    // avatar yet.
+                    ProfileAvatar(
+                        displayName = user.displayName,
+                        avatarUrl = user.avatarUrl,
+                        size = ScentThemeExtras.spacing.avatarSizeLarge,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        initialsColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        accentRing = true,
+                    )
+                    Column {
+                        Text(text = user.displayName, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = "@${user.username}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                ScentTextField(
+                    value = formState.displayName,
+                    onValueChange = { if (it.length <= 100) onDisplayNameChange(it) },
+                    label = "Display name",
+                    helperText = "Shown on your listings, reviews and messages",
+                    error = formState.displayNameError,
+                )
+
+                // TODO(feature/settings-suite): no bio length limit exists client- or
+                // server-side yet — needs Validator.validateBio plus a live "n / max" counter.
+                ScentTextField(
+                    value = formState.bio,
+                    onValueChange = onBioChange,
+                    label = "Bio",
+                    placeholder = "A line about your taste in fragrance",
+                    helperText = "Optional",
+                    singleLine = false,
+                    minLines = 3,
+                )
+
+                Spacer(modifier = Modifier.height(ScentThemeExtras.spacing.xl))
             }
-            Text(text = "Edit Profile", style = MaterialTheme.typography.titleLarge)
         }
 
-        ScentTextField(
-            value = displayName,
-            onValueChange = { displayName = it },
-            label = "Display name",
-        )
-
-        ScentTextField(
-            value = bio,
-            onValueChange = { bio = it },
-            label = "Bio",
-        )
-
-        // TODO(fix/edit-profile-screen-layout): fillMaxWidth() stretches the button edge-to-edge
-        // on wide/tablet viewports — should cap at auth-max-width like other form layouts.
+        ScentDivider()
         ScentPrimaryButton(
-            text = "SAVE",
-            onClick = { onSave(displayName, bio) },
-            modifier = Modifier.fillMaxWidth(),
+            text = "Save changes",
+            onClick = onSave,
+            enabled = formState.canSave,
+            modifier =
+                Modifier.padding(
+                    start = ScentThemeExtras.spacing.md,
+                    end = ScentThemeExtras.spacing.md,
+                    top = ScentThemeExtras.spacing.md,
+                    bottom = ScentThemeExtras.spacing.lg,
+                ),
         )
     }
 }
@@ -123,9 +174,55 @@ private fun EditProfileForm(
 private fun EditProfileFormPreview() {
     ScentTheme {
         EditProfileForm(
-            initialDisplayName = "Emmanuel Debrah",
-            initialBio = "Fragrance collector. Niche over designer, always.",
-            onSave = { _, _ -> },
+            user = User(id = 1, username = "edebrah", displayName = "Emmanuel Debrah", bio = "Fragrance collector."),
+            formState =
+                EditProfileFormState(
+                    displayName = "Emmanuel Debrah",
+                    bio = "Fragrance collector. Niche over designer, always.",
+                ),
+            onDisplayNameChange = {},
+            onBioChange = {},
+            onSave = {},
+            onBack = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EditProfileFormDirtyPreview() {
+    ScentTheme {
+        EditProfileForm(
+            user = User(id = 1, username = "edebrah", displayName = "Emmanuel Debrah"),
+            formState =
+                EditProfileFormState(
+                    displayName = "Emmanuel D.",
+                    isDirty = true,
+                    canSave = true,
+                ),
+            onDisplayNameChange = {},
+            onBioChange = {},
+            onSave = {},
+            onBack = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EditProfileFormErrorPreview() {
+    ScentTheme {
+        EditProfileForm(
+            user = User(id = 1, username = "edebrah", displayName = "Emmanuel Debrah"),
+            formState =
+                EditProfileFormState(
+                    displayName = "",
+                    isDirty = true,
+                    displayNameError = "Enter a display name",
+                ),
+            onDisplayNameChange = {},
+            onBioChange = {},
+            onSave = {},
             onBack = {},
         )
     }

@@ -52,6 +52,8 @@ fun ErrorState(
             ErrorStateVariant.Search -> Icons.Outlined.SearchOff
         }
 
+    // TODO(chore/remove-intermediate-theme-token-vals): inline to
+    // ScentThemeExtras.spacing.<field> directly.
     val spacing = ScentThemeExtras.spacing
     Column(
         modifier =

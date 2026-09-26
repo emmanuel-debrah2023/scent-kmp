@@ -32,6 +32,9 @@ fun ScentPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 2 intermediate
+    // `val motion = ScentThemeExtras.motion` assignments — inline to
+    // ScentThemeExtras.motion.<field>.
     val motion = ScentThemeExtras.motion
     val animSpec = tween<Color>(durationMillis = motion.durationDefault, easing = motion.easingDefault)
 

@@ -237,6 +237,8 @@ fun HomeFullBleedScreen(
 
 @Composable
 private fun NotificationsAction(tint: androidx.compose.ui.graphics.Color) {
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 7 intermediate
+    // `val = ScentThemeExtras.*` assignments — inline to ScentThemeExtras.<token>.<field>.
     val spacing = ScentThemeExtras.spacing
     IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
         Icon(

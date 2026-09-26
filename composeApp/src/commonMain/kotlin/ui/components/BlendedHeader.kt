@@ -65,6 +65,8 @@ fun BlendedHeader(
     onHeightMeasured: (Dp) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    // TODO(chore/remove-intermediate-theme-token-vals): inline to
+    // ScentThemeExtras.spacing.<field> directly.
     val spacing = ScentThemeExtras.spacing
     val density = LocalDensity.current
 

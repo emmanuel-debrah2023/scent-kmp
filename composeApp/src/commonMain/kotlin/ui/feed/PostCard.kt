@@ -41,6 +41,8 @@ fun PostCard(
     onVideoClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 2 intermediate
+    // `val = ScentThemeExtras.*` assignments — inline to ScentThemeExtras.<token>.<field>.
     val spacing = ScentThemeExtras.spacing
     val elevation = ScentThemeExtras.elevation
 

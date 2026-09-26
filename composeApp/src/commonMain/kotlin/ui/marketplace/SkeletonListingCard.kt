@@ -23,6 +23,8 @@ import ui.theme.ScentThemeExtras
 /** A shimmering placeholder shaped like [ui.components.ListingCard], shown during first load. */
 @Composable
 fun SkeletonListingCard(modifier: Modifier = Modifier) {
+    // TODO(chore/remove-intermediate-theme-token-vals): inline to
+    // ScentThemeExtras.spacing.<field> directly.
     val spacing = ScentThemeExtras.spacing
 
     Card(
