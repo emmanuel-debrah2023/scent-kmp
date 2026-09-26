@@ -42,6 +42,8 @@ fun FragranceCard(
     modifier: Modifier = Modifier,
 ) {
     var isFavorite by remember { mutableStateOf(false) }
+    // TODO(chore/remove-intermediate-theme-token-vals): inline to
+    // ScentThemeExtras.spacing.<field> directly.
     val spacing = ScentThemeExtras.spacing
 
     Card(

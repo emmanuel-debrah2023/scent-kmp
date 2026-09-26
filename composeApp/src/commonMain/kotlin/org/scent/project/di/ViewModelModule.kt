@@ -10,6 +10,7 @@ import ui.listing.CreateListingViewModel
 import ui.listing.EditListingViewModel
 import ui.marketplace.BrandSuggestionViewModel
 import ui.marketplace.MarketplaceViewModel
+import ui.profile.EditProfileViewModel
 import ui.profile.ProfileCollectionViewModel
 import ui.profile.ProfileFollowersViewModel
 import ui.profile.ProfileFollowingViewModel
@@ -17,6 +18,7 @@ import ui.profile.ProfileListingsViewModel
 import ui.profile.ProfilePostsViewModel
 import ui.profile.ProfileReviewsViewModel
 import ui.profile.ProfileViewModel
+import ui.profile.SettingsViewModel
 import ui.video.VideoViewModel
 
 val viewModelModule =
@@ -33,6 +35,8 @@ val viewModelModule =
         viewModel { (userId: Int) -> ProfileReviewsViewModel(userId, get()) }
         viewModel { (userId: Int) -> ProfileFollowersViewModel(userId, get()) }
         viewModel { (userId: Int) -> ProfileFollowingViewModel(userId, get()) }
+        viewModel { (userId: Int) -> EditProfileViewModel(userId, get()) }
+        viewModel { (userId: Int) -> SettingsViewModel(userId, get()) }
         viewModel { (url: String) -> VideoViewModel(url) }
         viewModel { MarketplaceViewModel(get()) }
         viewModel { BrandSuggestionViewModel(get()) }

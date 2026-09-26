@@ -90,6 +90,9 @@ fun ProfileListingRow(
     showActions: Boolean = true,
     isActionInFlight: Boolean = false,
 ) {
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 3 intermediate
+    // `val spacing = ScentThemeExtras.spacing` assignments — inline to
+    // ScentThemeExtras.spacing.<field>.
     val spacing = ScentThemeExtras.spacing
     val customActions =
         if (!showActions || isActionInFlight) {

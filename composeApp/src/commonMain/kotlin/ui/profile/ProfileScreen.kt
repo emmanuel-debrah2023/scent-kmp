@@ -72,6 +72,7 @@ import org.scent.project.domain.model.Post
 import org.scent.project.domain.model.Review
 import org.scent.project.domain.model.User
 import ui.accessibility.accessibleClickable
+import ui.accessibility.mergedGroup
 import ui.base.UiState
 import ui.components.BottleItem
 import ui.components.EmptyState
@@ -89,8 +90,7 @@ import kotlin.math.roundToInt
 fun ProfileScreen(
     authUser: AuthUser,
     onLogout: () -> Unit,
-    onCreateListing: () -> Unit,
-    onEditListing: (Int) -> Unit,
+    navActions: ProfileNavActions,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -201,29 +201,31 @@ fun ProfileScreen(
                 isOwnProfile = true,
                 isFollowing = isFollowing,
                 selectedTab = selectedTab,
-                postsState = postsState,
-                collectionState = collectionState,
-                wishlistState = wishlistState,
-                listingsState = listingsState,
-                reviewsState = reviewsState,
-                likesState = likesState,
+                tabState =
+                    ProfileTabState(
+                        postsState = postsState,
+                        collectionState = collectionState,
+                        wishlistState = wishlistState,
+                        listingsState = listingsState,
+                        reviewsState = reviewsState,
+                        likesState = likesState,
+                    ),
                 actions =
                     ProfileActions(
                         onToggleFollow = viewModel::toggleFollow,
                         onSelectTab = viewModel::selectTab,
                         onLogout = onLogout,
-                        // TODO(feature/profile-actions-wiring): no destination route yet.
-                        onNavigateToFollowers = {},
-                        // TODO(feature/profile-actions-wiring): no destination route yet.
-                        onNavigateToFollowing = {},
-                        // TODO(feature/profile-actions-wiring): no destination route yet.
-                        onNavigateToFragrance = {},
+                        onEditProfile = navActions.onNavigateToEditProfile,
+                        onSettings = navActions.onNavigateToSettings,
+                        onNavigateToFollowers = navActions.onNavigateToFollowers,
+                        onNavigateToFollowing = navActions.onNavigateToFollowing,
+                        onNavigateToFragrance = navActions.onNavigateToFragrance,
                         listings =
                             ListingActions(
                                 onUnlist = { listingsViewModel?.unlist(it) },
                                 onRelist = { listingsViewModel?.relist(it) },
-                                onCreate = onCreateListing,
-                                onEdit = onEditListing,
+                                onCreate = navActions.onCreateListing,
+                                onEdit = navActions.onEditListing,
                                 deleteConfirm =
                                     DeleteConfirmActions(
                                         onRequest = { listingsViewModel?.requestDelete(it) },
@@ -257,12 +259,7 @@ private fun ProfileLoaded(
     isOwnProfile: Boolean,
     isFollowing: Boolean,
     selectedTab: ProfileTab,
-    postsState: UiState<List<Post>>?,
-    collectionState: UiState<List<CollectionEntry>>?,
-    wishlistState: UiState<List<CollectionEntry>>,
-    listingsState: UiState<ProfileListingsUiState>?,
-    reviewsState: UiState<List<Review>>?,
-    likesState: UiState<List<Post>>,
+    tabState: ProfileTabState,
     actions: ProfileActions,
     modifier: Modifier = Modifier,
 ) {
@@ -303,6 +300,8 @@ private fun ProfileLoaded(
                     isOwnProfile = isOwnProfile,
                     isFollowing = isFollowing,
                     onToggleFollow = actions.onToggleFollow,
+                    onEditProfile = actions.onEditProfile,
+                    onSettings = actions.onSettings,
                     onNavigateToFollowers = actions.onNavigateToFollowers,
                     onNavigateToFollowing = actions.onNavigateToFollowing,
                 )
@@ -317,12 +316,7 @@ private fun ProfileLoaded(
             profileTabContent(
                 selectedTab = selectedTab,
                 isOwnProfile = isOwnProfile,
-                postsState = postsState,
-                collectionState = collectionState,
-                wishlistState = wishlistState,
-                listingsState = listingsState,
-                reviewsState = reviewsState,
-                likesState = likesState,
+                tabState = tabState,
                 onNavigateToFragrance = actions.onNavigateToFragrance,
                 listingActions = actions.listings,
             )
@@ -344,7 +338,7 @@ private fun ProfileLoaded(
     }
 
     val pendingListing =
-        (listingsState as? UiState.Success)?.data?.let { state ->
+        (tabState.listingsState as? UiState.Success)?.data?.let { state ->
             state.listings.firstOrNull { it.id == state.pendingDeleteId }
         }
     if (pendingListing != null) {
@@ -448,13 +442,12 @@ private fun ProfileHeader(
     isOwnProfile: Boolean,
     isFollowing: Boolean,
     onToggleFollow: () -> Unit,
+    onEditProfile: () -> Unit,
+    onSettings: () -> Unit,
     onNavigateToFollowers: () -> Unit,
     onNavigateToFollowing: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accent = ScentThemeExtras.accent
-    val gray400 = ScentThemeExtras.gray400
-
     Column(
         modifier =
             modifier
@@ -476,7 +469,7 @@ private fun ProfileHeader(
                             letterSpacing = 1.6.sp,
                             fontWeight = FontWeight.SemiBold,
                         ),
-                    color = gray400,
+                    color = ScentThemeExtras.gray400,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -518,13 +511,15 @@ private fun ProfileHeader(
                 Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(accent),
+                    .background(ScentThemeExtras.accent),
         )
 
         Spacer(Modifier.height(14.dp))
 
         // Stats — sourced entirely from User, so this header never depends on any
         // per-tab ViewModel's data (those are only instantiated on tab selection).
+        // Each stat is its own mergedGroup: "1.2k Followers" announces as one node,
+        // separate from its sibling stats and from the (independently clickable) row.
         Row(
             horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
@@ -537,11 +532,7 @@ private fun ProfileHeader(
 
         // Action buttons
         if (isOwnProfile) {
-            // TODO(feature/profile-actions-wiring): Edit Profile and Settings are both
-            // no-ops. Settings is also the natural home for the missing Logout affordance
-            // — see fix/profile-logout-unreachable — rather than adding a separate entry
-            // point.
-            OwnProfileActions(onEditProfile = { /* TODO */ }, onSettings = { /* TODO */ })
+            OwnProfileActions(onEditProfile = onEditProfile, onSettings = onSettings)
         } else {
             // TODO(feature/profile-actions-wiring): overflow menu (report/block/share) is a no-op.
             OtherProfileActions(
@@ -560,8 +551,6 @@ private fun ProfileStat(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    val gray400 = ScentThemeExtras.gray400
-
     val baseModifier =
         if (onClick != null) {
             modifier.clickable(
@@ -574,7 +563,9 @@ private fun ProfileStat(
         }
 
     Row(
-        modifier = baseModifier,
+        // Merges the count and label Text children into one announcement
+        // ("1.2k Followers") instead of two separate nodes.
+        modifier = baseModifier.mergedGroup(),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -591,7 +582,7 @@ private fun ProfileStat(
                     letterSpacing = 1.2.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),
-            color = gray400,
+            color = ScentThemeExtras.gray400,
             modifier = Modifier.padding(bottom = 2.dp),
         )
     }
@@ -706,25 +697,35 @@ private fun OtherProfileActions(
     }
 }
 
+// TODO(chore/extract-profile-avatar-component): ProfileAvatar now backs five call sites
+// across three screens (ProfileScreen, ProfileFollowersScreen/ProfileFollowingScreen,
+// SettingsScreen, EditProfileScreen) but still lives in this file as a profile-package
+// composable. Move it to ui/components/ as a proper reusable component, per
+// compose-component-api.md's component-library-first rule.
+
+/**
+ * Package-visible: reused by [ProfileFollowersScreen], [ProfileFollowingScreen],
+ * [ui.profile.SettingsScreen] and [ui.profile.EditProfileScreen].
+ *
+ * [containerColor]/[initialsColor] default to the header's tonal treatment; Settings and
+ * EditProfile pass `primaryContainer`/`onPrimaryContainer` for a more prominent card avatar.
+ * [accentRing] swaps the plain 1dp outline-variant border for a 1dp accent ring with a 2dp
+ * surface gap — off by default so the two existing call sites below are unaffected.
+ */
 @Composable
-private fun ProfileAvatar(
+fun ProfileAvatar(
     displayName: String,
     avatarUrl: String,
     size: Dp,
     modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    initialsColor: Color = MaterialTheme.colorScheme.primary,
+    accentRing: Boolean = false,
 ) {
     val initials = remember(displayName) { deriveInitials(displayName) }
     val fontSize = (size.value * 0.35f).sp
 
-    Box(
-        modifier =
-            modifier
-                .size(size)
-                .clip(CircleShape)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentAlignment = Alignment.Center,
-    ) {
+    val content: @Composable () -> Unit = {
         if (avatarUrl.isNotBlank()) {
             AsyncImage(
                 model = avatarUrl,
@@ -736,16 +737,33 @@ private fun ProfileAvatar(
             Text(
                 text = initials,
                 style = MaterialTheme.typography.headlineSmall.copy(fontSize = fontSize),
-                color = MaterialTheme.colorScheme.primary,
+                color = initialsColor,
             )
         } else {
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
                 modifier = Modifier.size(size * 0.5f),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = initialsColor,
             )
         }
+    }
+
+    Box(
+        modifier =
+            modifier
+                .size(size)
+                .clip(CircleShape)
+                .let {
+                    if (accentRing) {
+                        it.border(1.dp, ScentThemeExtras.accent, CircleShape).padding(2.dp).clip(CircleShape)
+                    } else {
+                        it.border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    }
+                }.background(containerColor),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 
@@ -765,9 +783,6 @@ private fun ProfileTabRow(
     onTabSelected: (ProfileTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accent = ScentThemeExtras.accent
-    val gray400 = ScentThemeExtras.gray400
-
     Column(
         modifier =
             modifier
@@ -799,7 +814,7 @@ private fun ProfileTabRow(
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 1.1.sp,
                             ),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else gray400,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else ScentThemeExtras.gray400,
                         modifier = Modifier.padding(top = 12.dp),
                     )
                     Spacer(Modifier.height(9.dp))
@@ -809,7 +824,7 @@ private fun ProfileTabRow(
                                 .height(2.dp)
                                 .width(24.dp)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(if (isSelected) accent else Color.Transparent),
+                                .background(if (isSelected) ScentThemeExtras.accent else Color.Transparent),
                     )
                 }
             }
@@ -853,12 +868,7 @@ private inline fun <T> LazyListScope.tabResult(
 private fun LazyListScope.profileTabContent(
     selectedTab: ProfileTab,
     isOwnProfile: Boolean,
-    postsState: UiState<List<Post>>?,
-    collectionState: UiState<List<CollectionEntry>>?,
-    wishlistState: UiState<List<CollectionEntry>>,
-    listingsState: UiState<ProfileListingsUiState>?,
-    reviewsState: UiState<List<Review>>?,
-    likesState: UiState<List<Post>>,
+    tabState: ProfileTabState,
     onNavigateToFragrance: (Int) -> Unit,
     listingActions: ListingActions,
 ) {
@@ -868,14 +878,15 @@ private fun LazyListScope.profileTabContent(
         // and measured up front — a profile with hundreds of posts composes all of them on
         // tab selection. Wishlist and Listings below keep the LazyListScope-extension form
         // that emits items(...); these three need restoring to it.
-        ProfileTab.Posts -> postsState?.let { tabResult(it) { posts -> item { PostsGrid(posts, isOwnProfile) } } }
+        ProfileTab.Posts -> tabState.postsState?.let { tabResult(it) { posts -> item { PostsGrid(posts) } } }
         ProfileTab.Collection ->
-            collectionState?.let {
-                tabResult(it) { entries -> item { CollectionSections(entries, isOwnProfile, onNavigateToFragrance) } }
+            tabState.collectionState?.let {
+                tabResult(it) { entries -> item { CollectionSections(entries, onNavigateToFragrance) } }
             }
-        ProfileTab.Wishlist -> tabResult(wishlistState) { wishlistTabContent(it, isOwnProfile, onNavigateToFragrance) }
+        ProfileTab.Wishlist ->
+            tabResult(tabState.wishlistState) { wishlistTabContent(it, onNavigateToFragrance) }
         ProfileTab.Listings ->
-            listingsState?.let {
+            tabState.listingsState?.let {
                 tabResult(it) { state ->
                     listingsTabContent(
                         listings = state.listings,
@@ -887,31 +898,25 @@ private fun LazyListScope.profileTabContent(
                 }
             }
         ProfileTab.Reviews ->
-            reviewsState?.let {
+            tabState.reviewsState?.let {
                 tabResult(
                     it,
-                ) { reviews -> item { ReviewsList(reviews, isOwnProfile) } }
+                ) { reviews -> item { ReviewsList(reviews) } }
             }
-        ProfileTab.Likes -> tabResult(likesState) { likesTabContent(it) }
+        ProfileTab.Likes -> tabResult(tabState.likesState) { likesTabContent(it) }
     }
 }
 
 @Composable
-private fun PostsGrid(
-    posts: List<Post>,
-    isOwnProfile: Boolean,
-) {
+private fun PostsGrid(posts: List<Post>) {
     if (posts.isEmpty()) {
+        // TODO(feature/profile-empty-state-post-cta): no create-post flow exists yet to
+        // route this to, so the CTA is dropped rather than left as a no-op button.
         EmptyState(
             title = "No posts yet",
             message = "Share a bottle, a note, or a shelf shot to start your feed.",
-            actionLabel = if (isOwnProfile) "CREATE POST" else null,
-            onAction =
-                if (isOwnProfile) {
-                    {}
-                } else {
-                    null
-                },
+            actionLabel = null,
+            onAction = null,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         return
@@ -945,7 +950,6 @@ private fun PostGridRow(
 @Composable
 private fun CollectionSections(
     collection: List<CollectionEntry>,
-    isOwnProfile: Boolean,
     onNavigateToFragrance: (Int) -> Unit,
 ) {
     val sections =
@@ -954,16 +958,13 @@ private fun CollectionSections(
             .filter { (_, entries) -> entries.isNotEmpty() }
 
     if (sections.isEmpty()) {
+        // TODO(feature/profile-empty-state-collection-cta): no add-to-collection flow
+        // exists yet to route this to, so the CTA is dropped rather than left as a no-op.
         EmptyState(
             title = "Your collection is empty",
             message = "Add what you own, what you've tried, and what you've moved on.",
-            actionLabel = if (isOwnProfile) "ADD A FRAGRANCE" else null,
-            onAction =
-                if (isOwnProfile) {
-                    {}
-                } else {
-                    null
-                },
+            actionLabel = null,
+            onAction = null,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         return
@@ -982,21 +983,18 @@ private fun CollectionSections(
 
 private fun LazyListScope.wishlistTabContent(
     wishlist: List<CollectionEntry>,
-    isOwnProfile: Boolean,
     onNavigateToFragrance: (Int) -> Unit,
 ) {
     if (wishlist.isEmpty()) {
         item {
+            // TODO(feature/profile-empty-state-wishlist-cta): switching to the Marketplace
+            // tab from here needs a callback threaded from MainGraph down through
+            // ProfileScreen; out of scope here, so the CTA is dropped rather than a no-op.
             EmptyState(
                 title = "Nothing saved yet",
                 message = "Save fragrances you're hunting and we'll flag them in the marketplace.",
-                actionLabel = if (isOwnProfile) "BROWSE FRAGRANCES" else null,
-                onAction =
-                    if (isOwnProfile) {
-                        {}
-                    } else {
-                        null
-                    },
+                actionLabel = null,
+                onAction = null,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -1018,8 +1016,6 @@ private fun CollectionSection(
     onNavigateToFragrance: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val gray400 = ScentThemeExtras.gray400
-
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier =
@@ -1042,7 +1038,7 @@ private fun CollectionSection(
             Text(
                 text = entries.size.toString(),
                 style = MaterialTheme.typography.bodySmall,
-                color = gray400,
+                color = ScentThemeExtras.gray400,
             )
         }
         LazyRow(
@@ -1095,13 +1091,14 @@ private fun LazyListScope.listingsTabContent(
     val activeCount = listings.count { it.isActive }
 
     item {
-        val spacing = ScentThemeExtras.spacing
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = spacing.profileRowHorizontalPadding, vertical = spacing.xs)
-                    .padding(top = spacing.xxs),
+                    .padding(
+                        horizontal = ScentThemeExtras.spacing.profileRowHorizontalPadding,
+                        vertical = ScentThemeExtras.spacing.xs,
+                    ).padding(top = ScentThemeExtras.spacing.xxs),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom,
         ) {
@@ -1115,7 +1112,10 @@ private fun LazyListScope.listingsTabContent(
                     ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.Bottom) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm),
+                verticalAlignment = Alignment.Bottom,
+            ) {
                 Text(
                     text = "$activeCount active",
                     style = MaterialTheme.typography.bodySmall,
@@ -1135,12 +1135,15 @@ private fun LazyListScope.listingsTabContent(
 
     if (isOwnProfile && actionError != null) {
         item {
-            val spacing = ScentThemeExtras.spacing
             Text(
                 text = "Couldn't update that listing: ${actionError.message}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = spacing.profileRowHorizontalPadding, vertical = spacing.xxs),
+                modifier =
+                    Modifier.padding(
+                        horizontal = ScentThemeExtras.spacing.profileRowHorizontalPadding,
+                        vertical = ScentThemeExtras.spacing.xxs,
+                    ),
             )
         }
     }
@@ -1160,12 +1163,11 @@ private fun LazyListScope.listingsTabContent(
         )
     }
     item {
-        val spacing = ScentThemeExtras.spacing
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outlineVariant,
-            modifier = Modifier.padding(horizontal = spacing.profileRowHorizontalPadding),
+            modifier = Modifier.padding(horizontal = ScentThemeExtras.spacing.profileRowHorizontalPadding),
         )
-        Spacer(Modifier.height(spacing.xl - spacing.xxs))
+        Spacer(Modifier.height(ScentThemeExtras.spacing.xl - ScentThemeExtras.spacing.xxs))
     }
 }
 
@@ -1245,21 +1247,15 @@ private fun listingRowAccessibilityDescription(
 
 // Reviews
 @Composable
-private fun ReviewsList(
-    reviews: List<Review>,
-    isOwnProfile: Boolean,
-) {
+private fun ReviewsList(reviews: List<Review>) {
     if (reviews.isEmpty()) {
+        // TODO(feature/profile-empty-state-review-cta): no write-a-review flow exists yet
+        // to route this to, so the CTA is dropped rather than left as a no-op button.
         EmptyState(
             title = "No reviews yet",
             message = "Rate a fragrance you've worn and it shows up here.",
-            actionLabel = if (isOwnProfile) "WRITE A REVIEW" else null,
-            onAction =
-                if (isOwnProfile) {
-                    {}
-                } else {
-                    null
-                },
+            actionLabel = null,
+            onAction = null,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         return
@@ -1293,6 +1289,16 @@ private fun LazyListScope.likesTabContent(likes: List<Post>) {
     }
 }
 
+private val previewTabState =
+    ProfileTabState(
+        postsState = UiState.Success(emptyList()),
+        collectionState = null,
+        wishlistState = UiState.Success(emptyList()),
+        listingsState = null,
+        reviewsState = null,
+        likesState = UiState.Success(emptyList()),
+    )
+
 @Preview(showBackground = true)
 @Composable
 private fun OwnProfilePreview() {
@@ -1312,12 +1318,7 @@ private fun OwnProfilePreview() {
             isOwnProfile = true,
             isFollowing = false,
             selectedTab = ProfileTab.Posts,
-            postsState = UiState.Success(emptyList()),
-            collectionState = null,
-            wishlistState = UiState.Success(emptyList()),
-            listingsState = null,
-            reviewsState = null,
-            likesState = UiState.Success(emptyList()),
+            tabState = previewTabState,
             actions = ProfileActions.noOp(),
         )
     }
@@ -1342,12 +1343,7 @@ private fun OtherProfilePreview() {
             isOwnProfile = false,
             isFollowing = false,
             selectedTab = ProfileTab.Posts,
-            postsState = UiState.Success(emptyList()),
-            collectionState = null,
-            wishlistState = UiState.Success(emptyList()),
-            listingsState = null,
-            reviewsState = null,
-            likesState = UiState.Success(emptyList()),
+            tabState = previewTabState,
             actions = ProfileActions.noOp(),
         )
     }

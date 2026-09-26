@@ -41,7 +41,16 @@ data class ScentSpacing(
     val profileRowPillPaddingV: Dp = 3.dp,
     val profileRowPillTopOffset: Dp = 2.dp,
     val profileRowHorizontalPadding: Dp = 22.dp,
+    // Small avatar for a compact list row (Followers/Following) — distinct from the
+    // profile header's larger avatar.
+    val avatarSizeSmall: Dp = 44.dp,
+    // Settings' profile-summary card avatar.
+    val avatarSizeMedium: Dp = 56.dp,
+    // EditProfile header avatar.
+    val avatarSizeLarge: Dp = 88.dp,
     val thumbnailGridMinSize: Dp = 96.dp,
+    // Back-button-row-then-title-below top bar (Settings, EditProfile).
+    val topBarHeight: Dp = 64.dp,
     // Skeleton placeholder line heights, mirroring the text styles they stand in for.
     val skeletonLineSmall: Dp = 12.dp,
     val skeletonLineMedium: Dp = 20.dp,

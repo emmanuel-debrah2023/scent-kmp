@@ -63,6 +63,20 @@ sealed interface ProfileRoute {
     data class EditListing(
         val listingId: Int,
     ) : ProfileRoute
+
+    data object Settings : ProfileRoute
+
+    data object EditProfile : ProfileRoute
+
+    data object Followers : ProfileRoute
+
+    data object Following : ProfileRoute
+
+    // Shared destination (see ADS-STE100) — Profile's own copy, kept on this tab's
+    // back stack rather than reusing Search's or Marketplace's.
+    data class FragranceDetail(
+        val fragranceId: Int,
+    ) : ProfileRoute
 }
 
 // Marketplace — browse and create listings

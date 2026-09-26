@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,6 +44,11 @@ import ui.theme.ScentThemeExtras
  * [label] sits above the input in label-uppercase style (labelLarge, uppercased).
  * Border animates outline-variant → primary on focus, → error when [error] is set.
  * When [enabled] is false the border and text are muted to outline-variant.
+ * [helperText] renders below the field in the same slot [error] uses — [error] always
+ * wins when both are set, so a field never shows stale help text next to a live error.
+ * [singleLine]/[minLines] mirror [androidx.compose.foundation.text.BasicTextField]'s own
+ * params for a multi-line field (e.g. a bio); the fixed [ui.theme.ScentSpacing.buttonHeight]
+ * only applies when [singleLine] is true.
  */
 @Composable
 fun ScentTextField(
@@ -53,10 +59,12 @@ fun ScentTextField(
     placeholder: String = "",
     enabled: Boolean = true,
     error: String? = null,
+    helperText: String? = null,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
-    val motion = ScentThemeExtras.motion
     var isFocused by remember { mutableStateOf(false) }
 
     val borderColor by animateColorAsState(
@@ -67,7 +75,11 @@ fun ScentTextField(
                 isFocused -> MaterialTheme.colorScheme.primary
                 else -> MaterialTheme.colorScheme.outlineVariant
             },
-        animationSpec = tween(durationMillis = motion.durationDefault, easing = motion.easingDefault),
+        animationSpec =
+            tween(
+                durationMillis = ScentThemeExtras.motion.durationDefault,
+                easing = ScentThemeExtras.motion.easingDefault,
+            ),
         label = "scentTextField_border",
     )
 
@@ -93,11 +105,18 @@ fun ScentTextField(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(ScentThemeExtras.spacing.buttonHeight)
-                    .onFocusChanged { isFocused = it.isFocused },
+                    .let {
+                        if (singleLine) {
+                            it.height(ScentThemeExtras.spacing.buttonHeight)
+                        } else {
+                            it.heightIn(min = ScentThemeExtras.spacing.buttonHeight)
+                        }
+                    }.onFocusChanged { isFocused = it.isFocused },
             enabled = enabled,
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            singleLine = singleLine,
+            minLines = minLines,
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             decorationBox = { innerTextField ->
@@ -127,6 +146,13 @@ fun ScentTextField(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = ScentThemeExtras.spacing.xxs),
             )
+        } else if (helperText != null) {
+            Text(
+                text = helperText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = ScentThemeExtras.spacing.xxs),
+            )
         }
     }
 }
@@ -145,7 +171,6 @@ fun ScentSearchBar(
     placeholder: String = "Search",
     enabled: Boolean = true,
 ) {
-    val motion = ScentThemeExtras.motion
     var isFocused by remember { mutableStateOf(false) }
 
     val borderColor by animateColorAsState(
@@ -155,7 +180,11 @@ fun ScentSearchBar(
             } else {
                 MaterialTheme.colorScheme.outlineVariant
             },
-        animationSpec = tween(durationMillis = motion.durationDefault, easing = motion.easingDefault),
+        animationSpec =
+            tween(
+                durationMillis = ScentThemeExtras.motion.durationDefault,
+                easing = ScentThemeExtras.motion.easingDefault,
+            ),
         label = "scentSearchBar_border",
     )
 
@@ -245,6 +274,35 @@ private fun ScentTextFieldErrorPreview() {
 private fun ScentTextFieldDisabledPreview() {
     ScentTheme {
         ScentTextField(value = "", onValueChange = {}, label = "Email", enabled = false)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ScentTextFieldHelperTextPreview() {
+    ScentTheme {
+        ScentTextField(
+            value = "Emmanuel Debrah",
+            onValueChange = {},
+            label = "Display name",
+            helperText = "Shown on your listings, reviews and messages",
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ScentTextFieldMultiLinePreview() {
+    ScentTheme {
+        ScentTextField(
+            value = "Fragrance collector. Niche over designer, always.",
+            onValueChange = {},
+            label = "Bio",
+            placeholder = "A line about your taste in fragrance",
+            helperText = "Optional",
+            singleLine = false,
+            minLines = 3,
+        )
     }
 }
 

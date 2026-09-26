@@ -83,6 +83,8 @@ fun VideoPostScreen(
     // FOLLOW/Buy are every one a no-op. See also fix/community-card-like-wiring for the
     // `liked` local-state pattern duplicated here.
     val colorScheme = MaterialTheme.colorScheme
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 2 intermediate
+    // `val = ScentThemeExtras.*` assignments — inline to ScentThemeExtras.<token>.<field>.
     val spacing = ScentThemeExtras.spacing
 
     var liked by remember { mutableStateOf(false) }

@@ -184,6 +184,9 @@ private fun MarketplaceHeader(
     onRemoveFilter: (FilterCategory) -> Unit,
     onClearAllFilters: () -> Unit,
 ) {
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 6 intermediate
+    // `val spacing = ScentThemeExtras.spacing` assignments — inline to
+    // ScentThemeExtras.spacing.<field>.
     val spacing = ScentThemeExtras.spacing
 
     Column(

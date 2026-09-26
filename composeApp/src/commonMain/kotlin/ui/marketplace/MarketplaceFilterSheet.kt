@@ -70,6 +70,9 @@ fun MarketplaceFilterSheet(
     onBrandSuggestionAccepted: (String) -> Unit = {},
     onBrandSuggestionRetry: () -> Unit = {},
 ) {
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 4 intermediate
+    // `val spacing = ScentThemeExtras.spacing` assignments — inline to
+    // ScentThemeExtras.spacing.<field>.
     val spacing = ScentThemeExtras.spacing
     var brand by remember { mutableStateOf(currentFilters.labelFor(FilterCategory.BRAND).orEmpty()) }
     var condition by remember { mutableStateOf(currentFilters.valueFor(FilterCategory.CONDITION)) }

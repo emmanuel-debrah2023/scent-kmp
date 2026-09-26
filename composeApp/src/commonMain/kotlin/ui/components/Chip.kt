@@ -52,6 +52,9 @@ fun AppliedFilterChip(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // TODO(chore/remove-intermediate-theme-token-vals): this file has 2 intermediate
+    // `val spacing = ScentThemeExtras.spacing` assignments — inline to
+    // ScentThemeExtras.spacing.<field>.
     val spacing = ScentThemeExtras.spacing
     val pillColor = MaterialTheme.colorScheme.primary
 
