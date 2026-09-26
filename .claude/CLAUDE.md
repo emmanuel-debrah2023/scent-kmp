@@ -62,8 +62,11 @@ These come up constantly. Getting them wrong means a redo.
 ## Skills — when they fire
 
 - `scent-dev-loop` — implementing/fixing/refactoring anything in this repo.
-  Five gates: compiles → ADS-STE100 → ktlint/detekt → unit tests → pre-push.
+  Five gates: compiles → ADS-STE100 → ktlint/detekt → tests → pre-push.
   Run it by default on non-trivial work; don't stop at "it looks right."
+- `scent-tdd` — writing or auditing tests. Red-green-refactor cycle, fakes over
+  mocks, exact `AppError` assertions, Compose UI test conventions. `scent-dev-loop`
+  Gate 4 enforces this skill's rules; it doesn't restate them.
 - `scent-ticket` — logging tasks to the Notion Tasks Tracker.
 - `scent-backlog` — "what's next", read-only backlog query.
 - `db-backend-ktor` — smoke-testing endpoints, local Postgres, Ktor tests, Flyway.
