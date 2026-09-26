@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import org.scent.project.domain.model.User
@@ -30,6 +31,7 @@ import ui.base.UiState
 import ui.components.EmptyState
 import ui.components.ErrorState
 import ui.components.ErrorStateVariant
+import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
 @Composable
@@ -115,8 +117,6 @@ private fun ConnectionRow(
     user: User,
     modifier: Modifier = Modifier,
 ) {
-    val spacing = ScentThemeExtras.spacing
-
     // Display-only: there is no per-tab route yet to view another user's profile from
     // Profile (see ProfileScreen's own "isOwnProfile = true" comment), so this row is
     // non-interactive rather than a no-op click target.
@@ -124,12 +124,16 @@ private fun ConnectionRow(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = spacing.md, vertical = spacing.sm)
+                .padding(horizontal = ScentThemeExtras.spacing.md, vertical = ScentThemeExtras.spacing.sm)
                 .mergedGroup(),
-        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ProfileAvatar(displayName = user.displayName, avatarUrl = user.avatarUrl, size = spacing.avatarSizeSmall)
+        ProfileAvatar(
+            displayName = user.displayName,
+            avatarUrl = user.avatarUrl,
+            size = ScentThemeExtras.spacing.avatarSizeSmall,
+        )
         Column {
             Text(text = user.displayName, style = MaterialTheme.typography.bodyLarge)
             Text(
@@ -138,5 +142,53 @@ private fun ConnectionRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+private val previewConnections =
+    listOf(
+        User(id = 2, username = "scenthound", displayName = "Jane Doe", followerCount = 542),
+        User(id = 3, username = "niche_nose", displayName = "Alex Kim", followerCount = 88),
+    )
+
+@Preview(showBackground = true)
+@Composable
+private fun ConnectionsLoadedPreview() {
+    ScentTheme {
+        ConnectionsScreenContent(
+            title = "Followers",
+            emptyTitle = "No followers yet",
+            emptyMessage = "When people follow you, they'll show up here.",
+            uiState = UiState.Success(previewConnections),
+            onBack = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ConnectionsEmptyPreview() {
+    ScentTheme {
+        ConnectionsScreenContent(
+            title = "Following",
+            emptyTitle = "Not following anyone yet",
+            emptyMessage = "Fragrances people you follow post about will show up in your feed.",
+            uiState = UiState.Success(emptyList()),
+            onBack = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ConnectionsLoadingPreview() {
+    ScentTheme {
+        ConnectionsScreenContent(
+            title = "Followers",
+            emptyTitle = "No followers yet",
+            emptyMessage = "When people follow you, they'll show up here.",
+            uiState = UiState.Loading,
+            onBack = {},
+        )
     }
 }

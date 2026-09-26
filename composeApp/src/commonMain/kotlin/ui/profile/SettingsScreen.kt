@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import ui.accessibility.accessibleClickable
 import ui.accessibility.accessiblePane
+import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
 /**
@@ -31,8 +33,6 @@ fun SettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val spacing = ScentThemeExtras.spacing
-
     Column(modifier = modifier.fillMaxSize().accessiblePane("Settings")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -46,8 +46,8 @@ fun SettingsScreen(
                 Modifier
                     .fillMaxWidth()
                     .accessibleClickable(label = "Log out", onClick = onLogout)
-                    .padding(spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                    .padding(ScentThemeExtras.spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -61,5 +61,13 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    ScentTheme {
+        SettingsScreen(onLogout = {}, onBack = {})
     }
 }

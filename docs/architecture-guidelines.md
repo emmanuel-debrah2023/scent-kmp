@@ -1779,6 +1779,78 @@ type.
 - ❌ Don't put non-callback state (UiState, IDs, flags) inside an `Actions`
   class — it's for function references only
 
+## State Bundling Pattern (Composable Tab/Section State)
+
+**CRITICAL**: If a screen-level composable would take **5 or more** `UiState`
+(or other read-model) parameters describing independent tabs or sections,
+bundle them into a dedicated `<Screen>State` data class instead of declaring
+them individually. Below 5, individual state params are fine — don't bundle
+prematurely.
+
+This is the state-side counterpart to the Actions Bundling Pattern above, and
+the two are deliberately kept as **separate types** rather than merged into
+one — a `State` class holds only read models, an `Actions` class holds only
+function references. Keeping them apart means a composable's parameter list
+still reads as "what it knows" vs "what it can do" at a glance, instead of
+one bundle doing both jobs.
+
+### Why
+- Same growth problem as callbacks: one state param per tab doesn't scale as
+  tabs are added — Scent's own `ProfileScreen` crossed the threshold with six
+  independent per-tab `UiState`s (`postsState`, `collectionState`,
+  `wishlistState`, `listingsState`, `reviewsState`, `likesState`).
+- Previews collapse from N `UiState` arguments to one `ProfileTabState(...)`
+  literal (or one shared preview constant, when several previews need the
+  same shape).
+- Keeps state and actions visually distinct — `tabState: ProfileTabState,
+  actions: ProfileActions` documents the split; a merged bundle would hide it.
+
+### Rule
+
+```
+5+ state params describing independent tabs/sections → group into a data class named <Screen>State
+< 5 → keep as individual params
+```
+
+### Pattern
+
+```kotlin
+data class ProfileTabState(
+    val postsState: UiState<List<Post>>?,
+    val collectionState: UiState<List<CollectionEntry>>?,
+    val wishlistState: UiState<List<CollectionEntry>>,
+    val listingsState: UiState<ProfileListingsUiState>?,
+    val reviewsState: UiState<List<Review>>?,
+    val likesState: UiState<List<Post>>,
+)
+
+@Composable
+private fun ProfileLoaded(
+    user: User,
+    isOwnProfile: Boolean,
+    isFollowing: Boolean,
+    selectedTab: ProfileTab,
+    tabState: ProfileTabState,
+    actions: ProfileActions,
+    modifier: Modifier = Modifier,
+) { /* ... */ }
+```
+
+### ✅ DO
+- ✅ Name the class `<Screen>State`
+- ✅ Keep it a plain data class of read models only — no functions
+- ✅ Keep `State` and `Actions` as separate types even when both bundle for
+  the same screen — don't merge them into one god object
+- ✅ For previews that need the same shape repeatedly, hoist one shared
+  `private val previewTabState = ProfileTabState(...)` rather than repeating
+  the literal per preview
+
+### ❌ DON'T
+- ❌ Don't bundle when there are fewer than 5 state params
+- ❌ Don't put callbacks inside a `State` class — that's what `Actions` is for
+- ❌ Don't give a field a default that masks a still-loading tab; a nullable
+  `UiState<T>?` means "not yet resolved," not "assume empty"
+
 ### 6. Migration Strategy to Official Navigation
 
 The per-tab structure maps cleanly onto official Compose Multiplatform Navigation's **nested graphs** — each `Tab` becomes a nested graph, and each per-tab route becomes a destination within it.

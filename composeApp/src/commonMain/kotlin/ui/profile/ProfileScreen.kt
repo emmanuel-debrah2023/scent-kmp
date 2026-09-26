@@ -201,12 +201,15 @@ fun ProfileScreen(
                 isOwnProfile = true,
                 isFollowing = isFollowing,
                 selectedTab = selectedTab,
-                postsState = postsState,
-                collectionState = collectionState,
-                wishlistState = wishlistState,
-                listingsState = listingsState,
-                reviewsState = reviewsState,
-                likesState = likesState,
+                tabState =
+                    ProfileTabState(
+                        postsState = postsState,
+                        collectionState = collectionState,
+                        wishlistState = wishlistState,
+                        listingsState = listingsState,
+                        reviewsState = reviewsState,
+                        likesState = likesState,
+                    ),
                 actions =
                     ProfileActions(
                         onToggleFollow = viewModel::toggleFollow,
@@ -256,12 +259,7 @@ private fun ProfileLoaded(
     isOwnProfile: Boolean,
     isFollowing: Boolean,
     selectedTab: ProfileTab,
-    postsState: UiState<List<Post>>?,
-    collectionState: UiState<List<CollectionEntry>>?,
-    wishlistState: UiState<List<CollectionEntry>>,
-    listingsState: UiState<ProfileListingsUiState>?,
-    reviewsState: UiState<List<Review>>?,
-    likesState: UiState<List<Post>>,
+    tabState: ProfileTabState,
     actions: ProfileActions,
     modifier: Modifier = Modifier,
 ) {
@@ -318,12 +316,7 @@ private fun ProfileLoaded(
             profileTabContent(
                 selectedTab = selectedTab,
                 isOwnProfile = isOwnProfile,
-                postsState = postsState,
-                collectionState = collectionState,
-                wishlistState = wishlistState,
-                listingsState = listingsState,
-                reviewsState = reviewsState,
-                likesState = likesState,
+                tabState = tabState,
                 onNavigateToFragrance = actions.onNavigateToFragrance,
                 listingActions = actions.listings,
             )
@@ -345,7 +338,7 @@ private fun ProfileLoaded(
     }
 
     val pendingListing =
-        (listingsState as? UiState.Success)?.data?.let { state ->
+        (tabState.listingsState as? UiState.Success)?.data?.let { state ->
             state.listings.firstOrNull { it.id == state.pendingDeleteId }
         }
     if (pendingListing != null) {
@@ -857,12 +850,7 @@ private inline fun <T> LazyListScope.tabResult(
 private fun LazyListScope.profileTabContent(
     selectedTab: ProfileTab,
     isOwnProfile: Boolean,
-    postsState: UiState<List<Post>>?,
-    collectionState: UiState<List<CollectionEntry>>?,
-    wishlistState: UiState<List<CollectionEntry>>,
-    listingsState: UiState<ProfileListingsUiState>?,
-    reviewsState: UiState<List<Review>>?,
-    likesState: UiState<List<Post>>,
+    tabState: ProfileTabState,
     onNavigateToFragrance: (Int) -> Unit,
     listingActions: ListingActions,
 ) {
@@ -872,14 +860,15 @@ private fun LazyListScope.profileTabContent(
         // and measured up front — a profile with hundreds of posts composes all of them on
         // tab selection. Wishlist and Listings below keep the LazyListScope-extension form
         // that emits items(...); these three need restoring to it.
-        ProfileTab.Posts -> postsState?.let { tabResult(it) { posts -> item { PostsGrid(posts) } } }
+        ProfileTab.Posts -> tabState.postsState?.let { tabResult(it) { posts -> item { PostsGrid(posts) } } }
         ProfileTab.Collection ->
-            collectionState?.let {
+            tabState.collectionState?.let {
                 tabResult(it) { entries -> item { CollectionSections(entries, onNavigateToFragrance) } }
             }
-        ProfileTab.Wishlist -> tabResult(wishlistState) { wishlistTabContent(it, onNavigateToFragrance) }
+        ProfileTab.Wishlist ->
+            tabResult(tabState.wishlistState) { wishlistTabContent(it, onNavigateToFragrance) }
         ProfileTab.Listings ->
-            listingsState?.let {
+            tabState.listingsState?.let {
                 tabResult(it) { state ->
                     listingsTabContent(
                         listings = state.listings,
@@ -891,12 +880,12 @@ private fun LazyListScope.profileTabContent(
                 }
             }
         ProfileTab.Reviews ->
-            reviewsState?.let {
+            tabState.reviewsState?.let {
                 tabResult(
                     it,
                 ) { reviews -> item { ReviewsList(reviews) } }
             }
-        ProfileTab.Likes -> tabResult(likesState) { likesTabContent(it) }
+        ProfileTab.Likes -> tabResult(tabState.likesState) { likesTabContent(it) }
     }
 }
 
@@ -1278,6 +1267,16 @@ private fun LazyListScope.likesTabContent(likes: List<Post>) {
     }
 }
 
+private val previewTabState =
+    ProfileTabState(
+        postsState = UiState.Success(emptyList()),
+        collectionState = null,
+        wishlistState = UiState.Success(emptyList()),
+        listingsState = null,
+        reviewsState = null,
+        likesState = UiState.Success(emptyList()),
+    )
+
 @Preview(showBackground = true)
 @Composable
 private fun OwnProfilePreview() {
@@ -1297,12 +1296,7 @@ private fun OwnProfilePreview() {
             isOwnProfile = true,
             isFollowing = false,
             selectedTab = ProfileTab.Posts,
-            postsState = UiState.Success(emptyList()),
-            collectionState = null,
-            wishlistState = UiState.Success(emptyList()),
-            listingsState = null,
-            reviewsState = null,
-            likesState = UiState.Success(emptyList()),
+            tabState = previewTabState,
             actions = ProfileActions.noOp(),
         )
     }
@@ -1327,12 +1321,7 @@ private fun OtherProfilePreview() {
             isOwnProfile = false,
             isFollowing = false,
             selectedTab = ProfileTab.Posts,
-            postsState = UiState.Success(emptyList()),
-            collectionState = null,
-            wishlistState = UiState.Success(emptyList()),
-            listingsState = null,
-            reviewsState = null,
-            likesState = UiState.Success(emptyList()),
+            tabState = previewTabState,
             actions = ProfileActions.noOp(),
         )
     }
