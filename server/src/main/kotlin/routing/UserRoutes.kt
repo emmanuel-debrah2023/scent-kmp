@@ -11,18 +11,28 @@ import data.schema.PostMediaTable
 import data.schema.PostsTable
 import data.schema.ReviewsTable
 import data.schema.UserFragranceCollectionTable
+import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.principal
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.route
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
+import models.UpdateUserRequest
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.scent.project.data.remote.dto.CollectionEntryDto
 import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.FeedResponseDto
@@ -32,7 +42,9 @@ import org.scent.project.data.remote.dto.PostDto
 import org.scent.project.data.remote.dto.PostListingDto
 import org.scent.project.data.remote.dto.ReviewDto
 import org.scent.project.data.remote.dto.UserCollectionResponseDto
+import org.scent.project.data.remote.dto.UserResponse
 import org.scent.project.data.remote.dto.UserReviewsResponseDto
+import org.scent.project.domain.validation.Validator
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 fun Route.userRoutes() {
@@ -76,8 +88,86 @@ fun Route.userRoutes() {
             val posts = dbQuery { queryUserLikes(userId) }
             call.respond(HttpStatusCode.OK, FeedResponseDto(posts = posts, nextCursor = null))
         }
+
+        authenticate("auth-jwt") {
+            patch { handleUpdateUser(call) }
+        }
     }
 }
+
+/**
+ * Split out of [userRoutes] to keep that function under detekt's LongMethod/complexity
+ * thresholds — this handler alone has 5 independent failure branches (auth, ownership,
+ * body shape, validation, not-found) before it ever touches [UsersTable].
+ */
+private suspend fun handleUpdateUser(call: ApplicationCall) {
+    val authUserId =
+        call.requireUserId()
+            ?: return call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token"))
+
+    val targetUserId =
+        call.parameters["id"]?.toIntOrNull()
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
+
+    if (authUserId != targetUserId) {
+        return call.respond(HttpStatusCode.Forbidden, ErrorResponse("You can only edit your own profile"))
+    }
+
+    val request =
+        runCatching { call.receive<UpdateUserRequest>() }
+            .getOrElse {
+                return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid request body: ${it.message}"))
+            }
+
+    val validatedDisplayName =
+        request.displayName?.let { name ->
+            Validator.validateDisplayName(name).fold(
+                ifLeft = { error -> return call.respond(HttpStatusCode.BadRequest, ErrorResponse(error.message)) },
+                ifRight = { it },
+            )
+        }
+
+    val exists =
+        dbQuery { UsersTable.selectAll().where { UsersTable.id eq targetUserId }.singleOrNull() } != null
+    if (!exists) {
+        return call.respond(HttpStatusCode.NotFound, ErrorResponse("User not found"))
+    }
+
+    val touchesAnyField = validatedDisplayName != null || request.bio != null || request.avatarUrl != null
+    if (touchesAnyField) {
+        dbQuery {
+            UsersTable.update({ UsersTable.id eq targetUserId }) {
+                validatedDisplayName?.let { name -> it[displayName] = name }
+                request.bio?.let { b -> it[bio] = b }
+                request.avatarUrl?.let { url -> it[avatarUrl] = url }
+            }
+        }
+    }
+
+    val updatedRow = dbQuery { UsersTable.selectAll().where { UsersTable.id eq targetUserId }.single() }
+    call.respond(HttpStatusCode.OK, buildUserResponse(targetUserId, updatedRow))
+}
+
+/** Extracts the JWT subject's user id — mirrors [routing.ListingRoutes]'s own copy. */
+private fun ApplicationCall.requireUserId(): Int? =
+    this
+        .principal<JWTPrincipal>()
+        ?.payload
+        ?.getClaim("userId")
+        ?.asInt()
+
+private fun buildUserResponse(
+    userId: Int,
+    row: ResultRow,
+): UserResponse =
+    UserResponse(
+        id = userId,
+        username = row[UsersTable.username],
+        displayName = row[UsersTable.displayName],
+        email = row[UsersTable.email],
+        avatarUrl = row[UsersTable.avatarUrl],
+        bio = row[UsersTable.bio],
+    )
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 private fun queryUserPosts(

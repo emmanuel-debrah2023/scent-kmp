@@ -42,6 +42,7 @@ import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
 import org.scent.project.data.remote.dto.UpdateListingRequestDto
+import org.scent.project.data.remote.dto.UpdateUserRequestDto
 import org.scent.project.data.remote.dto.UserCollectionResponseDto
 import org.scent.project.data.remote.dto.UserListResponseDto
 import org.scent.project.data.remote.dto.UserResponse
@@ -694,12 +695,23 @@ class FakeReviewApi : ReviewApi {
 class FakeUserApi : UserApi {
     var response: UserResponse? = null
     var exception: Exception? = null
+    var lastUpdateRequest: UpdateUserRequestDto? = null
 
     override suspend fun getProfile(
         userId: Int,
         token: String?,
     ): UserResponse {
         exception?.let { throw it }
+        return response ?: error("FakeUserApi.response not set")
+    }
+
+    override suspend fun updateProfile(
+        userId: Int,
+        request: UpdateUserRequestDto,
+        token: String,
+    ): UserResponse {
+        exception?.let { throw it }
+        lastUpdateRequest = request
         return response ?: error("FakeUserApi.response not set")
     }
 }

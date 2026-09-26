@@ -1,5 +1,6 @@
 package org.scent.project.data.mapper
 
+import org.scent.project.data.local.entity.UserEntity
 import org.scent.project.data.remote.dto.UserResponse
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.User
@@ -42,4 +43,23 @@ object UserMapper {
             bio = bio.orEmpty(),
         ).asRight()
     }
+
+    /**
+     * Refreshes a cached row after a successful profile edit — [followerCount]/
+     * [followingCount] are deliberately excluded (see [UserEntity]'s own doc); they're
+     * derived from [org.scent.project.domain.repository.UserRepository.getProfileFlow]'s
+     * `combine()` with `FollowDao`, never stored on this row.
+     */
+    fun User.toUserEntity(): UserEntity =
+        UserEntity(
+            id = id,
+            username = username,
+            displayName = displayName,
+            email = email,
+            avatarUrl = avatarUrl,
+            bio = bio,
+            isSeller = isSeller,
+            postCount = postCount,
+            createdAt = createdAt,
+        )
 }

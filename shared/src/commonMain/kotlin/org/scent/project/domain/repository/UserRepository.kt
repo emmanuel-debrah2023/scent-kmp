@@ -13,4 +13,10 @@ interface UserRepository {
     fun getProfileFlow(userId: Int): Flow<Result<User>>
 
     suspend fun refreshProfile(userId: Int): Result<Unit>
+
+    suspend fun updateProfile(
+        userId: Int,
+        displayName: String,
+        bio: String,
+    ): Result<User>
 }

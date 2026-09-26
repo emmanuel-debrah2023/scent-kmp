@@ -1,8 +1,11 @@
 package ui.profile
 
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.scent.project.domain.error.AppError
@@ -15,8 +18,8 @@ import ui.base.UiState
 /**
  * Loads the current user via [UserRepository.getProfileFlow] to prefill the edit form, then
  * owns live form state ([formState]) so the dirty/[EditProfileFormState.canSave] rules and
- * display-name validation are unit-testable without a Composable. [save] validates the
- * display-name edit but does not persist it — see its own doc.
+ * display-name validation are unit-testable without a Composable. [save] persists the edit
+ * via [UserRepository.updateProfile] — see its own doc.
  */
 class EditProfileViewModel(
     private val userId: Int,
@@ -27,6 +30,11 @@ class EditProfileViewModel(
 
     private val _formState = MutableStateFlow(EditProfileFormState())
     val formState: StateFlow<EditProfileFormState> = _formState.asStateFlow()
+
+    private val _saveSuccess = MutableSharedFlow<Unit>()
+
+    /** One-shot signal for [EditProfileScreen] to show a "Profile saved" snackbar. */
+    val saveSuccess: SharedFlow<Unit> = _saveSuccess.asSharedFlow()
 
     private var originalDisplayName: String = ""
     private var originalBio: String = ""
@@ -77,6 +85,10 @@ class EditProfileViewModel(
             )
     }
 
+    private fun emitSaveSuccess() {
+        viewModelScope.launch { _saveSuccess.emit(Unit) }
+    }
+
     private fun mapDisplayNameError(error: AppError): String =
         when (error) {
             is AppError.ValidationError.RequiredFieldEmpty -> "Enter a display name"
@@ -85,14 +97,25 @@ class EditProfileViewModel(
         }
 
     /**
-     * TODO(feature/settings-suite): no PATCH /api/v1/users/{id} exists yet, so a validated
-     * edit has nowhere to save to. Surfaced as a one-shot notice via the error channel rather
-     * than silently discarded or falsely reported as saved.
+     * Validates the display name client-side before ever touching the repository — an
+     * invalid edit never reaches the network. On a successful persist, resets the dirty
+     * baseline to the saved values (so the form goes clean without waiting for a Flow
+     * re-emission) and emits [saveSuccess].
      */
     fun save() {
-        Validator.validateDisplayName(_formState.value.displayName).handleResult(
+        val state = _formState.value
+        Validator.validateDisplayName(state.displayName).handleResult(
             onSuccess = {
-                handleError(AppError.Unknown(message = "Profile editing isn't available yet — check back soon."))
+                viewModelScope.launch {
+                    userRepository.updateProfile(userId, state.displayName, state.bio).handleResult(
+                        onSuccess = { user ->
+                            originalDisplayName = user.displayName
+                            originalBio = user.bio
+                            _formState.value = EditProfileFormState(displayName = user.displayName, bio = user.bio)
+                            emitSaveSuccess()
+                        },
+                    )
+                }
             },
         )
     }
