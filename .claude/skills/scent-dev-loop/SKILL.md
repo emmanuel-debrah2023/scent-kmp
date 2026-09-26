@@ -17,6 +17,8 @@ This skill runs five mandatory gates in order. If a gate fails, fix it and resta
 
 **CRITICAL RESOURCE:** All code changes must comply with **ADS-STE100** (`docs/architecture-guidelines.md`), the authoritative design doc for Scent. This is not optional guidance — it's the contract for this codebase.
 
+**TESTING STANDARD:** How tests are written — test-first cycle, fakes, assertions, UI tests, what counts as a useless test — lives in the **`scent-tdd`** skill. This loop does not restate those rules; it enforces them.
+
 ---
 
 ## Step 0: Orient — Read ADS-STE100 First
@@ -29,8 +31,8 @@ Before touching any code:
     - **Dependency Injection**: Constructor injection wired through Koin modules, never service-located.
     - **Repository pattern**: All repository methods return `Either<AppError, T>`; no exceptions for expected failures.
     - **ViewModel design**: Use `UiState<T>` sealed class for state; expose errors via `SharedFlow`.
-    - **Navigation**: State-based navigation (current approach); designed for migration to official Compose Navigation later.
-    - **Testing**: Prefer fakes over mocks; cover business logic (ViewModels, repositories, use cases) not framework code.
+    - **Navigation**: Bottom-nav with four tabs, each owning an isolated back stack (per-tab sealed routes + `NavigationState<Route>`, tied together by `AppNavigator`); designed for migration to official Compose Navigation nested graphs later.
+    - **Testing**: Prefer fakes over mocks; cover business logic and stateless composables, not framework code.
     - **Form validation**: Use validators returning `Either<AppError, T>`.
 
    These patterns interact — null-safety affects mapping, mapping affects error handling. Skipping this step will cause rework later.
@@ -40,6 +42,8 @@ Before touching any code:
 3. **Understand module shape** — Scent is KMP with `shared` / `composeApp` / `server` modules. Know which Gradle tasks apply to your files.
 
 4. **Check DI wiring** — Scent uses Koin. Verify `networkModule`, `databaseModule`, `repositoryModule`, `useCaseModule`, `viewModelModule` exist and that new classes are constructor-injected into the right module.
+
+5. **Write the failing tests first** — For any new behaviour or bugfix, load `scent-tdd` and write the RED tests before the implementation. The gates below run after the code exists; the tests should already be there by then. For a bugfix, the first test reproduces the bug.
 
 ---
 
@@ -95,17 +99,18 @@ Run Gradle compile for every target you touched:
 - ✅ ViewModels delegate errors to `SharedFlow` and use helper methods like `handleError()`.
 
 ### Navigation
-- ✅ Follow state-based navigation (sealed `Screen` class + `NavigationState` holder).
-- ✅ Pass navigation callbacks down (e.g., `onNavigateToDetail: (String) -> Unit`).
-- ✅ Don't inject `NavigationState` into deep components.
+- ✅ Routes belong to their tab's sealed hierarchy (`HomeRoute`, `MarketplaceRoute`, `SearchRoute`, `ProfileRoute`); each tab has its own `NavigationState<Route>` inside `AppNavigator`.
+- ✅ Shared destinations (`FragranceDetail`, `ListingDetail`, `UserProfile`) stay duplicated per tab by design — do not extract a shared `DetailRoute`.
+- ✅ Navigate to the current tab's own copy of a shared destination so the entry stays on that tab's stack.
+- ✅ Back press goes through `AppNavigator.onBackPressed()` — no ad-hoc back handling.
+- ✅ Pass navigation callbacks down (e.g., `onNavigateToDetail: (String) -> Unit`); don't inject `NavigationState` into deep components.
 - ✅ No ad-hoc navigation libraries or two concurrent approaches without explicit user request.
 
 ### Testing
-- ✅ Unit tests cover business logic (ViewModels, repositories, use cases, mappers, validators).
-- ✅ Minimum 80%+ coverage for ViewModels.
-- ✅ Prefer fake implementations over mocks.
-- ✅ Test both success and error paths — every `Either.Left()` needs a test case.
-- ✅ Follow Arrange-Act-Assert structure; use descriptive test names in backticks.
+- ✅ Tests follow `scent-tdd`: written first, behaviour-focused, fakes over mocks, exact `AppError` subtypes asserted.
+- ✅ Every `Either.Left` path introduced by the change has a test.
+- ✅ Screens are split into `XScreen(viewModel)` → stateless `XContent(state, callbacks)` so the content is UI-testable.
+- ✅ No useless tests added (see `scent-tdd` audit criteria): no testing fakes, getters, or framework code.
 
 ### Design System
 - ✅ New screens/components reuse tokens from `ui/theme/` (colors, spacing, typography).
@@ -129,23 +134,26 @@ Run Gradle compile for every target you touched:
 
 ---
 
-## Gate 4: Unit Tests
+## Gate 4: Tests
 
-Write or update unit tests for **business logic** — ViewModels, repositories, use cases, mappers, validators. Skip Activities, Composables, or DI configuration files themselves (those get behavior/screenshot tests only if the project already has that infrastructure).
+Confirm the tests written in Step 0 per `scent-tdd` exist, cover the change, and pass. Covered layers: validators, mappers, navigation state, use cases, repositories, ViewModels, stateless composables (`XContent`), and server routes where touched. Not covered: Activities, DI module files, framework code.
 
 ```bash
 # For the module you touched
 ./gradlew :shared:jvmTest
 ./gradlew :composeApp:testDebugUnitTest
+./gradlew :server:test
 
 # For all modules (comprehensive check during iteration)
 ./gradlew allTests
 ```
 
-- ✅ Prefer fakes over mocks for repositories/dependencies.
-- ✅ Match existing test conventions (Arrange-Act-Assert, existing Flow-testing library).
-- ✅ Run tests for every module you touched or whose behavior could be affected.
+- ✅ Every new behaviour had a RED test before its implementation (or a characterisation test, flagged as such, for pre-existing code).
+- ✅ Run tests for every module you touched or whose behaviour could be affected.
 - ✅ A green run on the module you edited doesn't mean downstream modules still pass.
+- ✅ New tests run twice without flaking.
+
+If tests are missing or weak, go back to `scent-tdd` — don't write quick post-hoc tests just to pass this gate.
 
 ---
 
@@ -187,7 +195,7 @@ When the loop finishes, tell the user:
 - **What was implemented** — the feature, fix, or refactor
 - **ADS-STE100 compliance** — did the change pass Gate 2? Call out any architecture issues caught and fixes applied (e.g., "Converted from exception-based error handling to `Either<AppError, T>`", "Added mappers for nullable DTOs", "Wired new repository through Koin").
 - **Static analysis** — what lint/detekt violations were fixed
-- **Tests** — what tests were added/updated; note coverage level for critical paths
+- **Tests** — what tests were written first and what each protects; any bugs they caught
 - **Gate 5 result** — confirmed all three checks pass locally before push
 
 **Always restate**: The change is ready to push only after Gate 5 passes clean.
@@ -201,3 +209,4 @@ When the loop finishes, tell the user:
 - **Error display**: Use the provided error components for consistency; don't roll one-off error handling.
 - **Marketplace features**: Listings and commerce logic must use `Either<AppError, T>` for transaction-safety patterns.
 - **KMP specifics**: Changes to `shared/src/commonMain/` must compile on all targets; `androidMain` and `iosMain` are platform-specific.
+- **Server tests**: Use `db-backend-ktor` for `testApplication`, H2 and JWT test setup.
