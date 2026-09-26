@@ -17,3 +17,10 @@ data class UserResponse(
 data class UserListResponseDto(
     val users: List<UserResponse>? = null,
 )
+
+@Serializable
+data class UpdateUserRequestDto(
+    @SerialName("display_name") val displayName: String? = null,
+    val bio: String? = null,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+)

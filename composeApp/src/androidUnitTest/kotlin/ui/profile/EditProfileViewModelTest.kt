@@ -1,6 +1,7 @@
 package ui.profile
 
 import app.cash.turbine.test
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -161,16 +162,37 @@ class EditProfileViewModelTest {
         }
 
     @Test
-    fun `save with a valid display name surfaces the deferred-persistence notice`() =
+    fun `save with a valid display name persists via updateProfile and resets the dirty baseline`() =
         runTest {
             val viewModel = EditProfileViewModel(userId = 1, userRepository = userRepository)
             profileFlow.emit(user.asRight())
             viewModel.onDisplayNameChange("Alice B")
+            val saved = user.copy(displayName = "Alice B")
+            coEvery { userRepository.updateProfile(1, "Alice B", user.bio) } returns saved.asRight()
+
+            viewModel.saveSuccess.test {
+                viewModel.save()
+                awaitItem()
+            }
+
+            val form = viewModel.formState.value
+            assertEquals("Alice B", form.displayName)
+            assertFalse(form.isDirty)
+            assertFalse(form.canSave)
+        }
+
+    @Test
+    fun `save surfaces the repository's error when persistence fails`() =
+        runTest {
+            val viewModel = EditProfileViewModel(userId = 1, userRepository = userRepository)
+            profileFlow.emit(user.asRight())
+            viewModel.onDisplayNameChange("Alice B")
+            val error = AppError.NetworkError.NoConnection()
+            coEvery { userRepository.updateProfile(1, "Alice B", user.bio) } returns error.asLeft()
 
             viewModel.error.test {
                 viewModel.save()
-                val error = awaitItem()
-                assertIs<AppError.Unknown>(error)
+                assertEquals(error, awaitItem())
             }
         }
 }

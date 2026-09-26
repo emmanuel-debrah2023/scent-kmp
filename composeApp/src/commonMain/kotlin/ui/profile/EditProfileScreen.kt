@@ -54,6 +54,12 @@ fun EditProfileScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.saveSuccess.collect {
+            snackbarHostState.showSnackbar("Profile saved")
+        }
+    }
+
     when (val state = uiState) {
         is UiState.Idle, is UiState.Loading ->
             Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

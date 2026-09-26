@@ -3,12 +3,14 @@ package org.scent.project.data.repository
 import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
 import org.scent.project.data.local.entity.UserEntity
+import org.scent.project.data.remote.dto.UserResponse
 import org.scent.project.fakes.FakeFollowDao
 import org.scent.project.fakes.FakeTokenStorage
 import org.scent.project.fakes.FakeUserApi
 import org.scent.project.fakes.FakeUserDao
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -112,5 +114,70 @@ class UserRepositoryImplTest {
             val result = repo.refreshProfile(userId = 1)
 
             assertTrue(result.isRight)
+        }
+
+    @Test
+    fun `updateProfile returns Unauthorized when no token is stored`() =
+        runTest {
+            val repo = repo()
+
+            val result = repo.updateProfile(userId = 1, displayName = "Alice B", bio = "New bio")
+
+            assertTrue(result.isLeft)
+        }
+
+    @Test
+    fun `updateProfile sends the given displayName and bio to the API`() =
+        runTest {
+            val api =
+                FakeUserApi().apply {
+                    response =
+                        UserResponse(
+                            id = 1,
+                            username = "alice",
+                            displayName = "Alice B",
+                            bio = "New bio",
+                        )
+                }
+            val storage = FakeTokenStorage().apply { storedToken = "token123" }
+            val repo = repo(api = api, storage = storage)
+
+            repo.updateProfile(userId = 1, displayName = "Alice B", bio = "New bio")
+
+            assertEquals("Alice B", api.lastUpdateRequest?.displayName)
+            assertEquals("New bio", api.lastUpdateRequest?.bio)
+            assertNull(api.lastUpdateRequest?.avatarUrl)
+        }
+
+    @Test
+    fun `updateProfile persists the returned user into the cache`() =
+        runTest {
+            val api =
+                FakeUserApi().apply {
+                    response =
+                        UserResponse(
+                            id = 1,
+                            username = "alice",
+                            displayName = "Alice B",
+                            email = "alice@example.com",
+                            avatarUrl = "",
+                            bio = "New bio",
+                        )
+                }
+            val userDao = FakeUserDao()
+            val storage = FakeTokenStorage().apply { storedToken = "token123" }
+            val repo = repo(api = api, userDao = userDao, storage = storage)
+
+            val result = repo.updateProfile(userId = 1, displayName = "Alice B", bio = "New bio")
+
+            assertTrue(result.isRight)
+            assertEquals("Alice B", result.getOrNull()?.displayName)
+
+            // getProfileFlow reads Room, not the network response — this proves the
+            // upsert actually happened rather than just trusting the returned value.
+            repo.getProfileFlow(userId = 1).test {
+                assertEquals("Alice B", awaitItem().getOrNull()?.displayName)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }

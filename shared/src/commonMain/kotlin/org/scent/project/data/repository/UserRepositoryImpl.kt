@@ -7,7 +7,10 @@ import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.local.dao.FollowDao
 import org.scent.project.data.local.dao.UserDao
 import org.scent.project.data.mapper.UserEntityMapper.toDomain
+import org.scent.project.data.mapper.UserMapper.toUser
+import org.scent.project.data.mapper.UserMapper.toUserEntity
 import org.scent.project.data.remote.api.UserApi
+import org.scent.project.data.remote.dto.UpdateUserRequestDto
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.User
 import org.scent.project.domain.repository.UserRepository
@@ -46,4 +49,30 @@ class UserRepositoryImpl(
             // When it ships, fetch the user and upsert it into userDao.
             Unit.asRight()
         }
+
+    override suspend fun updateProfile(
+        userId: Int,
+        displayName: String,
+        bio: String,
+    ): Result<User> {
+        val token =
+            tokenStorage.getToken().getOrNull()
+                ?: return AppError.AuthError.Unauthorized().asLeft()
+
+        return safeApiCall(
+            onHttpError = { status ->
+                AppError.NetworkError.ServerError(statusCode = status).asLeft()
+            },
+        ) {
+            val response =
+                api.updateProfile(
+                    userId = userId,
+                    request = UpdateUserRequestDto(displayName = displayName, bio = bio),
+                    token = token,
+                )
+            // Persisting the edit only in memory would make the Room-cache-backed
+            // getProfileFlow keep showing stale data until the next login.
+            response.toUser().onRight { user -> userDao.upsertUser(user.toUserEntity()) }
+        }
+    }
 }
