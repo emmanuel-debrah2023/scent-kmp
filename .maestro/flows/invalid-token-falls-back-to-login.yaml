@@ -1,4 +1,6 @@
 appId: org.scent.project
+tags:
+  - suite
 ---
 # The launch-argument hook only writes the token. A token the backend rejects must go
 # through normal hydration and land on the login screen: no crash, no faked session.

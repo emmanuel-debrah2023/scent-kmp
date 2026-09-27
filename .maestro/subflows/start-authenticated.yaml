@@ -1,6 +1,8 @@
 appId: org.scent.project
 onFlowStart:
   - runScript: ../scripts/seed-e2e-session.js
+tags:
+  - suite
 ---
 # Gray-box start (ADR-0002): seed the account through the API, hand the app a real JWT as a
 # launch argument, and let it hydrate the session exactly as on a relaunch.
