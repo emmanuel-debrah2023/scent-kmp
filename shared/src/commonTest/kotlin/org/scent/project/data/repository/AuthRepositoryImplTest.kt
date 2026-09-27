@@ -297,6 +297,8 @@ class AuthRepositoryImplTest {
             assertNull(storage.storedToken)
         }
 
+    // TODO(chore/auth-hydration-401-test): cover "stored token rejected with 401 clears it and emits
+    // Unauthenticated". The E2E launch-argument hook relies on it; a ResponseException needs ktor-client-mock.
     @Test
     fun `observeAuthState stays Unknown when network error occurs during hydration`() =
         runTest {
