@@ -92,11 +92,17 @@ compression of it, and where they disagree, the guideline wins.
 
 ## Tests
 
-- [ ] ViewModels, repositories, use cases, mappers, validators covered
-- [ ] Fakes, not mocks
-- [ ] Every `Either.Left` branch has a test case
+Full rules live in `scent-tdd` — load it before writing any test, not just this
+checklist. This is a quick sanity pass, not a substitute.
+
+- [ ] Test written before the implementation (RED first), or flagged as a
+      characterisation test for pre-existing code
+- [ ] Fakes, not mocks, unless a fake is impractical
+- [ ] Every `Either.Left` branch has a test asserting the exact `AppError`
+      subtype (`assertIs<...>`), never a bare `isLeft`
 - [ ] Arrange-Act-Assert, backtick names describing behaviour
 - [ ] `runTest` for coroutines
+- [ ] No test added purely to move a coverage number
 
 ## KMP
 
