@@ -101,6 +101,28 @@ Compose changes land in under a second, no app restart.
   begin watching. See the HotSwan workflow section in `.claude/CLAUDE.md` for
   the edit → reload → screenshot loop.
 
+### Maestro E2E smoke tests
+
+Maestro drives the app end-to-end on a real emulator/device, black-box —
+no Gradle dependency, just a CLI you install once.
+
+- **Install** — `curl -Ls "https://get.maestro.mobile.dev" | bash` (see
+  [maestro.mobile.dev](https://maestro.mobile.dev) for other platforms).
+  Requires `adb` on your `PATH` and a running/connected Android
+  emulator or device.
+- **Layout** — `.maestro/config.yaml` points at the flow files under
+  `.maestro/flows/`. `smoke-launch.yaml` launches the app fresh
+  (`clearState: true`), waits for the splash gate to settle, and asserts the
+  login screen (`Welcome back` / `Sign in`) is visible.
+- **Running a single flow** — build/install the debug APK, then run:
+  ```bash
+  maestro test .maestro/flows/smoke-launch.yaml
+  ```
+- **One-command run** — `./scripts/e2e-local.sh` installs the debug APK via
+  `./gradlew :composeApp:installDebug`, runs the smoke flow, and along the way
+  zeroes the emulator's window/transition/animator animation scales (restored
+  on exit, even on failure) so Maestro isn't waiting out animation timing.
+
 ## Architecture
 
 Scent follows a clean, layered architecture documented in `docs/architecture-guidelines.md`.
