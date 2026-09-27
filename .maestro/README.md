@@ -51,6 +51,20 @@ Select by visible text or accessibility label (`contentDescription`). That
 couples flows to the same thing users and screen readers depend on, and it
 stays stable when layouts change.
 
+Two traps, both hit while writing `sign-in-through-ui.yaml`:
+
+- **A visible label is not its input.** Tapping `"Password"` taps the label
+  text, not the field, and `assertVisible: "Password"` passes whether or not
+  the field got focus. Assert the outcome instead: `focused: true` after
+  tapping an input, and the exact field contents after typing.
+- **Relative selectors need both ends.** A bare `below: "Password"` matches
+  anything under the label, including the on-screen keyboard. Bound it
+  (`below: "Password"` plus `above: "Sign in"`) and call `hideKeyboard`
+  before tapping the next input.
+
+Relative selectors are a stopgap for inputs with no label of their own. The
+real fix is an accessible label in the app, which also fixes screen readers.
+
 ### 4. Escape hatches need a reason
 
 These are allowed only with a trailing `# UNSAFE: <reason>` comment on the same line:

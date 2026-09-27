@@ -70,11 +70,13 @@ For each flow:
    | Symptom | Class | Action |
    |---|---|---|
    | Selector matches nothing, but the element is on screen under different text or label | Flow bug | Fix the selector |
+   | A tap "completed" but hit the wrong node: a label instead of its input, or the keyboard | Flow bug | Target the input itself and assert the outcome (`focused: true`), not just that some text is visible |
    | Assertion ran before the screen settled | Flow bug | Add or move an `extendedWaitUntil` within the 15 s default |
    | Wrong screen because the flow skipped or mis-ordered a step | Flow bug | Fix the steps |
    | Precondition missing (no device, backend down, dev routes off) | Environment | Stop and report |
    | App shows an error, crashes, or behaves against the ticket, ADR or design | Real bug | Stop (see below) |
-   | Element the flow needs has no text or label at all | App gap | Stop and ask |
+   | Element has no label of its own but sits between visible labels (e.g. an unlabelled input) | App gap | Reach it with a bounded relative selector (see `.maestro/README.md` rule 3), add a `TODO(fix/...)` and log the gap with `scent-ticket` |
+   | Element the flow needs has no text or label anywhere near it | App gap | Stop and ask |
 
 6. **Fix the flow** and go back to step 3.
 

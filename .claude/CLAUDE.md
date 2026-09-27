@@ -167,6 +167,13 @@ Tickets live in the Scent **Tasks Tracker**. Board view is grouped by Status
   this bites on fresh local setups.
 - Server config comes from `application.conf` via env vars: `JWT_SECRET`,
   `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`.
+- **Worktrees have no `.env`** (it's gitignored), so `:server:run` from a
+  worktree can't find the database config. Symlink the main checkout's copy
+  from the worktree root: `ln -s <main-checkout>/.env .env`. It stays ignored.
+- **Maestro E2E** needs a running emulator (`emulator -avd Pixel_8`) and the
+  backend with dev routes mounted (`./gradlew :server:run -DSTREAM_PROVIDER=fake`).
+  The `scripts/e2e-*.sh` helpers find Maestro in `~/.maestro/bin` even when
+  it isn't on `PATH`.
 
 ---
 
