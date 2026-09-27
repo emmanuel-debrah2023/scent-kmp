@@ -19,7 +19,7 @@ private const val TAG = "E2eLaunchArguments"
  * so a bad or expired token lands on the login screen like any rejected session.
  */
 internal suspend fun ComponentActivity.applyE2eLaunchArguments() {
-    // TODO(feature/e2e-start-route): read an optional `e2eRoute` extra to open a flow on a given tab.
+    // TODO(chore/e2e-graybox-hooks): read an optional `e2eRoute` extra to open a flow on a given tab.
     seedE2eToken(intent.getStringExtra(E2E_TOKEN_EXTRA), get<TokenStorage>()::saveToken)
         .onLeft { error -> Log.w(TAG, "E2E token not stored, starting signed out: ${error.message}", error.cause) }
 }
