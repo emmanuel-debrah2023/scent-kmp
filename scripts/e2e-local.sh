@@ -10,6 +10,7 @@ FLOW="${1:-.maestro/flows/smoke-launch.yaml}"
 
 ./scripts/e2e-lint.sh
 require_maestro
+require_device
 disable_animations
 
 ./gradlew :composeApp:installDebug

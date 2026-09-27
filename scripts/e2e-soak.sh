@@ -24,6 +24,7 @@ done
 
 ./scripts/e2e-lint.sh "$FLOW" || exit 1
 require_maestro
+require_device
 
 APP_ID=$(sed -n 's/^appId:[[:space:]]*//p' "$FLOW" | head -1 | tr -d '"'"'"'')
 if [ -z "$APP_ID" ]; then
