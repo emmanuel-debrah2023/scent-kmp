@@ -119,7 +119,9 @@ no Gradle dependency, just a CLI you install once.
   maestro test .maestro/flows/smoke-launch.yaml
   ```
 - **One-command run** — `./scripts/e2e-local.sh` installs the debug APK via
-  `./gradlew :composeApp:installDebug` and runs the smoke flow in one step.
+  `./gradlew :composeApp:installDebug`, runs the smoke flow, and along the way
+  zeroes the emulator's window/transition/animator animation scales (restored
+  on exit, even on failure) so Maestro isn't waiting out animation timing.
 
 ## Architecture
 
