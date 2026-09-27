@@ -1,0 +1,9 @@
+appId: org.scent.project
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+- assertVisible: "Welcome back"
+- assertVisible: "Sign in"
