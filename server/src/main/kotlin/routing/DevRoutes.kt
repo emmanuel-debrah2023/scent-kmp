@@ -8,6 +8,8 @@ import data.schema.PostHashtagsTable
 import data.schema.PostsTable
 import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
@@ -20,11 +22,21 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import org.mindrot.jbcrypt.BCrypt
+import org.scent.project.data.remote.dto.ErrorResponse
+import org.scent.project.data.remote.dto.RegisterRequest
 
 @Serializable
 data class SeedResponse(
     val seeded: Int,
     val userId: Int,
+)
+
+@Serializable
+data class SeedUserResponse(
+    val userId: Int,
+    val created: Boolean,
 )
 
 private val seedSentences =
@@ -69,6 +81,51 @@ private suspend fun resolveSeedUser(
                     it[UsersTable.createdAt] =
                         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                 }.value
+        }
+    }
+
+private data class SeedUserInput(
+    val email: String,
+    val username: String,
+    val displayName: String,
+    val password: String,
+)
+
+private fun RegisterRequest.toSeedUserInput(): SeedUserInput? =
+    if (listOf(email, username, displayName, password).any { it.isNullOrBlank() }) {
+        null
+    } else {
+        SeedUserInput(email.orEmpty(), username.orEmpty(), displayName.orEmpty(), password.orEmpty())
+    }
+
+private suspend fun upsertLoginUser(
+    input: SeedUserInput,
+    passwordHash: String,
+): SeedUserResponse =
+    dbQuery {
+        val existingId =
+            UsersTable
+                .selectAll()
+                .where { UsersTable.email eq input.email }
+                .singleOrNull()
+                ?.get(UsersTable.id)
+                ?.value
+
+        if (existingId != null) {
+            UsersTable.update({ UsersTable.id eq existingId }) { it[UsersTable.passwordHash] = passwordHash }
+            SeedUserResponse(userId = existingId, created = false)
+        } else {
+            val userId =
+                UsersTable
+                    .insertAndGetId {
+                        it[UsersTable.email] = input.email
+                        it[UsersTable.username] = input.username
+                        it[UsersTable.displayName] = input.displayName
+                        it[UsersTable.passwordHash] = passwordHash
+                        it[UsersTable.createdAt] =
+                            Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                    }.value
+            SeedUserResponse(userId = userId, created = true)
         }
     }
 
@@ -163,6 +220,26 @@ fun Route.devRoutes() {
             insertSeedPosts(seedUserId, count)
 
             call.respond(HttpStatusCode.Created, SeedResponse(seeded = count, userId = seedUserId))
+        }
+
+        // Makes an E2E account usable for a real login: creates it, or resets the password if it
+        // already exists. Returns no token; callers log in through /api/v1/auth/login.
+        post("/seed-user") {
+            val request =
+                try {
+                    call.receive<RegisterRequest>()
+                } catch (e: BadRequestException) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid request body: ${e.message}"),
+                    )
+                }
+            val input =
+                request.toSeedUserInput()
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing required fields"))
+
+            val result = upsertLoginUser(input, BCrypt.hashpw(input.password, BCrypt.gensalt()))
+            call.respond(if (result.created) HttpStatusCode.Created else HttpStatusCode.OK, result)
         }
 
         post("/seed-listings") {
