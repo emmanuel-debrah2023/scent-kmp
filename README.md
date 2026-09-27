@@ -118,10 +118,38 @@ no Gradle dependency, just a CLI you install once.
   ```bash
   maestro test .maestro/flows/smoke-launch.yaml
   ```
-- **One-command run** — `./scripts/e2e-local.sh` installs the debug APK via
-  `./gradlew :composeApp:installDebug`, runs the smoke flow, and along the way
-  zeroes the emulator's window/transition/animator animation scales (restored
-  on exit, even on failure) so Maestro isn't waiting out animation timing.
+- **One-command run** — `./scripts/e2e-local.sh [flow]` lints every flow,
+  installs the debug APK via `./gradlew :composeApp:installDebug`, and runs the
+  flow (the smoke flow by default). Along the way it zeroes the emulator's
+  window/transition/animator animation scales (restored on exit, even on
+  failure) so Maestro isn't waiting out animation timing.
+- **Rules and gates** — `./scripts/e2e-lint.sh` checks every flow against the
+  rules in [`.maestro/README.md`](.maestro/README.md), and
+  `./scripts/e2e-soak.sh <flow>` runs a flow five times from a cleared state
+  before it can join the suite.
+- **Signed-in flows** — need the backend running with dev routes mounted:
+  `./gradlew :server:run -DSTREAM_PROVIDER=fake`. See
+  [`.maestro/README.md`](.maestro/README.md) for how the session is injected.
+
+### Maestro MCP (agent-driven E2E)
+
+Maestro ships its own MCP server, which lets Claude Code inspect the screen,
+run flows and read failures directly. The `scent-e2e` skill in
+`.claude/skills/` drives that loop.
+
+- **Register it** — either run `claude mcp add maestro -- maestro mcp`, or add
+  it to the same gitignored `.mcp.json` that holds the HotSwan config:
+  ```json
+  {
+    "mcpServers": {
+      "maestro": { "command": "maestro", "args": ["mcp"] }
+    }
+  }
+  ```
+  If Claude Code can't find the binary, use the full path to `maestro`.
+- **Check it** — with an emulator running, the `list_devices` tool should
+  show it. `inspect_screen`, `run` and `take_screenshot` are the tools the
+  loop leans on.
 
 ## Architecture
 

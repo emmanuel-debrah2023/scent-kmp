@@ -67,6 +67,9 @@ These come up constantly. Getting them wrong means a redo.
 - `scent-tdd` — writing or auditing tests. Red-green-refactor cycle, fakes over
   mocks, exact `AppError` assertions, Compose UI test conventions. `scent-dev-loop`
   Gate 4 enforces this skill's rules; it doesn't restate them.
+- `scent-e2e` — writing, running and repairing Maestro flows via the Maestro MCP.
+  Fixes flows, never app code; real bugs become tickets. Not a `scent-dev-loop`
+  gate: flows need a device and CI has none yet (ADR-0002).
 - `scent-ticket` — logging tasks to the Notion Tasks Tracker.
 - `scent-backlog` — "what's next", read-only backlog query.
 - `db-backend-ktor` — smoke-testing endpoints, local Postgres, Ktor tests, Flyway.
