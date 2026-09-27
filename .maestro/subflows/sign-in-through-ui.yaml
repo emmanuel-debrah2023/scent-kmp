@@ -1,0 +1,25 @@
+appId: org.scent.project
+onFlowStart:
+  - runScript: ../scripts/seed-e2e-session.js
+---
+# Fallback start for platforms without the launch-argument hook (iOS today): seed the account
+# through the API, then sign in through the real login screen. Prefer start-authenticated.yaml.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+- tapOn: "Email address"
+- assertVisible: "Email address"
+- inputText: ${output.e2eEmail}
+- assertVisible: ${output.e2eEmail}
+- tapOn: "Password"
+- assertVisible: "Password"
+- inputText: ${output.e2ePassword}
+- assertVisible: "Sign in"
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    notVisible: "Welcome back"
+    timeout: 15000
+- assertNotVisible: "Welcome back"
+- assertVisible: "Home"

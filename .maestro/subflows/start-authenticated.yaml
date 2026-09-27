@@ -1,0 +1,17 @@
+appId: org.scent.project
+onFlowStart:
+  - runScript: ../scripts/seed-e2e-session.js
+---
+# Gray-box start (ADR-0002): seed the account through the API, hand the app a real JWT as a
+# launch argument, and let it hydrate the session exactly as on a relaunch.
+# Android only; use sign-in-through-ui.yaml where the launch-argument hook doesn't exist (iOS).
+# Requires the backend on localhost:8080 with dev routes mounted (-DSTREAM_PROVIDER=fake).
+- launchApp:
+    clearState: true
+    arguments:
+      e2eToken: ${output.e2eToken}
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- assertNotVisible: "Welcome back"
+- assertVisible: "Home"

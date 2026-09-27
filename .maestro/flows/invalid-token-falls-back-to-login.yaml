@@ -1,0 +1,13 @@
+appId: org.scent.project
+---
+# The launch-argument hook only writes the token. A token the backend rejects must go
+# through normal hydration and land on the login screen: no crash, no faked session.
+- launchApp:
+    clearState: true
+    arguments:
+      e2eToken: "not-a-real-token"
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+- assertVisible: "Sign in"
+- assertNotVisible: "Home"
