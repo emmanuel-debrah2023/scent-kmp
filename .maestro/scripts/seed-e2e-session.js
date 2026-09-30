@@ -7,7 +7,7 @@
 var apiUrl = typeof E2E_API_URL !== 'undefined' ? E2E_API_URL : 'http://localhost:8080';
 var email = typeof E2E_EMAIL !== 'undefined' ? E2E_EMAIL : 'e2e@scent.dev';
 var password = typeof E2E_PASSWORD !== 'undefined' ? E2E_PASSWORD : 'ScentE2e-Passw0rd';
-var startBackend = './gradlew :server:run -DSTREAM_PROVIDER=fake';
+var startBackend = './scripts/e2e-up.sh';
 
 function postJson(path, body) {
   try {
@@ -27,7 +27,7 @@ var seeded = postJson('/api/v1/dev/seed-user', {
   displayName: 'Scent E2E',
 });
 if (seeded.status === 404) {
-  throw new Error('Dev routes are not mounted. Restart the backend with ' + startBackend);
+  throw new Error('Dev routes are not mounted: the running server was started without -DSTREAM_PROVIDER=fake. Stop it, then run ' + startBackend);
 }
 if (seeded.status !== 200 && seeded.status !== 201) {
   throw new Error('seed-user failed: HTTP ' + seeded.status + ' ' + seeded.body);
