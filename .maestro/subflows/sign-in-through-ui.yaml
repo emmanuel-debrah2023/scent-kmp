@@ -1,0 +1,41 @@
+appId: org.scent.project
+onFlowStart:
+  - runScript: ../scripts/seed-e2e-session.js
+tags:
+  - suite
+---
+# Fallback start for platforms without the launch-argument hook (iOS today): seed the account
+# through the API, then sign in through the real login screen. Prefer start-authenticated.yaml.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+# TODO(fix/auth-text-field-label-semantics): the inputs carry no label of their own, so each is found between
+# the visible labels around it. The keyboard is hidden first so it can't match "below".
+- tapOn:
+    below: "Email address"
+    above: "Password"
+- assertVisible:
+    below: "Email address"
+    above: "Password"
+    focused: true
+- inputText: ${output.e2eEmail}
+- assertVisible: ${output.e2eEmail}
+- hideKeyboard
+- tapOn:
+    below: "Password"
+    above: "Sign in"
+- assertVisible:
+    below: "Password"
+    above: "Sign in"
+    focused: true
+- inputText: ${output.e2ePassword}
+# Exact match: fails if any of the password leaked into the email field.
+- assertVisible: ${output.e2eEmail}
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    notVisible: "Welcome back"
+    timeout: 15000
+- assertNotVisible: "Welcome back"
+- assertVisible: "Home"

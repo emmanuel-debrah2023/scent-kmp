@@ -6,8 +6,11 @@ import data.schema.PostHashtagsTable
 import data.schema.PostsTable
 import data.schema.UsersTable
 import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
@@ -18,11 +21,14 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.mindrot.jbcrypt.BCrypt
 import routing.SeedResponse
+import routing.SeedUserResponse
 import routing.devRoutes
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class DevRoutesTest {
@@ -197,5 +203,78 @@ class DevRoutesTest {
             val listingsBody = Json.decodeFromString<SeedResponse>(listingsResponse.bodyAsText())
 
             assertTrue(feedBody.userId != listingsBody.userId)
+        }
+
+    // ── seed-user ────────────────────────────────────────────────────────────
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.seedUser(
+        password: String,
+        email: String = "e2e@scent.dev",
+    ) = client.post("/api/v1/dev/seed-user") {
+        contentType(ContentType.Application.Json)
+        setBody(
+            """{"email":"$email","username":"scent_e2e","password":"$password","displayName":"Scent E2E"}""",
+        )
+    }
+
+    private fun storedHash(email: String): String? =
+        transaction {
+            UsersTable
+                .selectAll()
+                .where { UsersTable.email eq email }
+                .single()[UsersTable.passwordHash]
+        }
+
+    private fun userCount(): Long = transaction { UsersTable.selectAll().count() }
+
+    @Test
+    fun `seed-user creates a login-capable account and returns 201 without a token`() =
+        withApp {
+            val response = seedUser(password = "First-Passw0rd")
+
+            assertEquals(HttpStatusCode.Created, response.status)
+            val text = response.bodyAsText()
+            val body = Json.decodeFromString<SeedUserResponse>(text)
+            assertTrue(body.created)
+            assertFalse(text.contains("token"))
+            assertTrue(BCrypt.checkpw("First-Passw0rd", storedHash("e2e@scent.dev")))
+        }
+
+    @Test
+    fun `seed-user on an existing email resets the password and returns 200`() =
+        withApp {
+            val first = Json.decodeFromString<SeedUserResponse>(seedUser(password = "First-Passw0rd").bodyAsText())
+            val response = seedUser(password = "Second-Passw0rd")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            val second = Json.decodeFromString<SeedUserResponse>(response.bodyAsText())
+            assertFalse(second.created)
+            assertEquals(first.userId, second.userId)
+            assertEquals(1L, userCount())
+            val hash = storedHash("e2e@scent.dev")
+            assertTrue(BCrypt.checkpw("Second-Passw0rd", hash))
+            assertFalse(BCrypt.checkpw("First-Passw0rd", hash))
+        }
+
+    @Test
+    fun `seed-user with a blank password returns 400 and creates nothing`() =
+        withApp {
+            val response = seedUser(password = " ")
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+            assertEquals(0L, userCount())
+        }
+
+    @Test
+    fun `seed-user with a malformed body returns 400 and creates nothing`() =
+        withApp {
+            val response =
+                client.post("/api/v1/dev/seed-user") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"email": """)
+                }
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+            assertEquals(0L, userCount())
         }
 }

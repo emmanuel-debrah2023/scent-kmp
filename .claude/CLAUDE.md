@@ -67,6 +67,9 @@ These come up constantly. Getting them wrong means a redo.
 - `scent-tdd` — writing or auditing tests. Red-green-refactor cycle, fakes over
   mocks, exact `AppError` assertions, Compose UI test conventions. `scent-dev-loop`
   Gate 4 enforces this skill's rules; it doesn't restate them.
+- `scent-e2e` — writing, running and repairing Maestro flows via the Maestro MCP.
+  Fixes flows, never app code; real bugs become tickets. Not a `scent-dev-loop`
+  gate: flows need a device and CI has none yet (ADR-0002).
 - `scent-ticket` — logging tasks to the Notion Tasks Tracker.
 - `scent-backlog` — "what's next", read-only backlog query.
 - `db-backend-ktor` — smoke-testing endpoints, local Postgres, Ktor tests, Flyway.
@@ -164,6 +167,13 @@ Tickets live in the Scent **Tasks Tracker**. Board view is grouped by Status
   this bites on fresh local setups.
 - Server config comes from `application.conf` via env vars: `JWT_SECRET`,
   `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`.
+- **Worktrees have no `.env`** (it's gitignored), so `:server:run` from a
+  worktree can't find the database config. Symlink the main checkout's copy
+  from the worktree root: `ln -s <main-checkout>/.env .env`. It stays ignored.
+- **Maestro E2E** needs a running emulator (`emulator -avd Pixel_8`) and the
+  backend with dev routes mounted (`./gradlew :server:run -DSTREAM_PROVIDER=fake`).
+  The `scripts/e2e-*.sh` helpers find Maestro in `~/.maestro/bin` even when
+  it isn't on `PATH`.
 
 ---
 
