@@ -5,6 +5,8 @@ import data.schema.ListingsTable
 import data.schema.PostHashtagsTable
 import data.schema.PostsTable
 import data.schema.UsersTable
+import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -22,8 +24,12 @@ import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
+import org.scent.project.data.remote.dto.AuthResponse
+import org.scent.project.data.remote.dto.MeResponse
+import plugins.configureSecurity
 import routing.SeedResponse
 import routing.SeedUserResponse
+import routing.authRoutes
 import routing.devRoutes
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -263,6 +269,33 @@ class DevRoutesTest {
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
             assertEquals(0L, userCount())
+        }
+
+    @Test
+    fun `seed-user credentials log in and the token authenticates against auth me`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing {
+                    devRoutes()
+                    authRoutes()
+                }
+            }
+            seedUser(password = "First-Passw0rd")
+
+            val login =
+                client.post("/api/v1/auth/login") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"email":"e2e@scent.dev","password":"First-Passw0rd"}""")
+                }
+            assertEquals(HttpStatusCode.OK, login.status)
+            val token = Json.decodeFromString<AuthResponse>(login.bodyAsText()).token
+
+            val me = client.get("/api/v1/auth/me") { bearerAuth(token.orEmpty()) }
+
+            assertEquals(HttpStatusCode.OK, me.status)
+            assertEquals("e2e@scent.dev", Json.decodeFromString<MeResponse>(me.bodyAsText()).email)
         }
 
     @Test
