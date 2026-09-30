@@ -171,7 +171,8 @@ Tickets live in the Scent **Tasks Tracker**. Board view is grouped by Status
   worktree can't find the database config. Symlink the main checkout's copy
   from the worktree root: `ln -s <main-checkout>/.env .env`. It stays ignored.
 - **Maestro E2E** needs a running emulator (`emulator -avd Pixel_8`) and the
-  backend with dev routes mounted (`./gradlew :server:run -DSTREAM_PROVIDER=fake`).
+  seeded backend: `./scripts/e2e-up.sh` starts Postgres, the server with dev
+  routes mounted and the seed data; `--down` stops it.
   The `scripts/e2e-*.sh` helpers find Maestro in `~/.maestro/bin` even when
   it isn't on `PATH`.
 

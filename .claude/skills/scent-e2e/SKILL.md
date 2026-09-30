@@ -44,8 +44,8 @@ work around a missing one.
 
 - An emulator is running (`list_devices` via the Maestro MCP, or `adb devices`).
 - The debug APK is installed (`./scripts/e2e-local.sh` installs it).
-- For signed-in flows, the backend is up with dev routes mounted:
-  `./gradlew :server:run -DSTREAM_PROVIDER=fake`.
+- For signed-in flows, the backend is up, seeded and has dev routes mounted:
+  run `./scripts/e2e-up.sh` (idempotent; reuses a running stack).
 
 ## The loop
 
