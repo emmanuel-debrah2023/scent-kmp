@@ -5,24 +5,18 @@ appId: org.scent.project
 - extendedWaitUntil:
     visible: "Welcome back"
     timeout: 15000
-# TODO(fix/auth-text-field-label-semantics): the inputs carry no label of their own, so each is found between
-# the visible labels around it. The keyboard is hidden first so it can't match "below".
-- tapOn:
-    below: "Email address"
-    above: "Password"
+# Compose exposes a text field's label as a child node of the field, so focus is asserted on
+# the field that contains the label rather than on the label itself.
+- tapOn: "Email address"
 - assertVisible:
-    below: "Email address"
-    above: "Password"
+    containsChild: "Email address"
     focused: true
 - inputText: ${LOGIN_EMAIL}
 - assertVisible: ${LOGIN_EMAIL}
 - hideKeyboard
-- tapOn:
-    below: "Password"
-    above: "Sign in"
+- tapOn: "Password"
 - assertVisible:
-    below: "Password"
-    above: "Sign in"
+    containsChild: "Password"
     focused: true
 - inputText: ${LOGIN_PASSWORD}
 # Exact match: fails if any of the password leaked into the email field.

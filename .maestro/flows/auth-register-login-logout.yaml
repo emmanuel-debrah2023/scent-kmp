@@ -21,54 +21,39 @@ tags:
     visible: "Display name"
     timeout: 15000
 - assertNotVisible: "Welcome back"
-# TODO(fix/auth-text-field-label-semantics): the inputs carry no label of their own, so each is
-# found between the visible labels around it, with the keyboard hidden before the next one.
-- tapOn:
-    below: "Username"
-    above: "Display name"
+# Each input is reached by its own label; the keyboard is hidden before the next one so it
+# can't cover the lower fields. Compose exposes a text field's label as a child node of the
+# field, so focus is asserted on the field that contains the label rather than on the label.
+- tapOn: "Username"
 - assertVisible:
-    below: "Username"
-    above: "Display name"
+    containsChild: "Username"
     focused: true
 - inputText: ${output.regUsername}
 - assertVisible: ${output.regUsername}
 - hideKeyboard
-- tapOn:
-    below: "Display name"
-    above: "Email address"
+- tapOn: "Display name"
 - assertVisible:
-    below: "Display name"
-    above: "Email address"
+    containsChild: "Display name"
     focused: true
 - inputText: ${output.regDisplayName}
 - assertVisible: ${output.regDisplayName}
 - hideKeyboard
-- tapOn:
-    below: "Email address"
-    above: "Password"
+- tapOn: "Email address"
 - assertVisible:
-    below: "Email address"
-    above: "Password"
+    containsChild: "Email address"
     focused: true
 - inputText: ${output.regEmail}
 - assertVisible: ${output.regEmail}
 - hideKeyboard
-# "Create account" is both the heading and the button; the button is the one below "Password".
-- tapOn:
-    below: "Password"
-    above:
-      text: "Create account"
-      below: "Password"
+- tapOn: "Password"
 - assertVisible:
-    below: "Password"
-    above:
-      text: "Create account"
-      below: "Password"
+    containsChild: "Password"
     focused: true
 - inputText: ${output.regPassword}
 # Exact match: fails if any of the password leaked into the email field.
 - assertVisible: ${output.regEmail}
 - hideKeyboard
+# "Create account" is both the heading and the button; the button is the one below "Password".
 - tapOn:
     text: "Create account"
     below: "Password"
