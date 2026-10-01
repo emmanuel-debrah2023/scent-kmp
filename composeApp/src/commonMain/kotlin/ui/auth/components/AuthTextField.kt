@@ -23,6 +23,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import ui.accessibility.accessibleLabel
+import ui.accessibility.decorative
 
 @Composable
 fun AuthTextField(
@@ -46,10 +48,13 @@ fun AuthTextField(
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // The input below carries the label for accessibility, so this visible copy is hidden
+        // from it: TalkBack announces "Password, edit box" once rather than the label twice.
         Text(
             text = label.uppercase(),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.decorative(),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -61,6 +66,7 @@ fun AuthTextField(
                 Modifier
                     .fillMaxWidth()
                     .height(40.dp)
+                    .accessibleLabel(label)
                     .onFocusChanged { isFocused = it.isFocused },
             textStyle =
                 MaterialTheme.typography.bodyLarge.copy(
