@@ -127,9 +127,13 @@ no Gradle dependency, just a CLI you install once.
   rules in [`.maestro/README.md`](.maestro/README.md), and
   `./scripts/e2e-soak.sh <flow>` runs a flow five times from a cleared state
   before it can join the suite.
-- **Signed-in flows** — need the backend running with dev routes mounted:
-  `./gradlew :server:run -DSTREAM_PROVIDER=fake`. See
-  [`.maestro/README.md`](.maestro/README.md) for how the session is injected.
+- **Signed-in flows** — need the backend running with dev routes mounted and
+  seeded. `./scripts/e2e-up.sh` does all of it: starts your local Postgres
+  container if it's down, starts the server with `-DSTREAM_PROVIDER=fake`
+  (Flyway migrates on startup), and seeds the E2E account, feed posts and
+  listings. It reuses anything already running; `./scripts/e2e-up.sh --down`
+  stops a server it started. See [`.maestro/README.md`](.maestro/README.md)
+  for how the session is injected.
 
 ### Maestro MCP (agent-driven E2E)
 

@@ -113,10 +113,12 @@ and the normal `/auth/me` check then runs exactly as on a relaunch, so an
 invalid token lands on the login screen rather than faking a session.
 `flows/invalid-token-falls-back-to-login.yaml` guards that behaviour.
 
-The backend must be running on `localhost:8080` with dev routes mounted:
+The backend must be running on `localhost:8080` with dev routes mounted.
+One command brings up Postgres, the server and the seeded data:
 
 ```bash
-./gradlew :server:run -DSTREAM_PROVIDER=fake
+./scripts/e2e-up.sh          # reuses anything already running
+./scripts/e2e-up.sh --down   # stops a server it started
 ```
 
 Override the account with `-e E2E_EMAIL=... -e E2E_PASSWORD=...` or the
