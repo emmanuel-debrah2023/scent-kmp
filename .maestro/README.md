@@ -51,7 +51,7 @@ Select by visible text or accessibility label (`contentDescription`). That
 couples flows to the same thing users and screen readers depend on, and it
 stays stable when layouts change.
 
-Two traps, both hit while writing `sign-in-through-ui.yaml`:
+Three traps, all hit while writing the sign-in and auth flows:
 
 - **A visible label is not its input.** Tapping `"Password"` taps the label
   text, not the field, and `assertVisible: "Password"` passes whether or not
@@ -61,6 +61,10 @@ Two traps, both hit while writing `sign-in-through-ui.yaml`:
   anything under the label, including the on-screen keyboard. Bound it
   (`below: "Password"` plus `above: "Sign in"`) and call `hideKeyboard`
   before tapping the next input.
+- **Text selectors are full-match regexes.** `"Already have an account?"`
+  never matches the node `"Already have an account? "`: the `?` makes the `t`
+  optional and the trailing space is missing. Pick a plain label nearby, or
+  escape the special characters and match the whole text.
 
 Relative selectors are a stopgap for inputs with no label of their own. The
 real fix is an accessible label in the app, which also fixes screen readers.
@@ -98,8 +102,11 @@ maestro test .maestro --include-tags suite
 
 ## Starting signed in
 
-Only the auth flow drives the login and register screens. Every other flow
-starts signed in through the gray-box subflow (ADR-0002):
+Only the auth flow, `flows/auth-register-login-logout.yaml`, drives the login
+and register screens: it registers a fresh account, checks the session survives
+a relaunch, logs out, checks that survives a relaunch too, and logs in with the
+seeded account. Every other flow starts signed in through the gray-box subflow
+(ADR-0002):
 
 ```yaml
 - runFlow: ../subflows/start-authenticated.yaml
@@ -126,4 +133,14 @@ backend with `-e E2E_API_URL=...`.
 
 `subflows/sign-in-through-ui.yaml` seeds the same account but signs in through
 the login screen. It is a fallback for platforms without the launch argument
-hook (iOS today), not a default.
+hook (iOS today), not a default. The login steps themselves live in
+`subflows/log-in-through-ui.yaml`, which starts on the login screen and takes
+the account as `env`:
+
+```yaml
+- runFlow:
+    file: ../subflows/log-in-through-ui.yaml
+    env:
+      LOGIN_EMAIL: ${output.e2eEmail}
+      LOGIN_PASSWORD: ${output.e2ePassword}
+```
