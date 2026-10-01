@@ -1,0 +1,35 @@
+appId: org.scent.project
+---
+# Signs in through the real login screen. Expects to start on it.
+# Pass the account with env: LOGIN_EMAIL and LOGIN_PASSWORD.
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+# TODO(fix/auth-text-field-label-semantics): the inputs carry no label of their own, so each is found between
+# the visible labels around it. The keyboard is hidden first so it can't match "below".
+- tapOn:
+    below: "Email address"
+    above: "Password"
+- assertVisible:
+    below: "Email address"
+    above: "Password"
+    focused: true
+- inputText: ${LOGIN_EMAIL}
+- assertVisible: ${LOGIN_EMAIL}
+- hideKeyboard
+- tapOn:
+    below: "Password"
+    above: "Sign in"
+- assertVisible:
+    below: "Password"
+    above: "Sign in"
+    focused: true
+- inputText: ${LOGIN_PASSWORD}
+# Exact match: fails if any of the password leaked into the email field.
+- assertVisible: ${LOGIN_EMAIL}
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    notVisible: "Welcome back"
+    timeout: 15000
+- assertNotVisible: "Welcome back"
+- assertVisible: "Home"

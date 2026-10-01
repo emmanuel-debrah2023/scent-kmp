@@ -1,0 +1,114 @@
+appId: org.scent.project
+onFlowStart:
+  - runScript: ../scripts/seed-e2e-session.js
+  - runScript: ../scripts/new-registration.js
+tags:
+  - suite
+---
+# The one black-box journey (ADR-0002): register a fresh account, prove the session survives a
+# relaunch, log out, prove that survives a relaunch too, then log in with the seeded account.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+
+# Register a fresh account.
+- tapOn: "Register"
+# "Display name" only appears on the register screen. (Selectors are full-match regexes, so
+# "Already have an account? " with its "?" and trailing space can't be used as one.)
+- extendedWaitUntil:
+    visible: "Display name"
+    timeout: 15000
+- assertNotVisible: "Welcome back"
+# TODO(fix/auth-text-field-label-semantics): the inputs carry no label of their own, so each is
+# found between the visible labels around it, with the keyboard hidden before the next one.
+- tapOn:
+    below: "Username"
+    above: "Display name"
+- assertVisible:
+    below: "Username"
+    above: "Display name"
+    focused: true
+- inputText: ${output.regUsername}
+- assertVisible: ${output.regUsername}
+- hideKeyboard
+- tapOn:
+    below: "Display name"
+    above: "Email address"
+- assertVisible:
+    below: "Display name"
+    above: "Email address"
+    focused: true
+- inputText: ${output.regDisplayName}
+- assertVisible: ${output.regDisplayName}
+- hideKeyboard
+- tapOn:
+    below: "Email address"
+    above: "Password"
+- assertVisible:
+    below: "Email address"
+    above: "Password"
+    focused: true
+- inputText: ${output.regEmail}
+- assertVisible: ${output.regEmail}
+- hideKeyboard
+# "Create account" is both the heading and the button; the button is the one below "Password".
+- tapOn:
+    below: "Password"
+    above:
+      text: "Create account"
+      below: "Password"
+- assertVisible:
+    below: "Password"
+    above:
+      text: "Create account"
+      below: "Password"
+    focused: true
+- inputText: ${output.regPassword}
+# Exact match: fails if any of the password leaked into the email field.
+- assertVisible: ${output.regEmail}
+- hideKeyboard
+- tapOn:
+    text: "Create account"
+    below: "Password"
+- extendedWaitUntil:
+    notVisible: "Display name"
+    timeout: 15000
+- assertNotVisible: "Display name"
+- assertVisible: "Home"
+
+# The session survives a relaunch (token persisted in DataStore).
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- assertNotVisible: "Welcome back"
+
+# Log out, and stay logged out across a relaunch.
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 15000
+- tapOn: "Settings"
+- assertVisible: "Log out"
+- tapOn: "Log out"
+- assertVisible: "Log out of scent?"
+- tapOn: "LOG OUT"
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+- assertNotVisible: "Log out of scent?"
+- launchApp
+- extendedWaitUntil:
+    visible: "Welcome back"
+    timeout: 15000
+- assertNotVisible: "Home"
+
+# Log in with the seeded account.
+- runFlow:
+    file: ../subflows/log-in-through-ui.yaml
+    env:
+      LOGIN_EMAIL: ${output.e2eEmail}
+      LOGIN_PASSWORD: ${output.e2ePassword}
+- assertVisible: "Home"
