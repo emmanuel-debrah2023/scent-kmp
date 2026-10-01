@@ -51,12 +51,23 @@ Select by visible text or accessibility label (`contentDescription`). That
 couples flows to the same thing users and screen readers depend on, and it
 stays stable when layouts change.
 
+Inputs are reached by their label (`tapOn: "Password"`): auth text fields
+carry their label for accessibility. Compose exposes that label as a child
+node of the field, so assert focus on the field that contains it:
+
+```yaml
+- tapOn: "Password"
+- assertVisible:
+    containsChild: "Password"
+    focused: true
+```
+
 Three traps, all hit while writing the sign-in and auth flows:
 
-- **A visible label is not its input.** Tapping `"Password"` taps the label
-  text, not the field, and `assertVisible: "Password"` passes whether or not
+- **Prove the tap landed.** `assertVisible: "Password"` passes whether or not
   the field got focus. Assert the outcome instead: `focused: true` after
-  tapping an input, and the exact field contents after typing.
+  tapping an input, and the exact field contents after typing. Before the
+  label fix, this is what caught taps hitting the visible label text.
 - **Relative selectors need both ends.** A bare `below: "Password"` matches
   anything under the label, including the on-screen keyboard. Bound it
   (`below: "Password"` plus `above: "Sign in"`) and call `hideKeyboard`
@@ -66,8 +77,9 @@ Three traps, all hit while writing the sign-in and auth flows:
   optional and the trailing space is missing. Pick a plain label nearby, or
   escape the special characters and match the whole text.
 
-Relative selectors are a stopgap for inputs with no label of their own. The
-real fix is an accessible label in the app, which also fixes screen readers.
+Relative selectors are a stopgap for elements with no label of their own. The
+real fix is an accessible label in the app, which also fixes screen readers;
+that is how the auth inputs were fixed.
 
 ### 4. Escape hatches need a reason
 
