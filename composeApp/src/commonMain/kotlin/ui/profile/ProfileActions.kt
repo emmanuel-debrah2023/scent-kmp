@@ -10,7 +10,6 @@ package ui.profile
 data class ProfileActions(
     val onToggleFollow: () -> Unit,
     val onSelectTab: (ProfileTab) -> Unit,
-    val onLogout: () -> Unit,
     val onEditProfile: () -> Unit,
     val onSettings: () -> Unit,
     val onNavigateToFollowers: () -> Unit,
@@ -24,7 +23,6 @@ data class ProfileActions(
             ProfileActions(
                 onToggleFollow = {},
                 onSelectTab = {},
-                onLogout = {},
                 onEditProfile = {},
                 onSettings = {},
                 onNavigateToFollowers = {},

@@ -85,7 +85,6 @@ private fun ProfileNavHost(
         is ProfileRoute.Profile ->
             ProfileScreen(
                 authUser = user,
-                onLogout = onLogout,
                 navActions =
                     ProfileNavActions(
                         onNavigateToSettings = { nav.navigateTo(ProfileRoute.Settings) },

@@ -89,7 +89,6 @@ import kotlin.math.roundToInt
 @Composable
 fun ProfileScreen(
     authUser: AuthUser,
-    onLogout: () -> Unit,
     navActions: ProfileNavActions,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -214,7 +213,6 @@ fun ProfileScreen(
                     ProfileActions(
                         onToggleFollow = viewModel::toggleFollow,
                         onSelectTab = viewModel::selectTab,
-                        onLogout = onLogout,
                         onEditProfile = navActions.onNavigateToEditProfile,
                         onSettings = navActions.onNavigateToSettings,
                         onNavigateToFollowers = navActions.onNavigateToFollowers,
