@@ -2,6 +2,7 @@ package routing
 
 import data.dbQuery
 import data.schema.CollectionStatus
+import data.schema.FollowsTable
 import data.schema.FragrancesTable
 import data.schema.PostFragrancesTable
 import data.schema.PostHashtagsTable
@@ -20,22 +21,29 @@ import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
+import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import models.UpdateUserRequest
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.upsert
 import org.scent.project.data.remote.dto.CollectionEntryDto
 import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.FeedResponseDto
+import org.scent.project.data.remote.dto.FollowResponseDto
 import org.scent.project.data.remote.dto.FragranceNoteDto
 import org.scent.project.data.remote.dto.FragranceResponse
 import org.scent.project.data.remote.dto.PostDto
@@ -91,8 +99,60 @@ fun Route.userRoutes() {
 
         authenticate("auth-jwt") {
             patch { handleUpdateUser(call) }
+            put("/follow") { handleSetFollow(call, follow = true) }
+            delete("/follow") { handleSetFollow(call, follow = false) }
         }
     }
+}
+
+/**
+ * Sets the follow relationship to the requested state rather than flipping it, so
+ * retries and double taps are safe: PUT always ends "following", DELETE always ends
+ * "not following", and both return 200 with the resulting state however many times
+ * they run. `users.follower_count` is maintained by the `trg_follows_sync_follower_count`
+ * trigger (V3), which fires only for rows actually inserted or deleted.
+ */
+private suspend fun handleSetFollow(
+    call: ApplicationCall,
+    follow: Boolean,
+) {
+    val followerId =
+        call.requireUserId()
+            ?: return call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token"))
+
+    val targetUserId =
+        call.parameters["id"]?.toIntOrNull()
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
+
+    if (followerId == targetUserId) {
+        return call.respond(HttpStatusCode.BadRequest, ErrorResponse("You cannot follow yourself"))
+    }
+
+    val followerCount =
+        dbQuery {
+            if (UsersTable.selectAll().where { UsersTable.id eq targetUserId }.empty()) return@dbQuery null
+            if (follow) {
+                // upsert rather than insertIgnore: H2 (used by route tests) rejects INSERT IGNORE.
+                // On conflict nothing is overwritten, and the trigger only fires for real inserts.
+                FollowsTable.upsert(onUpdateExclude = listOf(FollowsTable.createdAt)) {
+                    it[FollowsTable.followerId] = followerId
+                    it[FollowsTable.followingId] = targetUserId
+                    it[FollowsTable.createdAt] =
+                        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                }
+            } else {
+                FollowsTable.deleteWhere {
+                    FollowsTable.followerId eq followerId and (FollowsTable.followingId eq targetUserId)
+                }
+            }
+            // Re-read after the write: the trigger has updated the counter by now.
+            UsersTable
+                .selectAll()
+                .where { UsersTable.id eq targetUserId }
+                .single()[UsersTable.followerCount]
+        } ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("User not found"))
+
+    call.respond(HttpStatusCode.OK, FollowResponseDto(isFollowing = follow, followerCount = followerCount))
 }
 
 /**

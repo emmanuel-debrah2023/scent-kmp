@@ -29,3 +29,9 @@ data class UserCollectionResponseDto(
 data class UserReviewsResponseDto(
     val reviews: List<ReviewDto>? = null,
 )
+
+@Serializable
+data class FollowResponseDto(
+    val isFollowing: Boolean? = null,
+    val followerCount: Int? = null,
+)

@@ -1,13 +1,32 @@
 package data
 
+import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.delete
+import io.ktor.client.request.put
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.install
 import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.routing.routing
+import io.ktor.server.testing.testApplication
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.AfterClass
 import org.junit.Assume.assumeTrue
 import org.junit.BeforeClass
 import org.junit.Test
+import org.scent.project.generateTestToken
+import org.scent.project.seedUser
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
+import plugins.configureSecurity
+import routing.userRoutes
 import java.sql.DriverManager
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -62,7 +81,7 @@ class DatabaseMigrationTest {
         )
 
     @Test
-    fun `initDatabase applies V1 and V2 migrations cleanly against a real Postgres schema`() {
+    fun `initDatabase applies V1 to V3 migrations cleanly against a real Postgres schema`() {
         initDatabase(testConfig())
 
         DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
@@ -75,7 +94,7 @@ class DatabaseMigrationTest {
                 while (historyRs.next()) {
                     versions.add(historyRs.getString("version") to historyRs.getBoolean("success"))
                 }
-                assertEquals(listOf("1" to true, "2" to true), versions)
+                assertEquals(listOf("1" to true, "2" to true, "3" to true), versions)
 
                 val tablesRs =
                     statement.executeQuery(
@@ -119,7 +138,83 @@ class DatabaseMigrationTest {
                     rs.next()
                     rs.getInt(1)
                 }
-            assertEquals(2, count, "re-running migrate() must not reapply already-applied versions")
+            assertEquals(3, count, "re-running migrate() must not reapply already-applied versions")
+        }
+    }
+
+    @Test
+    fun `follow endpoints keep follower_count exact when retried against real Postgres`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { userRoutes() }
+            }
+            initDatabase(testConfig())
+            val follower = seedUser("route_follower")
+            val target = seedUser("route_target")
+
+            suspend fun followerCountAfter(request: suspend () -> HttpResponse): Int {
+                val response = request()
+                assertEquals(HttpStatusCode.OK, response.status)
+                return Json
+                    .parseToJsonElement(response.bodyAsText())
+                    .jsonObject
+                    .getValue("followerCount")
+                    .jsonPrimitive.int
+            }
+            val token = generateTestToken(follower)
+            val put = suspend { client.put("/api/v1/users/$target/follow") { bearerAuth(token) } }
+            val delete = suspend { client.delete("/api/v1/users/$target/follow") { bearerAuth(token) } }
+
+            assertEquals(1, followerCountAfter(put))
+            assertEquals(1, followerCountAfter(put), "repeating PUT must not double count")
+            assertEquals(0, followerCountAfter(delete))
+            assertEquals(0, followerCountAfter(delete), "repeating DELETE must not go negative")
+        }
+
+    @Test
+    fun `follower_count trigger counts each follow once and never goes negative`() {
+        initDatabase(testConfig())
+
+        DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
+            connection.createStatement().use { statement ->
+                fun insertUser(name: String): Int {
+                    val rs =
+                        statement.executeQuery(
+                            """
+                            INSERT INTO public.users (username, email, display_name, follower_count, created_at)
+                            VALUES ('$name', '$name@test.com', '$name', 0, now()) RETURNING id
+                            """.trimIndent(),
+                        )
+                    rs.next()
+                    return rs.getInt(1)
+                }
+
+                fun followerCount(id: Int): Int {
+                    val rs = statement.executeQuery("SELECT follower_count FROM public.users WHERE id = $id")
+                    rs.next()
+                    return rs.getInt(1)
+                }
+
+                val follower = insertUser("trigger_follower")
+                val target = insertUser("trigger_target")
+                val follow =
+                    "INSERT INTO public.follows (follower_id, following_id, created_at) " +
+                        "VALUES ($follower, $target, now()) ON CONFLICT DO NOTHING"
+
+                statement.executeUpdate(follow)
+                assertEquals(1, followerCount(target), "first follow increments the counter")
+
+                statement.executeUpdate(follow)
+                assertEquals(1, followerCount(target), "an ignored duplicate follow must not increment again")
+
+                statement.executeUpdate("DELETE FROM public.follows WHERE follower_id = $follower")
+                assertEquals(0, followerCount(target), "unfollow decrements the counter")
+
+                statement.executeUpdate("DELETE FROM public.follows WHERE follower_id = $follower")
+                assertEquals(0, followerCount(target), "deleting nothing must not decrement")
+            }
         }
     }
 }

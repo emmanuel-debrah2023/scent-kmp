@@ -2,6 +2,7 @@ package org.scent.project
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import data.schema.FollowsTable
 import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
@@ -50,6 +51,7 @@ internal fun initListingTestDatabase() {
     transaction {
         SchemaUtils.create(
             UsersTable,
+            FollowsTable,
             FragrancesTable,
             FragranceNotesTable,
             FragranceMediaTable,
