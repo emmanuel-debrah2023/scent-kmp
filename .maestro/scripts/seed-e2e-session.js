@@ -2,7 +2,8 @@
 // Makes sure the E2E account exists through the dev-only seed-user route, then logs in
 // through the real endpoint for a JWT. Runs on the host, so the backend is localhost:8080;
 // the emulator reaches the same server as 10.0.2.2.
-// Override with `maestro test -e E2E_EMAIL=... -e E2E_PASSWORD=... -e E2E_API_URL=... <flow>`.
+// Override with `maestro test -e E2E_EMAIL=... -e E2E_PASSWORD=... -e E2E_API_URL=... <flow>`,
+// and pick a start screen with `-e E2E_ROUTE=marketplace` or a calling flow's runFlow env.
 
 var apiUrl = typeof E2E_API_URL !== 'undefined' ? E2E_API_URL : 'http://localhost:8080';
 var email = typeof E2E_EMAIL !== 'undefined' ? E2E_EMAIL : 'e2e@scent.dev';
@@ -38,6 +39,9 @@ if (login.status !== 200) {
   throw new Error('Login for the E2E account failed: HTTP ' + login.status + ' ' + login.body);
 }
 
+// Optional start screen for the debug launch hook (see E2eLaunchArguments.kt for the accepted
+// routes). Blank means a normal start on Home; an unknown route also starts on Home and is logged.
+output.e2eRoute = typeof E2E_ROUTE !== 'undefined' ? E2E_ROUTE : '';
 output.e2eEmail = email;
 output.e2ePassword = password;
 output.e2eToken = json(login.body).token;
