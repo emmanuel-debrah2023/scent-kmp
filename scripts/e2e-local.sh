@@ -9,6 +9,7 @@ source scripts/e2e-common.sh
 FLOW="${1:-.maestro/flows/smoke-launch.yaml}"
 
 ./scripts/e2e-lint.sh
+./scripts/e2e-release-guard.sh
 require_maestro
 require_device
 disable_animations
