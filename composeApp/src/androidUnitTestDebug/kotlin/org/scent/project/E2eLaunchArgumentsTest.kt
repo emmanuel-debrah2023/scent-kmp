@@ -5,6 +5,9 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
+import ui.navigation.MarketplaceRoute
+import ui.navigation.ProfileRoute
+import ui.navigation.StartDestination
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -57,4 +60,41 @@ class E2eLaunchArgumentsTest {
 
             assertIs<AppError.StorageError.WriteFailed>(result.leftOrNull())
         }
+
+    @Test
+    fun `parseE2eRoute maps a tab name to that tab's root`() {
+        val result = parseE2eRoute("marketplace")
+
+        assertEquals(StartDestination.Marketplace(MarketplaceRoute.Listings), result.getOrNull())
+    }
+
+    @Test
+    fun `parseE2eRoute maps a nested path to the route on its tab`() {
+        val result = parseE2eRoute("profile/create-listing")
+
+        assertEquals(StartDestination.Profile(ProfileRoute.CreateListing), result.getOrNull())
+    }
+
+    @Test
+    fun `parseE2eRoute returns no destination when no route was passed`() {
+        val result = parseE2eRoute(null)
+
+        assertNull(result.leftOrNull())
+        assertNull(result.getOrNull())
+    }
+
+    @Test
+    fun `parseE2eRoute returns no destination when the route is blank`() {
+        val result = parseE2eRoute("  ")
+
+        assertNull(result.leftOrNull())
+        assertNull(result.getOrNull())
+    }
+
+    @Test
+    fun `parseE2eRoute rejects an unknown route as invalid input`() {
+        val result = parseE2eRoute("checkout")
+
+        assertEquals(AppError.ValidationError.InvalidInput("e2eRoute"), result.leftOrNull())
+    }
 }

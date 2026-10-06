@@ -18,9 +18,9 @@ class MainActivity : ComponentActivity() {
         // Main.immediate: with no launch arguments nothing suspends, so setContent still runs
         // synchronously inside onCreate. Fresh launches only, so a rotation can't re-inject a session.
         lifecycleScope.launch {
-            if (savedInstanceState == null) applyE2eLaunchArguments()
+            val startDestination = if (savedInstanceState == null) applyE2eLaunchArguments() else null
             setContent {
-                App()
+                App(startDestination)
             }
         }
     }
