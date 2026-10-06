@@ -132,6 +132,21 @@ and the normal `/auth/me` check then runs exactly as on a relaunch, so an
 invalid token lands on the login screen rather than faking a session.
 `flows/invalid-token-falls-back-to-login.yaml` guards that behaviour.
 
+To open on the screen a flow is about instead of Home, pass `E2E_ROUTE`. It
+reaches the app as the `e2eRoute` launch argument:
+
+```yaml
+- runFlow:
+    file: ../subflows/start-authenticated.yaml
+    env:
+      E2E_ROUTE: marketplace
+```
+
+Accepted routes are `home`, `search`, `marketplace`, `profile` and
+`profile/create-listing` (the list lives in `E2eLaunchArguments.kt`). An
+unknown route is logged and the app starts on Home, so assert the target
+screen straight after the subflow rather than trusting the route.
+
 The backend must be running on `localhost:8080` with dev routes mounted.
 One command brings up Postgres, the server and the seeded data:
 

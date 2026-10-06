@@ -11,14 +11,15 @@ import ui.auth.SplashGate
 import ui.navigation.AppNavState
 import ui.navigation.AuthGraph
 import ui.navigation.MainGraph
+import ui.navigation.StartDestination
 import ui.theme.ScentTheme
 
 @OptIn(KoinExperimentalAPI::class)
 @Composable
 @Preview
-fun App() {
+fun App(startDestination: StartDestination? = null) {
     ScentTheme {
-        val appNav = remember { AppNavState() }
+        val appNav = remember { AppNavState(startDestination) }
         val sessionViewModel: SessionViewModel = koinViewModel()
         val authState by sessionViewModel.authState.collectAsState()
 

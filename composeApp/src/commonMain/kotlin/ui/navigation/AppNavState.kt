@@ -11,9 +11,11 @@ import androidx.compose.runtime.setValue
  * [mainNav] is active once authenticated; it owns one [NavigationState]
  * per [Tab] so switching tabs preserves each tab's back stack position.
  */
-class AppNavState {
+class AppNavState(
+    startDestination: StartDestination? = null,
+) {
     val authNav = NavigationState<AuthRoute>(AuthRoute.Login)
-    val mainNav = MainNavState()
+    val mainNav = MainNavState().apply { startDestination?.let(::open) }
 }
 
 class MainNavState {
@@ -35,4 +37,26 @@ class MainNavState {
             }
 
     fun goBack(): Boolean = activeNav.goBack()
+
+    /** Selects the destination's tab and pushes its route; a tab root is a no-op push. */
+    fun open(destination: StartDestination) {
+        when (destination) {
+            is StartDestination.Home -> {
+                selectedTab = Tab.HOME
+                homeNav.navigateTo(destination.route)
+            }
+            is StartDestination.Search -> {
+                selectedTab = Tab.SEARCH
+                searchNav.navigateTo(destination.route)
+            }
+            is StartDestination.Profile -> {
+                selectedTab = Tab.PROFILE
+                profileNav.navigateTo(destination.route)
+            }
+            is StartDestination.Marketplace -> {
+                selectedTab = Tab.MARKETPLACE
+                marketplaceNav.navigateTo(destination.route)
+            }
+        }
+    }
 }
