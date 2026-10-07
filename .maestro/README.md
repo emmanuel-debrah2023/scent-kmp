@@ -147,6 +147,13 @@ Accepted routes are `home`, `search`, `marketplace`, `profile` and
 unknown route is logged and the app starts on Home, so assert the target
 screen straight after the subflow rather than trusting the route.
 
+To skip the system photo picker, pass `E2E_FAKE_IMAGES: 'true'` the same way. It
+reaches the app as the `e2eFakeImages` launch argument, and Add photos then
+returns a bundled 64x64 PNG without opening the picker, one photo per tap. It
+only works in debug builds. Uploads need the server started by `e2e-up.sh`,
+which sets `IMAGE_PROVIDER=fake`; an `.env` with a different `IMAGE_PROVIDER`
+overrides it.
+
 The backend must be running on `localhost:8080` with dev routes mounted.
 One command brings up Postgres, the server and the seeded data:
 

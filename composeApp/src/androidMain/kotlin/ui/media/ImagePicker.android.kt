@@ -5,8 +5,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,10 +41,25 @@ actual fun rememberImagePicker(
             }
         }
 
-    return remember(launcher) {
-        object : ImagePickerLauncher {
-            override fun launch() {
-                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    val systemPicker =
+        remember(launcher) {
+            object : ImagePickerLauncher {
+                override fun launch() {
+                    launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+            }
+        }
+
+    val e2eSource = rememberE2eImageSource()
+    val currentOnPicked by rememberUpdatedState(onPicked)
+    return remember(e2eSource, systemPicker, scope) {
+        if (e2eSource == null) {
+            systemPicker
+        } else {
+            object : ImagePickerLauncher {
+                override fun launch() {
+                    scope.launch { e2eSource()?.let { currentOnPicked(listOf(it)) } }
+                }
             }
         }
     }

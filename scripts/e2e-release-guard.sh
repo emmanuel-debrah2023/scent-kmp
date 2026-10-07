@@ -1,5 +1,5 @@
 #!/bin/bash
-# Proves the gray-box E2E launch hook (e2eToken, e2eRoute) is debug-only: compiles both
+# Proves the gray-box E2E launch hook (e2eToken, e2eRoute, e2eFakeImages) is debug-only: compiles both
 # Android variants and fails if any release class mentions an E2E launch argument.
 # Release has minify off, so these classes are what ships in the release dex.
 # The debug classes are checked too, so a broken search can't pass as "nothing found".
@@ -9,7 +9,8 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-PATTERN='e2eToken|e2eRoute'
+ARGS=(e2eToken e2eRoute e2eFakeImages)
+PATTERN=$(IFS='|'; echo "${ARGS[*]}")
 CLASSES=composeApp/build/tmp/kotlin-classes
 
 ./gradlew -q :composeApp:compileDebugKotlinAndroid :composeApp:compileReleaseKotlinAndroid
@@ -18,8 +19,10 @@ fail() { echo "e2e-release-guard: $*" >&2; exit 1; }
 
 [ -d "$CLASSES/release" ] || fail "no compiled release classes under $CLASSES/release"
 
-grep -rqE "$PATTERN" "$CLASSES/debug" \
-    || fail "the debug classes don't mention $PATTERN either, so this check can't see the hook. Has it moved or been renamed?"
+for a in "${ARGS[@]}"; do
+    grep -rq "$a" "$CLASSES/debug" \
+        || fail "debug classes don't mention $a, so this check can't see the hook. Has it moved or been renamed?"
+done
 
 LEAKS=$(grep -rlE "$PATTERN" "$CLASSES/release" || true)
 if [ -n "$LEAKS" ]; then

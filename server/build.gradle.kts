@@ -21,9 +21,11 @@ application {
 
 // The application plugin's `run` task forks a new JVM — it does not inherit `-D`
 // system properties passed to the Gradle invocation itself. Forward STREAM_PROVIDER
-// explicitly so `./gradlew :server:run -DSTREAM_PROVIDER=fake` reaches Application.kt.
+// and IMAGE_PROVIDER explicitly so `./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake`
+// reaches Application.kt.
 tasks.named<JavaExec>("run") {
     System.getProperty("STREAM_PROVIDER")?.let { systemProperty("STREAM_PROVIDER", it) }
+    System.getProperty("IMAGE_PROVIDER")?.let { systemProperty("IMAGE_PROVIDER", it) }
 }
 
 dependencies {

@@ -8,6 +8,7 @@ tags:
 # launch argument, and let it hydrate the session exactly as on a relaunch.
 # Pass E2E_ROUTE (e.g. marketplace, profile/create-listing) through runFlow env to open on that
 # screen; the caller asserts the screen itself. "Home" below is the bottom-nav label, shown on every tab.
+# Pass E2E_FAKE_IMAGES: 'true' so Add photos returns a bundled image instead of opening the system picker.
 # Android only; use sign-in-through-ui.yaml where the launch-argument hook doesn't exist (iOS).
 # Requires the backend on localhost:8080 with dev routes mounted (-DSTREAM_PROVIDER=fake).
 - launchApp:
@@ -15,6 +16,7 @@ tags:
     arguments:
       e2eToken: ${output.e2eToken}
       e2eRoute: ${output.e2eRoute}
+      e2eFakeImages: ${output.e2eFakeImages}
 - extendedWaitUntil:
     visible: "Home"
     timeout: 15000

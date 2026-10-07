@@ -19,6 +19,7 @@ import ui.navigation.StartDestination
 
 private const val E2E_TOKEN_EXTRA = "e2eToken"
 private const val E2E_ROUTE_EXTRA = "e2eRoute"
+internal const val E2E_FAKE_IMAGES_EXTRA = "e2eFakeImages"
 private const val TAG = "E2eLaunchArguments"
 
 private val e2eRoutes: Map<String, StartDestination> =
@@ -56,3 +57,11 @@ internal fun parseE2eRoute(raw: String?): Result<StartDestination?> {
     val route = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null.asRight()
     return e2eRoutes[route]?.asRight() ?: AppError.ValidationError.InvalidInput(E2E_ROUTE_EXTRA).asLeft()
 }
+
+/** Absent, blank or "false" leaves the system photo picker alone; only "true" swaps it for the bundled photo. */
+internal fun parseE2eFakeImages(raw: String?): Result<Boolean> =
+    when (raw?.trim()?.lowercase()) {
+        null, "", "false" -> false.asRight()
+        "true" -> true.asRight()
+        else -> AppError.ValidationError.InvalidInput(E2E_FAKE_IMAGES_EXTRA).asLeft()
+    }
