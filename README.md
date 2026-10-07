@@ -70,6 +70,8 @@ To seed the local feed with sample posts (requires `STREAM_PROVIDER=fake`):
 curl -X POST "http://localhost:8080/api/v1/dev/seed-feed?count=10"
 ```
 
+This also adds one video post. Its URL uses the request's `Host` header, so for the Android emulator add `-H "Host: 10.0.2.2:8080"` (`./scripts/e2e-up.sh` does this for you), otherwise the stored `localhost` URL is unreachable from the emulator.
+
 ### HotSwan hot reload (Compose UI iteration)
 
 Compose HotSwan gives AI-driven hot reload on a running device — structural

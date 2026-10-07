@@ -9,15 +9,19 @@ import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
 import data.schema.PostHashtagsTable
+import data.schema.PostMediaTable
 import data.schema.PostsTable
 import data.schema.ReviewsTable
 import data.schema.UsersTable
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.datetime.Clock
@@ -31,6 +35,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -47,6 +52,7 @@ import org.scent.project.domain.util.asRight
 data class SeedResponse(
     val seeded: Int,
     val userId: Int,
+    val videoPosts: Int = 0,
 )
 
 @Serializable
@@ -77,6 +83,9 @@ private val seedSentences =
     )
 
 private val seedHashtags = listOf("fragrance", "scentoftheday", "niche", "perfume")
+
+internal const val SEED_VIDEO_ROUTE = "/api/v1/dev/assets/seed-video.mp4"
+internal const val SEED_VIDEO_CAPTION = "Watch the amber pour in slow motion"
 
 private const val DEFAULT_SEED_COUNT = 10
 private const val MAX_SEED_COUNT = 50
@@ -182,6 +191,44 @@ private suspend fun insertSeedPosts(
                 this[PostHashtagsTable.postId] = postId
                 this[PostHashtagsTable.hashtag] = tag
             }
+        }
+    }
+}
+
+private object SeedVideoAsset {
+    val bytes: ByteArray? by lazy { javaClass.getResourceAsStream("/dev/seed-video.mp4")?.use { it.readBytes() } }
+}
+
+private fun seedVideo(): Result<ByteArray> =
+    SeedVideoAsset.bytes?.asRight() ?: AppError.NetworkError.NotFound("Seed video asset missing").asLeft()
+
+// Inserted after the text posts so it has the newest id and leads the newest-first feed.
+private suspend fun insertSeedVideoPost(
+    userId: Int,
+    videoUrl: String,
+) {
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    dbQuery {
+        val postId =
+            PostsTable
+                .insertAndGetId {
+                    it[PostsTable.userId] = userId
+                    it[PostsTable.contentFormat] = "VIDEO"
+                    it[PostsTable.textContent] = SEED_VIDEO_CAPTION
+                    it[PostsTable.likeCount] = 0
+                    it[PostsTable.commentCount] = 0
+                    it[PostsTable.shareCount] = 0
+                    it[PostsTable.createdAt] = now
+                }.value
+
+        PostMediaTable.insert {
+            it[PostMediaTable.postId] = postId
+            it[PostMediaTable.url] = videoUrl
+            it[PostMediaTable.index] = 0
+        }
+        PostHashtagsTable.batchInsert(seedHashtags) { tag ->
+            this[PostHashtagsTable.postId] = postId
+            this[PostHashtagsTable.hashtag] = tag
         }
     }
 }
@@ -339,8 +386,27 @@ fun Route.devRoutes() {
 
             val seedUserId = resolveSeedUserId()
             insertSeedPosts(seedUserId, count)
+            insertSeedVideoPost(seedUserId, call.requestBaseUrl() + SEED_VIDEO_ROUTE)
 
-            call.respond(HttpStatusCode.Created, SeedResponse(seeded = count, userId = seedUserId))
+            call.respond(
+                HttpStatusCode.Created,
+                SeedResponse(seeded = count, userId = seedUserId, videoPosts = 1),
+            )
+        }
+
+        /**
+         * Serves the bundled seed clip that the seeded VIDEO post points at.
+         *
+         * Unauthenticated because ExoPlayer sends no auth header. Always answers 200 with the
+         * whole body and has no Range support, by design: Media3's DefaultHttpDataSource skips
+         * bytes itself when it gets a 200 for a ranged request, and the clip is faststart (moov
+         * before mdat) so it starts without a seek. Only mounted with the dev routes.
+         */
+        get("/assets/seed-video.mp4") {
+            seedVideo().fold(
+                ifLeft = { call.respond(it.toHttpStatus(), ErrorResponse(it.message)) },
+                ifRight = { call.respondBytes(it, ContentType.Video.MP4) },
+            )
         }
 
         // Makes an E2E account usable for a real login: creates it, or resets the password if it

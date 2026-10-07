@@ -81,6 +81,30 @@ class DevRoutesGuardTest {
             assertDevRouteStatus(RESET_LISTINGS_PATH, HttpStatusCode.BadRequest)
         }
 
+    private fun getStatusAndType(path: String): Pair<HttpStatusCode, String?> {
+        var result: Pair<HttpStatusCode, String?>? = null
+        testApplication {
+            application { module() }
+            val response = client.get(path)
+            result = response.status to response.contentType()?.withoutParameters()?.toString()
+        }
+        return requireNotNull(result) { "testApplication did not run" }
+    }
+
+    @Test
+    fun `seed video asset is not mounted under production config`() =
+        withProviders(stream = null, image = null) {
+            assertEquals(HttpStatusCode.NotFound, getStatusAndType(SEED_VIDEO_PATH).first)
+        }
+
+    @Test
+    fun `seed video asset is served when the fake image provider is configured`() =
+        withProviders(stream = null, image = "fake") {
+            val (status, type) = getStatusAndType(SEED_VIDEO_PATH)
+            assertEquals(HttpStatusCode.OK, status)
+            assertEquals("video/mp4", type)
+        }
+
     // A GET alone 404s in both modes; PUT-then-GET is what tells them apart.
     private fun putThenGet(): Triple<HttpStatusCode, HttpStatusCode, ByteArray> {
         val path = "fake/${UUID.randomUUID()}.jpg"
@@ -118,6 +142,7 @@ class DevRoutesGuardTest {
 
     private companion object {
         const val SEED_USER_PATH = "/api/v1/dev/seed-user"
+        const val SEED_VIDEO_PATH = "/api/v1/dev/assets/seed-video.mp4"
         const val RESET_LISTINGS_PATH = "/api/v1/dev/reset-listings"
         const val STREAM_PROVIDER = "STREAM_PROVIDER"
         const val IMAGE_PROVIDER = "IMAGE_PROVIDER"
