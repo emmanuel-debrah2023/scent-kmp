@@ -9,8 +9,9 @@ import java.util.UUID
  *
  * Drives the full state machine without a paid Supabase project:
  *   1. Client calls POST /api/v1/media/image-upload-url → receives a fake upload URL
- *      pointing at POST /api/v1/media/fake-image-upload?path=<path>
- *   2. Client PUTs bytes to that URL (or a developer does it manually)
+ *      pointing at PUT /api/v1/media/fake-image-upload?path=<path>
+ *   2. Client PUTs bytes to that URL (or a developer does it manually); [FakeImageStore]
+ *      keeps them and serves them at the public URL, GET /fake-images/<path>
  *   3. Client calls POST /api/v1/media/{uid}/complete, same as the real flow
  */
 class FakeImageProvider(

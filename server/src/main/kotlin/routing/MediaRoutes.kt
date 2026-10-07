@@ -3,14 +3,18 @@ package routing
 import data.dbQuery
 import data.schema.MediaItemsTable
 import data.schema.MediaType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import io.ktor.server.plugins.origin
+import io.ktor.server.request.receive
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
@@ -26,8 +30,11 @@ import org.jetbrains.exposed.v1.jdbc.update
 import org.scent.project.data.remote.dto.CompleteUploadResponseDto
 import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.UploadUrlResponseDto
+import providers.FakeImageError
+import providers.FakeImageStore
 import providers.ImageProvider
 import providers.StreamProvider
+import providers.imageContentTypeOf
 
 private val lenientJson = Json { ignoreUnknownKeys = true }
 
@@ -78,13 +85,15 @@ internal suspend fun applyWebhookUpdate(payload: WebhookPayload) {
  * @param imageProvider Sibling abstraction for listing photos — see [ImageProvider].
  * @param fakeMode When true, registers a dev-only POST /fake-upload route that simulates
  *   the video provider completing an upload. Guarded so it is never registered in production.
- * @param fakeImageMode Same idea as [fakeMode], for the image upload flow.
+ * @param fakeImageStore Non-null only under IMAGE_PROVIDER=fake: registers the dev-only PUT
+ *   /fake-image-upload that keeps uploaded bytes in the store, and GET /fake-images/{path...}
+ *   that serves them back. Never registered in production.
  */
 fun Route.mediaRoutes(
     streamProvider: StreamProvider,
     imageProvider: ImageProvider,
     fakeMode: Boolean = false,
-    fakeImageMode: Boolean = false,
+    fakeImageStore: FakeImageStore? = null,
 ) {
     route("/api/v1/media") {
         authenticate("auth-jwt") {
@@ -94,8 +103,9 @@ fun Route.mediaRoutes(
         }
         webhookRoute(streamProvider)
         if (fakeMode) fakeUploadRoute()
-        if (fakeImageMode) fakeImageUploadRoute()
+        fakeImageStore?.let { fakeImageUploadRoute(it) }
     }
+    fakeImageStore?.let { fakeImageServeRoute(it) }
 }
 
 private fun Route.uploadUrlRoute(streamProvider: StreamProvider) {
@@ -253,12 +263,54 @@ private fun Route.fakeUploadRoute() {
     }
 }
 
-// Dev-only: stands in for the real Supabase signed-upload PUT target. Does nothing but
-// accept the bytes — the row's final url was already set at image-upload-url time, and
-// completeUploadRoute (identical for real and fake) is what flips it to READY.
-// Only registered when IMAGE_PROVIDER=fake — never reachable in production.
-private fun Route.fakeImageUploadRoute() {
+// Dev-only: stands in for the real Supabase signed-upload PUT target and keeps the bytes in
+// the store so fakeImageServeRoute can serve them. The row's final url was already set at
+// image-upload-url time, and completeUploadRoute (identical for real and fake) flips it to READY.
+// Only registered when IMAGE_PROVIDER=fake — never reachable in production, so unauthenticated.
+private fun Route.fakeImageUploadRoute(store: FakeImageStore) {
     put("/fake-image-upload") {
-        call.respond(HttpStatusCode.OK)
+        val path =
+            call.request.queryParameters["path"]
+                ?: run {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("path query parameter required"))
+                    return@put
+                }
+        val bytes = call.receive<ByteArray>()
+        imageContentTypeOf(call.request.headers[HttpHeaders.ContentType])
+            .flatMap { store.put(path, bytes, it) }
+            .fold(
+                ifLeft = { error ->
+                    when (error) {
+                        FakeImageError.InvalidPath ->
+                            call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid image path"))
+                        FakeImageError.TooLarge ->
+                            call.respond(HttpStatusCode.PayloadTooLarge, ErrorResponse("Image too large"))
+                        FakeImageError.UnsupportedContentType ->
+                            call.respond(
+                                HttpStatusCode.UnsupportedMediaType,
+                                ErrorResponse("Content-Type must be an image type"),
+                            )
+                        FakeImageError.NotFound ->
+                            call.respond(HttpStatusCode.NotFound, ErrorResponse("Image not found"))
+                    }
+                },
+                ifRight = { call.respond(HttpStatusCode.OK) },
+            )
+    }
+}
+
+// Dev-only: serves what fakeImageUploadRoute stored. Unauthenticated because image loaders
+// (Coil) send no auth header; only registered when IMAGE_PROVIDER=fake.
+private fun Route.fakeImageServeRoute(store: FakeImageStore) {
+    get("/fake-images/{path...}") {
+        val path =
+            call.parameters
+                .getAll("path")
+                ?.joinToString("/")
+                .orEmpty()
+        store.get(path).fold(
+            ifLeft = { call.respond(HttpStatusCode.NotFound, ErrorResponse("Image not found")) },
+            ifRight = { call.respondBytes(it.bytes, it.contentType) },
+        )
     }
 }
