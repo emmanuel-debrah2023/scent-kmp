@@ -28,6 +28,9 @@ import kotlin.test.assertEquals
 private const val DESCRIPTION =
     "Aventus by Creed, NEW condition, £285, or offer, sold by scent_seed_seller, fill not stated"
 
+private const val FIRM_DESCRIPTION =
+    "Aventus by Creed, NEW condition, £285, firm price, sold by scent_seed_seller, fill not stated"
+
 private val testListing =
     Listing(
         id = 1,
@@ -38,6 +41,8 @@ private val testListing =
         condition = "NEW",
         isNegotiable = true,
     )
+
+private val firmListing = testListing.copy(isNegotiable = false)
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -118,7 +123,131 @@ class ListingCardSemanticsTest {
 
         composeRule.onAllNodesWithText("Aventus").assertCountEquals(0)
     }
+
+    @Test
+    fun `negotiable offer card exposes Offer then Buy now custom actions`() {
+        setOfferCard(testListing)
+
+        composeRule
+            .onNode(hasContentDescription(DESCRIPTION))
+            .assert(hasCustomActionLabels(listOf("Offer", "Buy now")))
+    }
+
+    @Test
+    fun `firm offer card exposes only Buy now custom action`() {
+        setOfferCard(firmListing)
+
+        composeRule
+            .onNode(hasContentDescription(FIRM_DESCRIPTION))
+            .assert(hasCustomActionLabels(listOf("Buy now")))
+    }
+
+    @Test
+    fun `Offer custom action invokes onMakeOffer only`() {
+        setOfferCard(testListing)
+
+        performCustomAction(DESCRIPTION, "Offer")
+
+        assertEquals(1, makeOffers)
+        assertEquals(0, buyNows)
+    }
+
+    @Test
+    fun `Buy now custom action on negotiable card invokes onBuyNow only`() {
+        setOfferCard(testListing)
+
+        performCustomAction(DESCRIPTION, "Buy now")
+
+        assertEquals(1, buyNows)
+        assertEquals(0, makeOffers)
+    }
+
+    @Test
+    fun `Buy now custom action on firm card invokes onBuyNow`() {
+        setOfferCard(firmListing)
+
+        performCustomAction(FIRM_DESCRIPTION, "Buy now")
+
+        assertEquals(1, buyNows)
+        assertEquals(0, makeOffers)
+    }
+
+    @Test
+    fun `offer card content description is the negotiable announcement`() {
+        setOfferCard(testListing)
+
+        composeRule.onNode(hasContentDescription(DESCRIPTION)).assert(hasExactContentDescription(DESCRIPTION))
+    }
+
+    @Test
+    fun `firm offer card content description is the firm announcement`() {
+        setOfferCard(firmListing)
+
+        composeRule
+            .onNode(hasContentDescription(FIRM_DESCRIPTION))
+            .assert(hasExactContentDescription(FIRM_DESCRIPTION))
+    }
+
+    @Test
+    fun `firm offer card has a click action`() {
+        setOfferCard(firmListing)
+
+        composeRule.onNode(hasContentDescription(FIRM_DESCRIPTION)).assertHasClickAction()
+    }
+
+    @Test
+    fun `touch click on offer card invokes onClick only`() {
+        setOfferCard(testListing)
+
+        composeRule.onNode(hasContentDescription(DESCRIPTION)).performClick()
+
+        assertEquals(1, cardClicks)
+        assertEquals(0, buyNows)
+        assertEquals(0, makeOffers)
+    }
+
+    @Test
+    fun `offer card button text stays cleared`() {
+        setOfferCard(testListing)
+
+        composeRule.onAllNodesWithText("Buy now").assertCountEquals(0)
+    }
+
+    private var cardClicks = 0
+    private var buyNows = 0
+    private var makeOffers = 0
+
+    private fun setOfferCard(listing: Listing) {
+        composeRule.setContent {
+            MaterialTheme {
+                ListingCardWithOffer(
+                    listing = listing,
+                    onClick = { cardClicks++ },
+                    onBuyNow = { buyNows++ },
+                    onMakeOffer = { makeOffers++ },
+                )
+            }
+        }
+    }
+
+    private fun performCustomAction(
+        description: String,
+        label: String,
+    ) {
+        val action =
+            composeRule
+                .onNode(hasContentDescription(description))
+                .fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions]
+                .single { it.label == label }
+        composeRule.runOnIdle { action.action() }
+    }
 }
+
+private fun hasExactContentDescription(expected: String) =
+    SemanticsMatcher("ContentDescription == [$expected]") {
+        it.config.getOrNull(SemanticsProperties.ContentDescription) == listOf(expected)
+    }
 
 private fun hasCustomActionLabels(expected: List<String>) =
     SemanticsMatcher("CustomActions labels == $expected") {

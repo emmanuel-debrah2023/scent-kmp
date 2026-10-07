@@ -40,6 +40,8 @@ import ui.theme.ScentThemeExtras
 import kotlin.math.roundToInt
 
 private const val CONDITION_MAX_LENGTH = 14
+private const val OFFER_LABEL = "Offer"
+private const val BUY_NOW_LABEL = "Buy now"
 
 @Composable
 fun ListingCard(
@@ -58,20 +60,42 @@ fun ListingCardWithOffer(
     onMakeOffer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ListingCardScaffold(listing = listing, onClick = onClick, modifier = modifier) {
+    val customActions =
+        buildList {
+            if (listing.isNegotiable) {
+                add(
+                    CustomAccessibilityAction(OFFER_LABEL) {
+                        onMakeOffer()
+                        true
+                    },
+                )
+            }
+            add(
+                CustomAccessibilityAction(BUY_NOW_LABEL) {
+                    onBuyNow()
+                    true
+                },
+            )
+        }
+    ListingCardScaffold(
+        listing = listing,
+        onClick = onClick,
+        modifier = modifier,
+        customActions = customActions,
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
             horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
         ) {
             if (listing.isNegotiable) {
                 ScentSecondaryButton(
-                    text = "Offer",
+                    text = OFFER_LABEL,
                     onClick = onMakeOffer,
                     modifier = Modifier.weight(1f),
                 )
             }
             ScentPrimaryButton(
-                text = "Buy now",
+                text = BUY_NOW_LABEL,
                 onClick = onBuyNow,
                 modifier = Modifier.weight(1f),
             )
