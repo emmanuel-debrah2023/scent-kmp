@@ -2,6 +2,7 @@ package ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -16,12 +17,15 @@ actual fun VideoPlayer(
     thumbnailUrl: String?,
     modifier: Modifier,
 ) {
-    Box(modifier = modifier.background(Color.Black)) {
-        Icon(
-            imageVector = Icons.Default.PlayArrow,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.align(Alignment.Center),
-        )
+    // TODO(feature/ios-video-player): placeholder never plays; replace with an AVPlayer (needs Range support on the dev asset route)
+    VideoPlaybackFrame(VideoPlaybackState.Unavailable, modifier) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
     }
 }

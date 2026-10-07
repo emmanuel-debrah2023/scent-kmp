@@ -1,8 +1,12 @@
 package ui.components
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -29,19 +33,46 @@ actual fun VideoPlayer(
             }
         }
 
-    DisposableEffect(url) {
+    var playback by remember(url) { mutableStateOf(VideoPlaybackState.Loading) }
+
+    DisposableEffect(exoPlayer) {
+        val listener =
+            object : Player.Listener {
+                override fun onEvents(
+                    player: Player,
+                    events: Player.Events,
+                ) {
+                    playback = videoPlaybackStateOf(player.isPlaying, player.playbackState, player.playerError != null)
+                }
+            }
+        exoPlayer.addListener(listener)
         onDispose {
+            exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
     }
 
-    AndroidView(
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                useController = false
-                player = exoPlayer
-            }
-        },
-        modifier = modifier,
-    )
+    VideoPlaybackFrame(state = playback, modifier = modifier) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = false
+                    player = exoPlayer
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }
+
+internal fun videoPlaybackStateOf(
+    isPlaying: Boolean,
+    playbackState: Int,
+    hasError: Boolean,
+): VideoPlaybackState =
+    when {
+        hasError -> VideoPlaybackState.Unavailable
+        isPlaying -> VideoPlaybackState.Playing
+        playbackState == Player.STATE_IDLE || playbackState == Player.STATE_BUFFERING -> VideoPlaybackState.Loading
+        else -> VideoPlaybackState.Paused
+    }
