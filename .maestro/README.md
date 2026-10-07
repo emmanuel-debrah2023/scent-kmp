@@ -202,3 +202,11 @@ killed. If the account does not exist yet when `onFlowStart` runs, the
 route answers 404 and the script carries on with zero removed. A 404 with an
 empty body means the running server predates the route, so restart it with
 `./scripts/e2e-up.sh --down && ./scripts/e2e-up.sh`.
+
+## Seeded video
+
+`POST /api/v1/dev/seed-feed` also adds one video post with the caption "Watch the amber pour in slow motion". It plays a small bundled clip served by the dev-only `GET /api/v1/dev/assets/seed-video.mp4` route. The player reports its state to the accessibility tree as a single node whose content description is one of "Video, loading", "Video, playing", "Video, paused" or "Video, unavailable". The state is in the content description because Maestro cannot read `stateDescription`.
+
+`e2e-up.sh` sends a `Host` header of `10.0.2.2:8080` (override with `E2E_EMULATOR_HOST`), and the server stores the video URL using that host, so the emulator can reach it. A manual `curl localhost:8080/api/v1/dev/seed-feed` stores a `localhost` URL, which the Android emulator cannot reach, so that card shows "Video, unavailable".
+
+The server must be restarted after pulling this change, because a running server does not have the new route and seeds text posts only.
