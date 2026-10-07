@@ -118,6 +118,16 @@ Run Gradle compile for every target you touched:
 - ✅ Use `MaterialTheme.colorScheme`, `MaterialTheme.typography`, etc.
 - ✅ Reuse shared components from `ui/components/`.
 
+### Independent second opinion
+
+After your own pass above, spawn the **`ads-ste100-auditor`** subagent (`.claude/agents/ads-ste100-auditor.md`). Self-review is biased toward the code you just wrote; the auditor starts with fresh context, reads the full guideline and the changed files itself, and is read-only, so it can only report.
+
+- Give it the diff range or file list and nothing else. Don't pass your own conclusions, justifications or "already checked" notes — they anchor it and defeat the point.
+- A `FAIL` verdict or any blocking violation fails Gate 2, even if your self-check passed. Fix in the main thread, then re-run the auditor.
+- Treat `GUIDELINE GAPS` as a prompt to tell the user, not to edit the guideline.
+- Record the outcome with `scripts/gates.sh --gate2 pass|fail "<auditor verdict>"`.
+- For a small single-file change, `references/gate2-checklist.md` alone is enough; skip the subagent.
+
 **Action**: If the code doesn't match ADS-STE100, fix it — don't rewrite the guideline. If you believe the guideline needs updating, surface that explicitly (with explanation) rather than silently violating it.
 
 ---
