@@ -4,7 +4,6 @@ tags:
 ---
 # Proves a signed-in user sees the seeded Community posts and can scroll the feed to more of them.
 # Every seeded post carries the same hashtag line, so assertions hold however many seed runs there have been.
-# TODO(chore/e2e-seed-video-post): seed-feed creates TEXT posts only and the player exposes no state, so playback isn't covered yet.
 - runFlow: ../subflows/start-authenticated.yaml
 
 - tapOn: "Community"

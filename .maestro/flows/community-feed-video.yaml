@@ -1,0 +1,21 @@
+appId: org.scent.project
+tags:
+  - suite
+---
+# Proves the seeded video post plays inline and reports it as "Video, playing" (content description).
+# e2e-up.sh seeds one video post per run, newest first; every copy plays the same bundled clip, so any visible one passing is valid.
+- runFlow: ../subflows/start-authenticated.yaml
+- tapOn: "Community"
+- extendedWaitUntil:
+    visible: "Latest posts"
+    timeout: 15000
+- assertNotVisible: "FEATURED TODAY"
+- assertVisible: "Latest posts"
+- scrollUntilVisible:
+    element: "Watch the amber pour in slow motion"
+    direction: DOWN
+- assertVisible: "Watch the amber pour in slow motion"
+- extendedWaitUntil:
+    visible: "Video, playing"
+    timeout: 15000
+- assertVisible: "Video, playing"
