@@ -34,6 +34,8 @@ api_keys.properties
 # Claude Code dev-loop gate state (transient; not .approved-deps which IS committed)
 .claude/.scent-gates.json
 .claude/.scent-gates.pre-compact.json
+.claude/.scent-gate5-pass
+.claude/.scent-gate5-fails
 # Notion workspace identifiers (share via secure channel, not git)
 .claude/.scent-notion.env
 # MCP config (HotSwan, Maestro) — machine-specific (absolute plugin jar path per IDE install)
