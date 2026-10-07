@@ -13,6 +13,7 @@ import io.ktor.server.routing.routing
 import plugins.configureSecurity
 import providers.CloudflareStreamProvider
 import providers.FakeImageProvider
+import providers.FakeImageStore
 import providers.FakeStreamProvider
 import providers.SupabaseStorageProvider
 import routing.authRoutes
@@ -92,7 +93,7 @@ fun Application.module() {
         authRoutes()
         fragranceRoutes()
         listingRoutes()
-        mediaRoutes(streamProvider, imageProvider, fakeMode, fakeImageMode)
+        mediaRoutes(streamProvider, imageProvider, fakeMode, if (fakeImageMode) FakeImageStore() else null)
         postRoutes()
         userRoutes()
         if (fakeMode || fakeImageMode) devRoutes()
