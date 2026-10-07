@@ -1,0 +1,107 @@
+appId: org.scent.project
+onFlowStart:
+  - runScript: ../scripts/reset-e2e-listings.js
+  - runScript: ../scripts/new-listing-price.js
+onFlowComplete:
+  - runScript: ../scripts/reset-e2e-listings.js
+tags:
+  - suite
+---
+# Proves a signed-in user can publish a listing with a photo and then sees it on the profile Listings tab.
+# clearState does not reset the server, so the E2E account's listings are reset before the run and again
+# when it ends, even on failure, which keeps the marketplace feed from filling up for the flows after it.
+# The price is unique per run (new-listing-price.js), so the final row can only be this run's listing.
+- runFlow:
+    file: ../subflows/start-authenticated.yaml
+    env:
+      E2E_ROUTE: profile/create-listing
+      E2E_FAKE_IMAGES: 'true'
+- extendedWaitUntil:
+    visible: "Create Listing"
+    timeout: 15000
+- assertVisible: "Create Listing"
+
+# The fake picker adds one bundled photo and the upload starts at once.
+# "Remove photo 1" shows only when the upload is no longer in progress.
+- tapOn: "ADD PHOTOS"
+- extendedWaitUntil:
+    visible: "Remove photo 1"
+    timeout: 15000
+- assertNotVisible: "Upload failed"
+
+- tapOn: "Fragrance"
+- assertVisible:
+    containsChild: "Fragrance"
+    focused: true
+- inputText: "Sauvage"
+- extendedWaitUntil:
+    visible: "Use Dior Sauvage"
+    timeout: 15000
+# Hide the keyboard so it cannot cover the suggestion rows.
+- hideKeyboard
+- assertVisible: "Use Dior Sauvage"
+- tapOn: "Use Dior Sauvage"
+- extendedWaitUntil:
+    notVisible: "Use Dior Sauvage"
+    timeout: 15000
+- assertVisible: "Sauvage"
+
+- tapOn: "Price"
+- assertVisible:
+    containsChild: "Price"
+    focused: true
+- inputText: ${output.listingPrice}
+- assertVisible: ${output.listingPrice}
+- hideKeyboard
+- assertVisible: ${output.listingPrice}
+
+- tapOn: "Used"
+- assertVisible:
+    text: "Used"
+    checked: true
+# Opened is the default kind. It needs a bottle size and a remaining amount.
+- assertVisible:
+    text: "Opened"
+    checked: true
+
+- scrollUntilVisible:
+    element: "PUBLISH LISTING"
+    direction: DOWN
+- assertVisible: "PUBLISH LISTING"
+
+- tapOn: 'Bottle size \(ml\)'
+- assertVisible:
+    containsChild: 'Bottle size \(ml\)'
+    focused: true
+- inputText: "100"
+- assertVisible: "100"
+- hideKeyboard
+- assertVisible: "100"
+
+- tapOn: 'Remaining \(ml\)'
+- assertVisible:
+    containsChild: 'Remaining \(ml\)'
+    focused: true
+- inputText: "80"
+- assertVisible: "80"
+- hideKeyboard
+- assertVisible: "80"
+
+- assertVisible:
+    text: "PUBLISH LISTING"
+    enabled: true
+# The heading is scrolled off by now, so wait for a field label of the form to go.
+- tapOn: "PUBLISH LISTING"
+- extendedWaitUntil:
+    notVisible: 'Bottle size \(ml\)'
+    timeout: 15000
+- assertNotVisible: 'Bottle size \(ml\)'
+- assertNotVisible: "Create Listing"
+- assertVisible: "EDIT PROFILE"
+
+# Keep this tap after the refute: selectors ignore case, and this tab has a "Create listing" button.
+- tapOn: "LISTINGS"
+- extendedWaitUntil:
+    visible: "Sauvage by Dior, £${output.listingPrice}, firm price, live, Used · 80% full · 100 ml"
+    timeout: 15000
+- assertVisible: "ACTIVE LISTINGS"
