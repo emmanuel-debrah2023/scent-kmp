@@ -85,6 +85,38 @@ printf '{"gate1":"pass","gate2":"fail","gate3":"pass","gate4":"pass","gate5":"pa
 check "blocks push, gate2 red"  block-unverified-push.sh 2 '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}'
 rm -f .claude/.scent-gates.json
 
+echo "stop-gate5.sh"
+rm -f .claude/.scent-gate5-pass .claude/.scent-gate5-fails
+SENTINEL="$TMP/ran"
+PROBE="StopHookProbe.kt" # an untracked .kt file counts as a build-relevant change
+trap 'rm -rf "$TMP" "$PROBE" .claude/.scent-gate5-pass .claude/.scent-gate5-fails' EXIT
+stop() { # stop <expected-exit> <gate-cmd> <name>
+  rm -f "$SENTINEL"
+  printf '{"hook_event_name":"Stop","stop_hook_active":false}' | SCENT_GATE5_CMD="$2" bash "$HOOKS/stop-gate5.sh" >/dev/null 2>&1
+  local got=$?
+  if [ "$got" = "$1" ]; then PASS=$((PASS+1)); printf '  ok   %s\n' "$3"
+  else FAIL=$((FAIL+1)); printf '  FAIL %s (expected %s, got %s)\n' "$3" "$1" "$got"; fi
+}
+ran() { # ran <yes|no> <name>
+  if { [ "$1" = yes ] && [ -f "$SENTINEL" ]; } || { [ "$1" = no ] && [ ! -f "$SENTINEL" ]; }; then
+    PASS=$((PASS+1)); printf '  ok   %s\n' "$2"
+  else FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$2"; fi
+}
+stop 0 "touch $SENTINEL; exit 1" "ignores a turn with no Kotlin/Gradle changes"
+ran no "gate not run when nothing relevant changed"
+echo "val probe = 1" > "$PROBE"
+stop 2 "touch $SENTINEL; exit 1" "blocks turn end when the gate fails"
+ran yes "gate command actually ran"
+stop 0 "touch $SENTINEL" "allows turn end when the gate passes"
+stop 0 "touch $SENTINEL; exit 1" "skips re-run on a tree that already passed"
+ran no "cached pass did not re-run the gate"
+echo "val probe = 2" > "$PROBE"
+rm -f .claude/.scent-gate5-fails
+stop 2 "exit 1" "blocks again once the tree changes (attempt 1)"
+stop 2 "exit 1" "blocks again (attempt 2)"
+stop 0 "exit 1" "gives up after 3 consecutive failures on one tree"
+rm -f "$PROBE" .claude/.scent-gate5-pass .claude/.scent-gate5-fails
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" = "0" ]

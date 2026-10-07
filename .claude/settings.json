@@ -70,6 +70,18 @@
       }
     ],
 
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop-gate5.sh",
+            "timeout": 1800
+          }
+        ]
+      }
+    ],
+
     "PreCompact": [
       {
         "hooks": [
