@@ -2743,6 +2743,7 @@ app/src/
 - `mergedGroup()` — for a natural group of **non-interactive** text children (e.g. a card's metadata row: username, caption, like count). Never pair it with a hand-written content description; let the real child text concatenate on its own, or the description will drift out of sync the next time a child's text changes.
 - `clearedDescription()` / `accessibleToggle()` — for a custom component whose children are purely decorative and need one hand-written, unified announcement instead (e.g. a favorite/like toggle's icon + label, or a listing card whose price/condition/name read better rewritten than concatenated).
 - A clear wipes every semantics modifier to its right on the same node, not only the children. Pass custom actions through `clearedDescription(customActions = …)` rather than a later `withCustomActions`, and when the click comes from a component's own `onClick` (such as `Card(onClick)`), pass it as `clearedDescription(onClick = …)` so the card stays actionable.
+- `accessibleClickable()` / `accessibleCombinedClickable()` clear descendants too: the label is the whole announcement and stays on the clickable node. Never put an independently interactive child inside one, and place any semantics the node must keep (live region, collection item) to the left of it.
 - Never attach `clickable`/`toggleable` to a child living inside a `mergedGroup()` block. Anything independently actionable either stays outside the merged group as its own focusable control, or gets exposed via `withCustomActions` on the parent.
 
 ### Mandatory Patterns
