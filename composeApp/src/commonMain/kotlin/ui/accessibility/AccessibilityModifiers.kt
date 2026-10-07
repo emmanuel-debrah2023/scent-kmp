@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -66,11 +67,30 @@ fun Modifier.mergedGroup(): Modifier = semantics(mergeDescendants = true) {}
 /**
  * Replaces a subtree of purely decorative children with one hand-written announcement
  * (e.g. a listing card whose price/condition/name read better rewritten than concatenated).
- * Other modifiers on the same element (like `clickable`) still contribute their own
- * role/action semantics — only descendant composables are cleared.
+ *
+ * This clears descendant semantics and every semantics modifier to its right on the same
+ * node. Only modifiers to its left (the caller's clickable, collectionItem) survive.
+ *
+ * Pass custom actions through [customActions], not a later `withCustomActions`, which
+ * would be discarded. Pass [onClick] only when the touch is handled by a component's
+ * internal clickable that sits after this modifier (e.g. `Card(onClick)`), which still
+ * owns touch, ripple and press elevation. Never pass it when nothing handles the touch.
  */
-fun Modifier.clearedDescription(description: String): Modifier =
-    clearAndSetSemantics { contentDescription = description }
+fun Modifier.clearedDescription(
+    description: String,
+    customActions: List<CustomAccessibilityAction> = emptyList(),
+    onClick: (() -> Unit)? = null,
+): Modifier =
+    clearAndSetSemantics {
+        contentDescription = description
+        if (customActions.isNotEmpty()) this.customActions = customActions
+        onClick?.let { action ->
+            onClick {
+                action()
+                true
+            }
+        }
+    }
 
 /**
  * A toggle control (favorite/wishlist/like) with one unified announcement and an
