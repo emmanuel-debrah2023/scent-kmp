@@ -1,9 +1,14 @@
 package org.scent.project
 
+import data.schema.FragranceMediaTable
 import data.schema.FragrancesTable
+import data.schema.ListingMediaTable
 import data.schema.ListingsTable
+import data.schema.MediaItemsTable
+import data.schema.MediaLikesTable
 import data.schema.PostHashtagsTable
 import data.schema.PostsTable
+import data.schema.ReviewsTable
 import data.schema.UsersTable
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
@@ -21,12 +26,14 @@ import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
 import org.scent.project.data.remote.dto.AuthResponse
 import org.scent.project.data.remote.dto.MeResponse
 import plugins.configureSecurity
+import routing.ResetListingsResponse
 import routing.SeedResponse
 import routing.SeedUserResponse
 import routing.authRoutes
@@ -47,7 +54,18 @@ class DevRoutesTest {
             driver = "org.h2.Driver",
         )
         transaction {
-            SchemaUtils.create(UsersTable, PostsTable, PostHashtagsTable, FragrancesTable, ListingsTable)
+            SchemaUtils.create(
+                UsersTable,
+                PostsTable,
+                PostHashtagsTable,
+                FragrancesTable,
+                ListingsTable,
+                MediaItemsTable,
+                ListingMediaTable,
+                FragranceMediaTable,
+                MediaLikesTable,
+                ReviewsTable,
+            )
         }
     }
 
@@ -309,5 +327,164 @@ class DevRoutesTest {
 
             assertEquals(HttpStatusCode.BadRequest, response.status)
             assertEquals(0L, userCount())
+        }
+
+    // ── reset-listings ───────────────────────────────────────────────────────
+
+    private fun linkMedia(
+        listingId: Int,
+        mediaId: Int,
+    ) = transaction {
+        ListingMediaTable.insert {
+            it[ListingMediaTable.listingId] = listingId
+            it[mediaItemId] = mediaId
+            it[position] = 0
+        }
+    }
+
+    // The class's own seedUser extension (dev seed-user route) shadows the shared fixture.
+    private fun seedAccount(username: String): Int = org.scent.project.seedUser(username)
+
+    private fun mediaCount(): Long = transaction { MediaItemsTable.selectAll().count() }
+
+    private suspend fun io.ktor.server.testing.ApplicationTestBuilder.resetListings(body: String) =
+        client.post("/api/v1/dev/reset-listings") {
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+
+    private fun emailBody(email: String) = """{"email":"$email"}"""
+
+    private fun seedListingWithPhoto(
+        sellerId: Int,
+        fragranceId: Int,
+    ): Pair<Int, Int> {
+        val listingId = seedListing(sellerId, fragranceId)
+        val mediaId = seedReadyMedia(sellerId).single()
+        linkMedia(listingId, mediaId)
+        return listingId to mediaId
+    }
+
+    @Test
+    fun `reset-listings removes only the target user's listings and their photos`() =
+        withApp {
+            val e2eId = seedAccount("scent_e2e")
+            val sellerId = seedAccount("scent_seed_seller")
+            val fragranceId = seedFragrance(sellerId)
+            repeat(2) { seedListingWithPhoto(e2eId, fragranceId) }
+            repeat(3) { seedListing(sellerId, fragranceId) }
+
+            val response = resetListings(emailBody("scent_e2e@test.com"))
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.decodeFromString<ResetListingsResponse>(response.bodyAsText())
+            assertEquals(ResetListingsResponse(userId = e2eId, removed = 2, mediaRemoved = 2), body)
+            assertEquals(3L, listingCount())
+            assertEquals(1L, fragranceCount())
+            assertEquals(0L, mediaCount())
+        }
+
+    @Test
+    fun `reset-listings called twice returns 0 the second time`() =
+        withApp {
+            val e2eId = seedAccount("scent_e2e")
+            val fragranceId = seedFragrance(e2eId)
+            seedListingWithPhoto(e2eId, fragranceId)
+            resetListings(emailBody("scent_e2e@test.com"))
+
+            val response = resetListings(emailBody("scent_e2e@test.com"))
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.decodeFromString<ResetListingsResponse>(response.bodyAsText())
+            assertEquals(ResetListingsResponse(userId = e2eId, removed = 0, mediaRemoved = 0), body)
+        }
+
+    @Test
+    fun `reset-listings for an unknown email returns 404 and deletes nothing`() =
+        withApp {
+            val sellerId = seedAccount("scent_seed_seller")
+            seedListing(sellerId, seedFragrance(sellerId))
+
+            val response = resetListings(emailBody("nobody@scent.dev"))
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+            assertTrue(response.bodyAsText().isNotBlank())
+            assertEquals(1L, listingCount())
+        }
+
+    @Test
+    fun `reset-listings refuses a non-E2E account with 403 and deletes nothing`() =
+        withApp {
+            val sellerId = seedAccount("scent_seed_seller")
+            seedListingWithPhoto(sellerId, seedFragrance(sellerId))
+
+            val response = resetListings(emailBody("scent_seed_seller@test.com"))
+
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+            assertEquals(1L, listingCount())
+            assertEquals(1L, mediaCount())
+        }
+
+    @Test
+    fun `reset-listings keeps a photo still referenced by fragrance media`() =
+        withApp {
+            val e2eId = seedAccount("scent_e2e")
+            val fragranceId = seedFragrance(e2eId)
+            val (_, keptMediaId) = seedListingWithPhoto(e2eId, fragranceId)
+            seedListingWithPhoto(e2eId, fragranceId)
+            transaction {
+                FragranceMediaTable.insert {
+                    it[FragranceMediaTable.fragranceId] = fragranceId
+                    it[mediaItemId] = keptMediaId
+                }
+            }
+
+            val response = resetListings(emailBody("scent_e2e@test.com"))
+
+            val body = Json.decodeFromString<ResetListingsResponse>(response.bodyAsText())
+            assertEquals(2, body.removed)
+            assertEquals(1, body.mediaRemoved)
+            assertEquals(1L, mediaCount())
+        }
+
+    @Test
+    fun `reset-listings removes an upload that was never attached to a listing`() =
+        withApp {
+            val e2eId = seedAccount("scent_e2e")
+            seedReadyMedia(e2eId)
+
+            val response = resetListings(emailBody("scent_e2e@test.com"))
+
+            val body = Json.decodeFromString<ResetListingsResponse>(response.bodyAsText())
+            assertEquals(ResetListingsResponse(userId = e2eId, removed = 0, mediaRemoved = 1), body)
+            assertEquals(0L, mediaCount())
+        }
+
+    @Test
+    fun `reset-listings accepts an e2e_ registration account`() =
+        withApp {
+            val userId = seedAccount("e2e_12345")
+            seedListingWithPhoto(userId, seedFragrance(userId))
+
+            val response = resetListings(emailBody("e2e_12345@test.com"))
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0L, listingCount())
+        }
+
+    @Test
+    fun `reset-listings with a blank email returns 400`() =
+        withApp {
+            val response = resetListings(emailBody("  "))
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `reset-listings with a malformed body returns 400`() =
+        withApp {
+            val response = resetListings("""{"email": """)
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
         }
 }
