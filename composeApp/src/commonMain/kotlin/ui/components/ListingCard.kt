@@ -33,7 +33,6 @@ import org.scent.project.domain.model.Fragrance
 import org.scent.project.domain.model.Listing
 import org.scent.project.domain.model.ListingKind
 import ui.accessibility.clearedDescription
-import ui.accessibility.withCustomActions
 import ui.components.buttons.ScentPrimaryButton
 import ui.components.buttons.ScentSecondaryButton
 import ui.theme.ScentTheme
@@ -145,8 +144,11 @@ private fun ListingCardScaffold(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clearedDescription(listingContentDescription(listing))
-                .withCustomActions(*customActions.toTypedArray()),
+                .clearedDescription(
+                    description = listingContentDescription(listing),
+                    customActions = customActions,
+                    onClick = onClick,
+                ),
         shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(defaultElevation = ScentThemeExtras.elevation.card),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

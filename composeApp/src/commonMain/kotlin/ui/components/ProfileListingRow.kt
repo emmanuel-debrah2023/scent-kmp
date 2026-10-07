@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import ui.accessibility.accessibleClickable
 import ui.accessibility.clearedDescription
-import ui.accessibility.withCustomActions
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
@@ -132,8 +131,7 @@ fun ProfileListingRow(
                         strokeWidth = 1.dp.toPx(),
                     )
                 }.clickable(onClick = onClick)
-                .clearedDescription(listing.accessibilityDescription)
-                .withCustomActions(*customActions.toTypedArray())
+                .clearedDescription(listing.accessibilityDescription, customActions = customActions)
                 .padding(vertical = spacing.md),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(spacing.md),
