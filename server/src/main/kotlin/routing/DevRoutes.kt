@@ -2,12 +2,18 @@ package routing
 
 import data.dbQuery
 import data.schema.FragranceCondition
+import data.schema.FragranceMediaTable
 import data.schema.FragrancesTable
+import data.schema.ListingMediaTable
 import data.schema.ListingsTable
+import data.schema.MediaItemsTable
+import data.schema.MediaLikesTable
 import data.schema.PostHashtagsTable
 import data.schema.PostsTable
+import data.schema.ReviewsTable
 import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -18,14 +24,24 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mindrot.jbcrypt.BCrypt
 import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.RegisterRequest
+import org.scent.project.domain.error.AppError
+import org.scent.project.domain.util.Result
+import org.scent.project.domain.util.asLeft
+import org.scent.project.domain.util.asRight
 
 @Serializable
 data class SeedResponse(
@@ -37,6 +53,18 @@ data class SeedResponse(
 data class SeedUserResponse(
     val userId: Int,
     val created: Boolean,
+)
+
+@Serializable
+data class ResetListingsRequest(
+    val email: String? = null,
+)
+
+@Serializable
+data class ResetListingsResponse(
+    val userId: Int,
+    val removed: Int,
+    val mediaRemoved: Int,
 )
 
 private val seedSentences =
@@ -52,6 +80,8 @@ private val seedHashtags = listOf("fragrance", "scentoftheday", "niche", "perfum
 
 private const val DEFAULT_SEED_COUNT = 10
 private const val MAX_SEED_COUNT = 50
+private const val E2E_USERNAME = "scent_e2e"
+private const val E2E_REGISTRATION_PREFIX = "e2e_"
 
 private suspend fun resolveSeedUserId(): Int = resolveSeedUser("scent_seed_bot", "seed@scent.dev", "Scent Seed Bot")
 
@@ -209,6 +239,97 @@ private suspend fun insertSeedListings(
     }
 }
 
+private suspend fun ApplicationCall.receiveResetRequest(): Result<ResetListingsRequest> =
+    try {
+        receive<ResetListingsRequest>().asRight()
+    } catch (e: BadRequestException) {
+        AppError.ValidationError.InvalidInput("request body", cause = e).asLeft()
+    }
+
+private fun ResetListingsRequest.validEmail(): Result<String> =
+    email?.trim()?.takeIf { it.isNotEmpty() }?.asRight()
+        ?: AppError.ValidationError.RequiredFieldEmpty("email").asLeft()
+
+private fun String.isE2eAccount(): Boolean = this == E2E_USERNAME || startsWith(E2E_REGISTRATION_PREFIX)
+
+private suspend fun resetListings(email: String): Result<ResetListingsResponse> =
+    dbQuery {
+        val user =
+            UsersTable
+                .selectAll()
+                .where { UsersTable.email eq email }
+                .singleOrNull()
+        when {
+            user == null -> AppError.NetworkError.NotFound("No account with that email").asLeft()
+            !user[UsersTable.username].isE2eAccount() ->
+                AppError.AuthError
+                    .Forbidden("reset-listings only clears E2E accounts ($E2E_USERNAME, $E2E_REGISTRATION_PREFIX*)")
+                    .asLeft()
+            else -> deleteListingsOf(user[UsersTable.id].value).asRight()
+        }
+    }
+
+// Runs inside the caller's transaction. Order matters: join rows, then listings, then the
+// photos nothing else references any more.
+private fun deleteListingsOf(userId: Int): ResetListingsResponse {
+    val listingIds =
+        ListingsTable
+            .select(ListingsTable.id)
+            .where { ListingsTable.sellerId eq userId }
+            .map { it[ListingsTable.id].value }
+    var removed = 0
+    if (listingIds.isNotEmpty()) {
+        ListingMediaTable.deleteWhere { ListingMediaTable.listingId inList listingIds }
+        removed = ListingsTable.deleteWhere { ListingsTable.id inList listingIds }
+    }
+    return ResetListingsResponse(userId, removed, deleteUnreferencedUploads(userId))
+}
+
+// Deletes the user's uploads that no remaining row references, including orphans from uploads
+// that never reached a listing. Every table with a foreign key to media_items is checked.
+private fun deleteUnreferencedUploads(userId: Int): Int {
+    val candidates =
+        MediaItemsTable
+            .select(MediaItemsTable.id)
+            .where { MediaItemsTable.uploaderId eq userId }
+            .map { it[MediaItemsTable.id].value }
+    val kept =
+        referencedIn(ListingMediaTable.mediaItemId, candidates) +
+            referencedIn(FragranceMediaTable.mediaItemId, candidates) +
+            referencedIn(MediaLikesTable.mediaItemId, candidates) +
+            referencedIn(ReviewsTable.mediaItemId, candidates)
+    val deletable = candidates - kept
+    return if (deletable.isEmpty()) {
+        0
+    } else {
+        MediaItemsTable.deleteWhere {
+            MediaItemsTable.id inList deletable and (MediaItemsTable.uploaderId eq userId)
+        }
+    }
+}
+
+private fun referencedIn(
+    column: Column<out EntityID<Int>?>,
+    candidates: List<Int>,
+): Set<Int> =
+    if (candidates.isEmpty()) {
+        emptySet()
+    } else {
+        column.table
+            .select(column)
+            .where { column inList candidates }
+            .mapNotNull { it[column]?.value }
+            .toSet()
+    }
+
+private fun AppError.toHttpStatus(): HttpStatusCode =
+    when (this) {
+        is AppError.NetworkError.NotFound -> HttpStatusCode.NotFound
+        is AppError.AuthError.Forbidden -> HttpStatusCode.Forbidden
+        is AppError.ValidationError -> HttpStatusCode.BadRequest
+        else -> HttpStatusCode.InternalServerError
+    }
+
 fun Route.devRoutes() {
     route("/api/v1/dev") {
         post("/seed-feed") {
@@ -251,6 +372,17 @@ fun Route.devRoutes() {
             insertSeedListings(seedSellerId, count)
 
             call.respond(HttpStatusCode.Created, SeedResponse(seeded = count, userId = seedSellerId))
+        }
+
+        post("/reset-listings") {
+            call
+                .receiveResetRequest()
+                .flatMap { it.validEmail() }
+                .flatMap { resetListings(it) }
+                .fold(
+                    ifLeft = { call.respond(it.toHttpStatus(), ErrorResponse(it.message)) },
+                    ifRight = { call.respond(HttpStatusCode.OK, it) },
+                )
         }
     }
 }

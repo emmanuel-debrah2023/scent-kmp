@@ -178,3 +178,27 @@ the account as `env`:
       LOGIN_EMAIL: ${output.e2eEmail}
       LOGIN_PASSWORD: ${output.e2ePassword}
 ```
+
+## Resetting server state
+
+`clearState` resets the app, not the server. A flow that creates server data,
+such as publishing a listing, leaves it behind, and over many runs that data
+fills the newest-first marketplace feed and the profile Listings tab. Flows
+that create server data should reset it.
+
+`scripts/reset-e2e-listings.js` does this for listings. It calls the dev-only
+`POST /api/v1/dev/reset-listings` route with the E2E email, which deletes that
+account's listings and any photos nothing else uses, and sets
+`output.e2eListingsRemoved`. The route only accepts the E2E accounts
+(`scent_e2e` and the `e2e_*` registration accounts) and answers 403 for any
+other user, so it cannot clear real data. It answers 200 with zero removed when
+there is nothing to clear, which makes it safe to run repeatedly.
+
+A flow that creates server data should run the script from both `onFlowStart`
+and `onFlowComplete`. Maestro runs `onFlowComplete` even after a failed flow
+(checked with a throwaway flow whose assertion fails), so a failure does not
+leave listings behind, and `onFlowStart` clears anything left by a run that was
+killed. If the account does not exist yet when `onFlowStart` runs, the
+route answers 404 and the script carries on with zero removed. A 404 with an
+empty body means the running server predates the route, so restart it with
+`./scripts/e2e-up.sh --down && ./scripts/e2e-up.sh`.

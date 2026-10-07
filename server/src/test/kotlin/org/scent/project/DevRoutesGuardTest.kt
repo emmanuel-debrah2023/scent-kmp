@@ -39,31 +39,46 @@ class DevRoutesGuardTest {
         if (value == null) System.clearProperty(key) else System.setProperty(key, value)
     }
 
-    private fun assertSeedUserStatus(expected: HttpStatusCode) =
-        testApplication {
-            application { module() }
+    private fun assertDevRouteStatus(
+        path: String,
+        expected: HttpStatusCode,
+    ) = testApplication {
+        application { module() }
 
-            val status =
-                client
-                    .post("/api/v1/dev/seed-user") {
-                        contentType(ContentType.Application.Json)
-                        setBody("{}")
-                    }.status
+        val status =
+            client
+                .post(path) {
+                    contentType(ContentType.Application.Json)
+                    setBody("{}")
+                }.status
 
-            assertEquals(expected, status)
-        }
+        assertEquals(expected, status)
+    }
 
     @Test
     fun `seed-user is not mounted under production config`() =
         withProviders(stream = null, image = null) {
-            assertSeedUserStatus(HttpStatusCode.NotFound)
+            assertDevRouteStatus(SEED_USER_PATH, HttpStatusCode.NotFound)
         }
 
     @Test
     fun `seed-user is mounted when the fake stream provider is configured`() =
         withProviders(stream = "fake", image = null) {
             // 400 for the empty body proves the route exists; only the guard can produce a 404.
-            assertSeedUserStatus(HttpStatusCode.BadRequest)
+            assertDevRouteStatus(SEED_USER_PATH, HttpStatusCode.BadRequest)
+        }
+
+    @Test
+    fun `reset-listings is not mounted under production config`() =
+        withProviders(stream = null, image = null) {
+            assertDevRouteStatus(RESET_LISTINGS_PATH, HttpStatusCode.NotFound)
+        }
+
+    @Test
+    fun `reset-listings is mounted when the fake image provider is configured`() =
+        withProviders(stream = null, image = "fake") {
+            // 400 for the empty body is returned before any database access.
+            assertDevRouteStatus(RESET_LISTINGS_PATH, HttpStatusCode.BadRequest)
         }
 
     // A GET alone 404s in both modes; PUT-then-GET is what tells them apart.
@@ -102,6 +117,8 @@ class DevRoutesGuardTest {
         }
 
     private companion object {
+        const val SEED_USER_PATH = "/api/v1/dev/seed-user"
+        const val RESET_LISTINGS_PATH = "/api/v1/dev/reset-listings"
         const val STREAM_PROVIDER = "STREAM_PROVIDER"
         const val IMAGE_PROVIDER = "IMAGE_PROVIDER"
         val PROVIDER_KEYS = listOf(STREAM_PROVIDER, IMAGE_PROVIDER)
