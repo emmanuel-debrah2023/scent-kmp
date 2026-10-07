@@ -261,13 +261,16 @@ private fun ListingCardScaffold(
     }
 }
 
+/** The bottle's own photo when the seller uploaded one, else the catalogue stock image. */
+internal fun Listing.heroImageUrl(): String? = photoUrls.firstOrNull() ?: fragrance.imageUrls.firstOrNull()
+
 @Composable
 private fun ListingHero(listing: Listing) {
     Box(
         modifier = Modifier.fillMaxWidth().height(ScentThemeExtras.spacing.cardHeroHeight),
         contentAlignment = Alignment.Center,
     ) {
-        val imageUrl = listing.fragrance.imageUrls.firstOrNull()
+        val imageUrl = listing.heroImageUrl()
         if (imageUrl != null) {
             AsyncImage(
                 model = imageUrl,
