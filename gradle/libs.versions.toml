@@ -48,6 +48,8 @@ h2 = "2.2.224"
 hotswan = "2.0.0-beta04"
 flyway = "10.17.0"
 testcontainers = "1.21.4"
+robolectric = "4.17"
+androidx-compose-ui-test = "1.10.4"
 
 [libraries]
 # Kotlin
@@ -132,6 +134,9 @@ turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }
 androidx-test-espresso = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-espresso" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "androidx-compose-ui-test" }
+androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "androidx-compose-ui-test" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }

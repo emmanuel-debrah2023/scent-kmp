@@ -1,3 +1,5 @@
+androidx.compose.ui:ui-test-junit4
+androidx.compose.ui:ui-test-manifest
 androidx.room
 androidx.room:androidx.room.gradle.plugin
 androidx.sqlite:sqlite-bundled
@@ -8,5 +10,6 @@ io.gitlab.arturbosch.detekt:detekt-formatting
 io.nlopez.compose.rules:detekt
 org.flywaydb:flyway-core
 org.flywaydb:flyway-database-postgresql
+org.robolectric:robolectric
 org.testcontainers:postgresql
 org.testcontainers:testcontainers

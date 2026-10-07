@@ -117,6 +117,8 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.testJunit)
                 implementation(libs.mockk)
+                implementation(libs.robolectric)
+                implementation(libs.androidx.compose.ui.test.junit4)
             }
         }
     }
@@ -181,10 +183,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
     debugImplementation(compose.uiTooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     detektPlugins(libs.detekt.compose)
 }
 
