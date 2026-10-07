@@ -6,7 +6,7 @@
 # Usage: ./scripts/e2e-up.sh          start or reuse the stack, then seed it
 #        ./scripts/e2e-up.sh --down   stop a server this script started
 #
-# Overrides: E2E_API_URL, E2E_PG_CONTAINER, E2E_EMAIL, E2E_PASSWORD, E2E_SEED_COUNT
+# Overrides: E2E_API_URL, E2E_PG_CONTAINER, E2E_EMAIL, E2E_PASSWORD, E2E_SEED_COUNT, E2E_EMULATOR_HOST
 
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -15,6 +15,7 @@ API_URL="${E2E_API_URL:-http://localhost:8080}"
 EMAIL="${E2E_EMAIL:-e2e@scent.dev}"
 PASSWORD="${E2E_PASSWORD:-ScentE2e-Passw0rd}"
 SEED_COUNT="${E2E_SEED_COUNT:-10}"
+EMULATOR_HOST="${E2E_EMULATOR_HOST:-10.0.2.2:8080}"
 PID_FILE="build/e2e-server.pid"
 LOG_FILE="build/e2e-server.log"
 SERVER_TIMEOUT_S=180
@@ -91,10 +92,12 @@ check_seeded() { # check_seeded <what> <status> <accepted statuses...>
 
 USER_JSON=$(printf '{"email":"%s","username":"scent_e2e","password":"%s","displayName":"Scent E2E"}' "$EMAIL" "$PASSWORD")
 check_seeded "E2E account $EMAIL" "$(post /api/v1/dev/seed-user "$USER_JSON")" 200 201
-check_seeded "$SEED_COUNT feed posts" "$(post "/api/v1/dev/seed-feed?count=$SEED_COUNT")" 201
+# The stored video URL takes the request's Host, so send the emulator's address or the app can't reach it.
+check_seeded "$SEED_COUNT feed posts and a video post" \
+    "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/api/v1/dev/seed-feed?count=$SEED_COUNT" -H "Host: $EMULATOR_HOST")" 201
 check_seeded "$SEED_COUNT listings" "$(post "/api/v1/dev/seed-listings?count=$SEED_COUNT")" 201
 
 echo
 echo "E2E stack ready at $API_URL. Sign in as $EMAIL."
-echo "Feed posts and listings are additive: each run adds $SEED_COUNT more."
+echo "Feed posts and listings are additive: each run adds $SEED_COUNT more, plus one video post."
 [ -f "$PID_FILE" ] && echo "Stop the server with: ./scripts/e2e-up.sh --down"

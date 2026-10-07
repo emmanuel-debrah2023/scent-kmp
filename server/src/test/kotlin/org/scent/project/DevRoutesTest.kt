@@ -7,15 +7,19 @@ import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
 import data.schema.PostHashtagsTable
+import data.schema.PostMediaTable
 import data.schema.PostsTable
 import data.schema.ReviewsTable
 import data.schema.UsersTable
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -40,9 +44,12 @@ import routing.authRoutes
 import routing.devRoutes
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+
+private const val BOX_HEADER = 8
 
 class DevRoutesTest {
     // ── Test database setup ──────────────────────────────────────────────────
@@ -58,6 +65,7 @@ class DevRoutesTest {
                 UsersTable,
                 PostsTable,
                 PostHashtagsTable,
+                PostMediaTable,
                 FragrancesTable,
                 ListingsTable,
                 MediaItemsTable,
@@ -71,7 +79,16 @@ class DevRoutesTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private fun postCount(): Long = transaction { PostsTable.selectAll().count() }
+    private fun postCount(format: String): Long =
+        transaction { PostsTable.selectAll().where { PostsTable.contentFormat eq format }.count() }
+
+    private fun mediaUrlsOfVideoPosts(): List<String> =
+        transaction {
+            (PostMediaTable innerJoin PostsTable)
+                .selectAll()
+                .where { PostsTable.contentFormat eq "VIDEO" }
+                .map { it[PostMediaTable.url] }
+        }
 
     private fun listingCount(): Long = transaction { ListingsTable.selectAll().count() }
 
@@ -97,7 +114,7 @@ class DevRoutesTest {
             val body = Json.decodeFromString<SeedResponse>(response.bodyAsText())
             assertEquals(5, body.seeded)
             assertTrue(body.userId > 0)
-            assertEquals(5L, postCount())
+            assertEquals(5L, postCount("TEXT"))
         }
 
     @Test
@@ -108,7 +125,7 @@ class DevRoutesTest {
             assertEquals(HttpStatusCode.Created, response.status)
             val body = Json.decodeFromString<SeedResponse>(response.bodyAsText())
             assertEquals(50, body.seeded)
-            assertEquals(50L, postCount())
+            assertEquals(50L, postCount("TEXT"))
         }
 
     @Test
@@ -119,7 +136,7 @@ class DevRoutesTest {
             assertEquals(HttpStatusCode.Created, response.status)
             val body = Json.decodeFromString<SeedResponse>(response.bodyAsText())
             assertEquals(10, body.seeded)
-            assertEquals(10L, postCount())
+            assertEquals(10L, postCount("TEXT"))
         }
 
     @Test
@@ -138,7 +155,7 @@ class DevRoutesTest {
             assertEquals(firstBody.userId, secondBody.userId)
 
             // Posts are additive: 3 + 3 = 6
-            assertEquals(6L, postCount())
+            assertEquals(6L, postCount("TEXT"))
 
             // Only one seed user in the table
             val seedUserCount =
@@ -150,6 +167,99 @@ class DevRoutesTest {
                 }
             assertEquals(1L, seedUserCount)
         }
+
+    // ── seed-feed video post ─────────────────────────────────────────────────
+
+    @Test
+    fun `seed-feed adds one VIDEO post with the caption and the newest id`() =
+        withApp {
+            client.post("/api/v1/dev/seed-feed?count=3")
+
+            val rows = transaction { PostsTable.selectAll().toList() }
+            val video = rows.single { it[PostsTable.contentFormat] == "VIDEO" }
+            assertEquals("Watch the amber pour in slow motion", video[PostsTable.textContent])
+            assertEquals(rows.maxOf { it[PostsTable.id].value }, video[PostsTable.id].value)
+            assertEquals(1L, postCount("VIDEO"))
+        }
+
+    @Test
+    fun `seed-feed video url is built from the Host header`() =
+        withApp {
+            client.post("/api/v1/dev/seed-feed?count=1") { header(HttpHeaders.Host, "10.0.2.2:8080") }
+
+            assertEquals(listOf("http://10.0.2.2:8080/api/v1/dev/assets/seed-video.mp4"), mediaUrlsOfVideoPosts())
+        }
+
+    @Test
+    fun `seed-feed twice gives two video posts`() =
+        withApp {
+            client.post("/api/v1/dev/seed-feed?count=1")
+            client.post("/api/v1/dev/seed-feed?count=1")
+
+            assertEquals(2L, postCount("VIDEO"))
+            assertEquals(2, mediaUrlsOfVideoPosts().size)
+        }
+
+    @Test
+    fun `seed-feed response reports one video post`() =
+        withApp {
+            val response = client.post("/api/v1/dev/seed-feed?count=2")
+
+            val body = Json.decodeFromString<SeedResponse>(response.bodyAsText())
+            assertEquals(2, body.seeded)
+            assertEquals(1, body.videoPosts)
+        }
+
+    // ── seed video asset ─────────────────────────────────────────────────────
+
+    private fun seedVideoResource(): ByteArray =
+        requireNotNull(javaClass.getResourceAsStream("/dev/seed-video.mp4")) { "seed-video.mp4 missing" }
+            .use { it.readBytes() }
+
+    @Test
+    fun `asset route returns 200 video mp4 with the resource bytes`() =
+        withApp {
+            val response = client.get("/api/v1/dev/assets/seed-video.mp4")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(ContentType.Video.MP4, response.contentType()?.withoutParameters())
+            assertContentEquals(seedVideoResource(), response.bodyAsBytes())
+        }
+
+    // Pins the ExoPlayer contract: a ranged request still gets the whole body with a 200.
+    @Test
+    fun `asset route answers a Range request with 200 and the full body`() =
+        withApp {
+            val response = client.get("/api/v1/dev/assets/seed-video.mp4") { header(HttpHeaders.Range, "bytes=0-99") }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertContentEquals(seedVideoResource(), response.bodyAsBytes())
+        }
+
+    @Test
+    fun `seed video is faststart`() {
+        val bytes = seedVideoResource()
+        val boxes = topLevelBoxes(bytes)
+
+        assertEquals("ftyp", boxes.first())
+        assertTrue(boxes.indexOf("moov") in 0 until boxes.indexOf("mdat"), "moov must precede mdat: $boxes")
+        assertTrue(bytes.size < 64 * 1024, "seed video is ${bytes.size} bytes")
+    }
+
+    // Each top-level MP4 box: 4-byte big-endian size, 4-char type; size 1 means a 64-bit size follows.
+    private fun topLevelBoxes(bytes: ByteArray): List<String> {
+        val buffer = java.nio.ByteBuffer.wrap(bytes)
+        val types = mutableListOf<String>()
+        var offset = 0
+        while (offset + BOX_HEADER <= bytes.size) {
+            val size32 = buffer.getInt(offset).toLong() and 0xFFFFFFFFL
+            types += String(bytes, offset + 4, 4, Charsets.US_ASCII)
+            val size = if (size32 == 1L) buffer.getLong(offset + BOX_HEADER) else size32
+            if (size < BOX_HEADER) break
+            offset += size.toInt()
+        }
+        return types
+    }
 
     // ── seed-listings ────────────────────────────────────────────────────────
 

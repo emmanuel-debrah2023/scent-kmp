@@ -8,7 +8,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
-import io.ktor.server.plugins.origin
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
@@ -146,11 +145,7 @@ private fun Route.imageUploadUrlRoute(imageProvider: ImageProvider) {
                     return@post
                 }
         val contentType = call.request.queryParameters["content_type"] ?: "image/jpeg"
-        // Echoes back whatever host:port the client actually used (Host header via
-        // ApplicationRequest.origin) rather than assuming "localhost" — the Android
-        // emulator reaches this server at 10.0.2.2, not localhost, and a hardcoded
-        // localhost base URL produces upload/public URLs the client can never reach.
-        val requestBaseUrl = with(call.request.origin) { "$scheme://$serverHost:$serverPort" }
+        val requestBaseUrl = call.requestBaseUrl()
 
         imageProvider.createSignedUpload(contentType, requestBaseUrl).fold(
             onSuccess = { signed ->
