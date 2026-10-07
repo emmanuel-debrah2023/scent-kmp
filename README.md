@@ -46,18 +46,6 @@ _Coming soon_
 - JDK 17+
 - PostgreSQL instance
 
-### Editor and tooling setup
-
-For code intelligence outside Android Studio, install the Kotlin language
-server alongside the ktlint and detekt checks (`./gradlew ktlintCheck detekt`):
-
-```bash
-brew install JetBrains/utils/kotlin-lsp
-```
-
-It gives Claude Code and other LSP clients go-to-definition, references and
-diagnostics for `.kt` and `.kts` files across `shared`, `composeApp` and `server`.
-
 ### Android
 
 ```bash
