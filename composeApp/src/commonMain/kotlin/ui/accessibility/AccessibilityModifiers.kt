@@ -21,7 +21,13 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 
-/** Sets a content description on a non-interactive element (e.g. a static icon carrying meaning). */
+/**
+ * Sets a content description on a non-interactive element (e.g. a static icon carrying meaning).
+ *
+ * Also how a text field gets its label. On Android that label surfaces on a child node of the
+ * EditText. Never swap it for `clearAndSetSemantics` on a text field: that wipes the editable
+ * text, set-text, focus and IME semantics.
+ */
 fun Modifier.accessibleLabel(label: String): Modifier = semantics { contentDescription = label }
 
 /** A clickable element with its own announced label, distinct from any child text. */
