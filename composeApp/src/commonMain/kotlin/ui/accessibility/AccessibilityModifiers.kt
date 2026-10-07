@@ -69,6 +69,11 @@ fun Modifier.clearedDescription(description: String): Modifier =
 /**
  * A toggle control (favorite/wishlist/like) with one unified announcement and an
  * accessible checked state, backed by `Modifier.toggleable` for the click action.
+ *
+ * Descendant semantics are cleared, so [label] is the whole announcement and the label,
+ * role and checked state all sit on the one toggle node. Without this, a child with its
+ * own semantics (e.g. a chip's `Text`) makes Android move the label and role onto fake
+ * child nodes, leaving the real toggle node unlabelled.
  */
 fun Modifier.accessibleToggle(
     value: Boolean,
@@ -77,9 +82,7 @@ fun Modifier.accessibleToggle(
     onValueChange: (Boolean) -> Unit,
 ): Modifier =
     toggleable(value = value, onValueChange = onValueChange, role = role)
-        .semantics {
-            contentDescription = label
-        }
+        .clearAndSetSemantics { contentDescription = label }
 
 /** Exposes extra actions beyond the default click (e.g. "Remove from wishlist" on a card). */
 fun Modifier.withCustomActions(vararg actions: CustomAccessibilityAction): Modifier =
