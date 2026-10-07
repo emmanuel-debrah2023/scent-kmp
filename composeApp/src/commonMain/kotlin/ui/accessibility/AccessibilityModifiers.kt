@@ -31,16 +31,23 @@ import androidx.compose.ui.semantics.stateDescription
  */
 fun Modifier.accessibleLabel(label: String): Modifier = semantics { contentDescription = label }
 
-/** A clickable element with its own announced label, distinct from any child text. */
+/**
+ * A clickable element announced only by [label]. Descendant semantics, and any semantics
+ * modifier to its right on the same node (including a Text's own text), are cleared, so the
+ * label, role and click action sit on the one clickable node. Without this, a child Text makes
+ * Android move the label and role onto fake child nodes, leaving the clickable node unlabelled.
+ * Never wrap an independently interactive child (button, toggle, text field): it would be
+ * wiped. Give it its own control or a custom action.
+ */
 fun Modifier.accessibleClickable(
     label: String,
     role: Role = Role.Button,
     onClick: () -> Unit,
 ): Modifier =
     clickable(onClickLabel = label, role = role, onClick = onClick)
-        .semantics { contentDescription = label }
+        .clearAndSetSemantics { contentDescription = label }
 
-/** A clickable element that also exposes a long-click, both independently announced. */
+/** As [accessibleClickable], with an optional long-click; descendants are cleared the same way. */
 @OptIn(ExperimentalFoundationApi::class)
 fun Modifier.accessibleCombinedClickable(
     label: String,
@@ -55,7 +62,7 @@ fun Modifier.accessibleCombinedClickable(
         onLongClickLabel = onLongClickLabel,
         onLongClick = onLongClick,
         onClick = onClick,
-    ).semantics { contentDescription = label }
+    ).clearAndSetSemantics { contentDescription = label }
 
 /**
  * Groups non-interactive text children (e.g. a card's metadata row) into a single

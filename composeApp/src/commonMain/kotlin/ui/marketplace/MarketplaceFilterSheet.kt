@@ -344,7 +344,10 @@ private fun BrandSuggestionList(
                     } else {
                         "Couldn't load brand suggestions. Tap to retry."
                     },
-                modifier = modifier.accessibleClickable(label = "Retry brand suggestions", onClick = onRetry),
+                modifier =
+                    modifier
+                        .accessibleLiveRegion()
+                        .accessibleClickable(label = "Retry brand suggestions", onClick = onRetry),
             )
         is UiState.Success ->
             if (state.data.isEmpty()) {
