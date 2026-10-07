@@ -35,13 +35,18 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ui.accessibility.accessibleLabel
+import ui.accessibility.decorative
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
 /**
  * A bottom-border-only text input field.
  *
- * [label] sits above the input in label-uppercase style (labelLarge, uppercased).
+ * [label] sits above the input in label-uppercase style (labelLarge, uppercased). The input
+ * itself carries the label for accessibility and the visible copy is decorative, so a screen
+ * reader announces it once. [accessibilityLabel] overrides it when the visible copy is too
+ * terse to be understood alone (e.g. "Min" → "Minimum price in pounds").
  * Border animates outline-variant → primary on focus, → error when [error] is set.
  * When [enabled] is false the border and text are muted to outline-variant.
  * [helperText] renders below the field in the same slot [error] uses — [error] always
@@ -57,6 +62,7 @@ fun ScentTextField(
     label: String,
     modifier: Modifier = Modifier,
     placeholder: String = "",
+    accessibilityLabel: String = label,
     enabled: Boolean = true,
     error: String? = null,
     helperText: String? = null,
@@ -91,10 +97,13 @@ fun ScentTextField(
         }
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // The input below carries the label for accessibility, so this visible copy is hidden
+        // from it: TalkBack announces "Price, edit box" once rather than the label twice.
         Text(
             text = label.uppercase(),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.decorative(),
         )
 
         Spacer(modifier = Modifier.height(ScentThemeExtras.spacing.xs))
@@ -111,7 +120,8 @@ fun ScentTextField(
                         } else {
                             it.heightIn(min = ScentThemeExtras.spacing.buttonHeight)
                         }
-                    }.onFocusChanged { isFocused = it.isFocused },
+                    }.accessibleLabel(accessibilityLabel)
+                    .onFocusChanged { isFocused = it.isFocused },
             enabled = enabled,
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),

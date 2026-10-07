@@ -31,7 +31,6 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.validation.Validator
 import ui.accessibility.accessibleClickable
 import ui.accessibility.accessibleHeading
-import ui.accessibility.accessibleLabel
 import ui.accessibility.accessibleLiveRegion
 import ui.accessibility.accessiblePane
 import ui.accessibility.accessibleState
@@ -270,7 +269,8 @@ private fun PriceSection(
                 onValueChange = { onMinChange(it.filter(Char::isDigit)) },
                 label = "Min",
                 placeholder = "£ any",
-                modifier = Modifier.weight(1f).accessibleLabel("Minimum price in pounds"),
+                modifier = Modifier.weight(1f),
+                accessibilityLabel = "Minimum price in pounds",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 error = minPriceError,
             )
@@ -279,7 +279,8 @@ private fun PriceSection(
                 onValueChange = { onMaxChange(it.filter(Char::isDigit)) },
                 label = "Max",
                 placeholder = "£ any",
-                modifier = Modifier.weight(1f).accessibleLabel("Maximum price in pounds"),
+                modifier = Modifier.weight(1f),
+                accessibilityLabel = "Maximum price in pounds",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 error = maxPriceError ?: rangeError,
             )
@@ -307,7 +308,6 @@ private fun BrandSection(
             onValueChange = onValueChange,
             label = "Brand",
             placeholder = "e.g. Dior",
-            modifier = Modifier.accessibleLabel("Brand"),
         )
         BrandSuggestionList(
             state = suggestions,
