@@ -1,10 +1,6 @@
 package ui.components
 
 import android.app.Application
-import android.content.ComponentName
-import android.content.Intent
-import android.content.IntentFilter
-import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -18,35 +14,19 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ApplicationProvider
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import ui.testing.composeHostActivityRule
 import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class SelectableChipTest {
-    // ui-test-manifest only reaches the debug variant, so register the host activity by
-    // hand for the release unit-test run. Must run before the compose rule launches it.
     @get:Rule(order = 0)
-    val hostActivity =
-        object : ExternalResource() {
-            override fun before() {
-                val app = ApplicationProvider.getApplicationContext<Application>()
-                val host = ComponentName(app.packageName, ComponentActivity::class.java.name)
-                val launcher =
-                    IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                shadowOf(app.packageManager).apply {
-                    addActivityIfNotPresent(host)
-                    addIntentFilterForActivity(host, launcher)
-                }
-            }
-        }
+    val hostActivity = composeHostActivityRule()
 
     @get:Rule(order = 1)
     val composeRule = createComposeRule()
