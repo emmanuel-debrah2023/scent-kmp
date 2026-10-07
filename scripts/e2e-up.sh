@@ -62,7 +62,7 @@ if server_up; then
 else
     mkdir -p build
     echo "e2e-up: starting the server with dev routes mounted; log in $LOG_FILE"
-    nohup ./gradlew :server:run -DSTREAM_PROVIDER=fake >"$LOG_FILE" 2>&1 &
+    nohup ./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake >"$LOG_FILE" 2>&1 &
     echo $! >"$PID_FILE"
     for _ in $(seq 1 "$SERVER_TIMEOUT_S"); do
         server_up && break
@@ -85,7 +85,7 @@ post() { # post <path> [json-body] -> prints the HTTP status
 check_seeded() { # check_seeded <what> <status> <accepted statuses...>
     local what="$1" status="$2"; shift 2
     for ok in "$@"; do [ "$status" = "$ok" ] && { echo "e2e-up: seeded $what (HTTP $status)"; return; }; done
-    [ "$status" = "404" ] && fail "dev routes aren't mounted. Restart the server with: ./gradlew :server:run -DSTREAM_PROVIDER=fake"
+    [ "$status" = "404" ] && fail "dev routes aren't mounted. Restart the server with: ./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake"
     fail "seeding $what failed with HTTP $status"
 }
 

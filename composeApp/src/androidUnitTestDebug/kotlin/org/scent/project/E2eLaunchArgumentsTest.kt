@@ -97,4 +97,24 @@ class E2eLaunchArgumentsTest {
 
         assertEquals(AppError.ValidationError.InvalidInput("e2eRoute"), result.leftOrNull())
     }
+
+    @Test
+    fun `parseE2eFakeImages enables on true ignoring case and whitespace`() {
+        assertEquals(true.asRight(), parseE2eFakeImages("true"))
+        assertEquals(true.asRight(), parseE2eFakeImages(" TRUE "))
+    }
+
+    @Test
+    fun `parseE2eFakeImages is off when absent, blank or false`() {
+        assertEquals(false.asRight(), parseE2eFakeImages(null))
+        assertEquals(false.asRight(), parseE2eFakeImages(""))
+        assertEquals(false.asRight(), parseE2eFakeImages("  "))
+        assertEquals(false.asRight(), parseE2eFakeImages("false"))
+    }
+
+    @Test
+    fun `parseE2eFakeImages rejects other values as invalid input`() {
+        assertIs<AppError.ValidationError.InvalidInput>(parseE2eFakeImages("yes").leftOrNull())
+        assertIs<AppError.ValidationError.InvalidInput>(parseE2eFakeImages("1").leftOrNull())
+    }
 }

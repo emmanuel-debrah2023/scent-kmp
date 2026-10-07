@@ -42,6 +42,8 @@ if (login.status !== 200) {
 // Optional start screen for the debug launch hook (see E2eLaunchArguments.kt for the accepted
 // routes). Blank means a normal start on Home; an unknown route also starts on Home and is logged.
 output.e2eRoute = typeof E2E_ROUTE !== 'undefined' ? E2E_ROUTE : '';
+// "true" makes Add photos return a bundled image instead of opening the system picker.
+output.e2eFakeImages = typeof E2E_FAKE_IMAGES !== 'undefined' ? E2E_FAKE_IMAGES : '';
 output.e2eEmail = email;
 output.e2ePassword = password;
 output.e2eToken = json(login.body).token;
