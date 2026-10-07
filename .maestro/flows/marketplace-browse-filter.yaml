@@ -1,0 +1,38 @@
+appId: org.scent.project
+---
+# Proves a signed-in user sees the seeded marketplace listings and can narrow them to one condition with the filter sheet.
+# Seeded listings cycle through every condition, so filtering on New leaves only NEW cards however many seed runs there have been.
+- runFlow:
+    file: ../subflows/start-authenticated.yaml
+    env:
+      E2E_ROUTE: marketplace
+- extendedWaitUntil:
+    visible: "Marketplace"
+    timeout: 15000
+- assertVisible: ".*USED condition.*sold by scent_seed_seller.*"
+
+- tapOn: "Filters"
+- extendedWaitUntil:
+    visible: "CONDITION"
+    timeout: 15000
+- assertVisible: "CONDITION"
+
+# TODO(fix/selectable-chip-toggle-semantics): the chip exposes no checked state to Android, so this
+# fails until that fix lands. It asserts the correct behaviour on purpose; keep the flow out of the suite until then.
+- tapOn: "New"
+- assertVisible:
+    text: "New"
+    checked: true
+
+- scrollUntilVisible:
+    element: "APPLY"
+    direction: DOWN
+- assertVisible: "APPLY"
+
+- tapOn: "APPLY"
+- extendedWaitUntil:
+    notVisible: "CONDITION"
+    timeout: 15000
+- assertNotVisible: "CONDITION"
+- assertVisible: ".*NEW condition.*sold by scent_seed_seller.*"
+- assertNotVisible: ".*USED condition.*"
