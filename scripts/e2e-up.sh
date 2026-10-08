@@ -117,7 +117,7 @@ start_server() {
     local gradle_pid
     mkdir -p build "$STATE_DIR"
     echo "e2e-up: starting the server with dev routes mounted; log in $LOG_FILE"
-    nohup ./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake >"$LOG_FILE" 2>&1 &
+    nohup ./gradlew :server:run -DSCENT_ENV=dev -DDEV_ROUTES=true -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake >"$LOG_FILE" 2>&1 &
     gradle_pid=$!
     for _ in $(seq 1 "$SERVER_TIMEOUT_S"); do
         server_up && break
@@ -160,7 +160,7 @@ post() { # post <path> [json-body] -> prints the HTTP status
 check_seeded() { # check_seeded <what> <status> <accepted statuses...>
     local what="$1" status="$2"; shift 2
     for ok in "$@"; do [ "$status" = "$ok" ] && { echo "e2e-up: seeded $what (HTTP $status)"; return; }; done
-    [ "$status" = "404" ] && fail "dev routes aren't mounted. Restart the server with: ./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake"
+    [ "$status" = "404" ] && fail "dev routes aren't mounted. Restart the server with: ./gradlew :server:run -DSCENT_ENV=dev -DDEV_ROUTES=true -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake"
     fail "seeding $what failed with HTTP $status"
 }
 

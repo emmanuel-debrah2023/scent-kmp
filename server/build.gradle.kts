@@ -22,10 +22,12 @@ application {
 // The application plugin's `run` task forks a new JVM — it does not inherit `-D`
 // system properties passed to the Gradle invocation itself. Forward the settings meant to be
 // passed with -D (secrets and database config come from .env instead), so for example
-// `./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake`
-// or `-DAGENT_MODEL=<id>` reaches it. A property left off this list is silently ignored.
+// `./gradlew :server:run -DSCENT_ENV=dev -DDEV_ROUTES=true -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake
+// -DASK_BACK_AGENT=fake` or `-DAGENT_MODEL=<id>` reaches it. A property left off this list is silently ignored.
 tasks.named<JavaExec>("run") {
     listOf(
+        "SCENT_ENV",
+        "DEV_ROUTES",
         "STREAM_PROVIDER",
         "IMAGE_PROVIDER",
         "ASK_BACK_AGENT",

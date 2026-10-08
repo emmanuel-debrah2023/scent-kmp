@@ -10,7 +10,7 @@ tags:
 # screen; the caller asserts the screen itself. "Home" below is the bottom-nav label, shown on every tab.
 # Pass E2E_FAKE_IMAGES: 'true' so Add photos returns a bundled image instead of opening the system picker.
 # Android only; use sign-in-through-ui.yaml where the launch-argument hook doesn't exist (iOS).
-# Requires the backend on localhost:8080 with dev routes mounted (-DSTREAM_PROVIDER=fake).
+# Requires the backend on localhost:8080 with dev routes mounted (-DSCENT_ENV=dev -DDEV_ROUTES=true).
 - launchApp:
     clearState: true
     arguments:

@@ -14,10 +14,10 @@ docker stop scent-db && docker start scent-db
 ## Env vars → run the server
 
 The server reads config through `application.conf` (HOCON) from env vars.
-Export them in the *same shell* that runs Gradle. `initDatabase()` logs a
-warning and skips DB init when `DATABASE_URL` is blank or `ci-placeholder`
-(so the server boots for route tests without a database), but any endpoint
-that hits the DB will then fail — set all four for real local work:
+Export them in the *same shell* that runs Gradle. The server refuses to start
+(`Refusing to start: ...` naming each missing key) when `JWT_SECRET` or
+`DATABASE_URL` is missing. Route tests don't need a database, as they build the
+app with `configureApp(testServerConfig())`. Set all four for real local work:
 
 ```bash
 export JWT_SECRET=dev-secret
