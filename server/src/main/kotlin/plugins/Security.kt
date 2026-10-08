@@ -1,7 +1,9 @@
 package plugins
 
 import com.auth0.jwt.JWT
+import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
+import config.JwtConfig
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -11,24 +13,42 @@ import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.response.respond
 import java.util.Date
 
-fun Application.configureSecurity() {
-    val config = environment.config
+private const val TOKEN_TTL_MS = 24 * 60 * 60 * 1000L
 
-    val jwtSecret = config.propertyOrNull("jwt.secret")?.getString() ?: System.getenv("JWT_SECRET") ?: "secret"
-    val jwtIssuer = config.propertyOrNull("jwt.issuer")?.getString() ?: "fragrances-app"
-    val jwtAudience = config.propertyOrNull("jwt.audience")?.getString() ?: "fragrances-users"
-    val jwtRealm = config.propertyOrNull("jwt.realm")?.getString() ?: "fragrances"
+/**
+ * Signs and verifies access tokens with one [Algorithm] instance, so the signer and the
+ * verifier can never disagree about the secret.
+ */
+class JwtTokenService(
+    private val config: JwtConfig,
+    private val now: () -> Long = System::currentTimeMillis,
+) {
+    private val algorithm = Algorithm.HMAC256(config.secret)
 
+    val realm: String = config.realm
+
+    val verifier: JWTVerifier =
+        JWT
+            .require(algorithm)
+            .withAudience(config.audience)
+            .withIssuer(config.issuer)
+            .build()
+
+    fun generateToken(userId: Int): String =
+        JWT
+            .create()
+            .withAudience(config.audience)
+            .withIssuer(config.issuer)
+            .withClaim("userId", userId)
+            .withExpiresAt(Date(now() + TOKEN_TTL_MS))
+            .sign(algorithm)
+}
+
+fun Application.configureSecurity(tokens: JwtTokenService) {
     install(Authentication) {
         jwt("auth-jwt") {
-            realm = jwtRealm
-            verifier(
-                JWT
-                    .require(Algorithm.HMAC256(jwtSecret))
-                    .withAudience(jwtAudience)
-                    .withIssuer(jwtIssuer)
-                    .build(),
-            )
+            realm = tokens.realm
+            verifier(tokens.verifier)
             validate { credential ->
                 if (credential.payload.getClaim("userId").asInt() != null) {
                     JWTPrincipal(credential.payload)
@@ -41,22 +61,4 @@ fun Application.configureSecurity() {
             }
         }
     }
-}
-
-fun generateToken(
-    userId: Int,
-    application: Application,
-): String {
-    val config = application.environment.config
-    val jwtSecret = config.propertyOrNull("jwt.secret")?.getString() ?: System.getenv("JWT_SECRET") ?: "secret"
-    val jwtIssuer = config.propertyOrNull("jwt.issuer")?.getString() ?: "fragrances-app"
-    val jwtAudience = config.propertyOrNull("jwt.audience")?.getString() ?: "fragrances-users"
-
-    return JWT
-        .create()
-        .withAudience(jwtAudience)
-        .withIssuer(jwtIssuer)
-        .withClaim("userId", userId)
-        .withExpiresAt(Date(System.currentTimeMillis() + 86400000)) // 24 hours
-        .sign(Algorithm.HMAC256(jwtSecret))
 }
