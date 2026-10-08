@@ -147,6 +147,7 @@ fun Route.authRoutes(tokens: JwtTokenService) {
                     return@post
                 }
 
+            // TODO(fix/oauth-audience-config): read GOOGLE_CLIENT_ID via ServerConfig; the empty audience fails open.
             val verifier =
                 GoogleIdTokenVerifier
                     .Builder(
@@ -226,6 +227,7 @@ fun Route.authRoutes(tokens: JwtTokenService) {
 
             val algorithm = Algorithm.RSA256(jwk.publicKey as RSAPublicKey, null)
 
+            // TODO(fix/oauth-audience-config): read APPLE_BUNDLE_ID via ServerConfig; an unset audience fails open.
             val verified =
                 try {
                     JWT
