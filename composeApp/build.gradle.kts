@@ -1,6 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.konan.target.HostManager
-import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -17,33 +16,6 @@ plugins {
 // which the HotSwan IDE plugin sets automatically for its own build/install runs.
 if (project.hasProperty("hotswanEnabled")) {
     apply(plugin = "com.github.skydoves.compose.hotswan.compiler")
-}
-
-val projectProperties =
-    Properties().apply {
-        val envFile = rootProject.file(".env")
-        if (envFile.exists()) {
-            envFile.inputStream().use { load(it) }
-        }
-        val localPropsFile = rootProject.file("local.properties")
-        if (localPropsFile.exists()) {
-            localPropsFile.inputStream().use { load(it) }
-        }
-    }
-
-fun requireProperty(
-    key: String,
-    buildType: String,
-    fallbackKey: String? = null,
-): String {
-    val value = projectProperties.getProperty(key) ?: (fallbackKey?.let { projectProperties.getProperty(it) })
-    if (value.isNullOrBlank()) {
-        // In CI or environments without .env, return a placeholder so configuration
-        // succeeds (lint, detekt, etc.). Actual builds requiring real values will fail
-        // at runtime, not at Gradle configuration time.
-        return "ci-placeholder"
-    }
-    return value
 }
 
 kotlin {
@@ -152,31 +124,11 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    // Never put server or database secrets in BuildConfig: it ships in the APK and
+    // decompiles trivially. The client only ever talks to the Ktor API.
     buildTypes {
-        getByName("debug") {
-            buildConfigField(
-                "String",
-                "DB_URL",
-                "\"${requireProperty("DATABASE_URL", "debug", "LOCAL_DATABASE_URL")}\"",
-            )
-            buildConfigField(
-                "String",
-                "DB_USER",
-                "\"${requireProperty("DATABASE_USER", "debug", "LOCAL_DATABASE_USER")}\"",
-            )
-            buildConfigField(
-                "String",
-                "DB_PASSWORD",
-                "\"${requireProperty("DATABASE_PASSWORD", "debug", "LOCAL_DATABASE_PASSWORD")}\"",
-            )
-            buildConfigField("Boolean", "IS_SUPABASE", "false")
-        }
         getByName("release") {
             isMinifyEnabled = false
-            buildConfigField("String", "DB_URL", "\"${requireProperty("DB_URL", "release")}\"")
-            buildConfigField("String", "DB_USER", "\"${requireProperty("DB_USER", "release")}\"")
-            buildConfigField("String", "DB_PASSWORD", "\"${requireProperty("DB_PASSWORD", "release")}\"")
-            buildConfigField("Boolean", "IS_SUPABASE", "true")
         }
     }
     compileOptions {
