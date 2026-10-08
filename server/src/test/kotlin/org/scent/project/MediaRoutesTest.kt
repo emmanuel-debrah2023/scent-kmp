@@ -129,22 +129,24 @@ class MediaRoutesTest {
 
     // ── Test provider (real sig verification, no HTTP to Cloudflare) ────────
 
-    private fun testProvider() =
+    private fun testProvider(secret: String = webhookSecret) =
         CloudflareStreamProvider(
             accountId = "unused-in-tests",
             apiToken = "unused-in-tests",
-            webhookSecret = webhookSecret,
+            webhookSecret = secret,
         )
 
-    private fun withApp(block: suspend io.ktor.server.testing.ApplicationTestBuilder.() -> Unit) =
-        testApplication {
-            application {
-                install(ContentNegotiation) { json() }
-                configureSecurity()
-                routing { mediaRoutes(testProvider(), FakeImageProvider()) }
-            }
-            block()
+    private fun withApp(
+        provider: CloudflareStreamProvider = testProvider(),
+        block: suspend io.ktor.server.testing.ApplicationTestBuilder.() -> Unit,
+    ) = testApplication {
+        application {
+            install(ContentNegotiation) { json() }
+            configureSecurity()
+            routing { mediaRoutes(provider, FakeImageProvider()) }
         }
+        block()
+    }
 
     // ── Webhook tests ───────────────────────────────────────────────────────
 
@@ -204,6 +206,25 @@ class MediaRoutesTest {
                 client.post("/api/v1/media/webhook") {
                     contentType(ContentType.Application.Json)
                     header("Cf-Webhook-Signature", signatureHeader("wrong-secret", ts, body))
+                    setBody(body)
+                }
+
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
+            assertEquals("PENDING", fetchStatus(uid))
+        }
+
+    @Test
+    fun `webhook returns 401 when no webhook secret is configured`() =
+        withApp(provider = testProvider(secret = "")) {
+            val uid = "cf-uid-nosecret"
+            seedPendingMedia(seedUser(), uid)
+
+            val body = """{"uid":"$uid","status":"ready","readyToStream":true}"""
+
+            val response =
+                client.post("/api/v1/media/webhook") {
+                    contentType(ContentType.Application.Json)
+                    header("Cf-Webhook-Signature", "time=${freshTimestamp()},sig1=00")
                     setBody(body)
                 }
 
