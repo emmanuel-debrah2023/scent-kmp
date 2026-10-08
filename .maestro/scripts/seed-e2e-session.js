@@ -28,7 +28,7 @@ var seeded = postJson('/api/v1/dev/seed-user', {
   displayName: 'Scent E2E',
 });
 if (seeded.status === 404) {
-  throw new Error('Dev routes are not mounted: the running server was started without -DSTREAM_PROVIDER=fake. Stop it, then run ' + startBackend);
+  throw new Error('Dev routes are not mounted: the running server was started without -DSCENT_ENV=dev -DDEV_ROUTES=true. Stop it, then run ' + startBackend);
 }
 if (seeded.status !== 200 && seeded.status !== 201) {
   throw new Error('seed-user failed: HTTP ' + seeded.status + ' ' + seeded.body);
