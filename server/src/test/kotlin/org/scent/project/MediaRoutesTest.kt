@@ -28,7 +28,6 @@ import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
-import plugins.configureSecurity
 import providers.CloudflareStreamProvider
 import providers.FakeImageProvider
 import routing.mediaRoutes
@@ -142,7 +141,7 @@ class MediaRoutesTest {
     ) = testApplication {
         application {
             install(ContentNegotiation) { json() }
-            configureSecurity()
+            configureTestSecurity()
             routing { mediaRoutes(provider, FakeImageProvider()) }
         }
         block()
