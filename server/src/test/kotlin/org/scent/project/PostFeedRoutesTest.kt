@@ -25,7 +25,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import plugins.configureSecurity
 import routing.postRoutes
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -57,7 +56,7 @@ class PostFeedRoutesTest {
             }
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { postRoutes() }
             }
 
