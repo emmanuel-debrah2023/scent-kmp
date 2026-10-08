@@ -20,7 +20,6 @@ import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import plugins.configureSecurity
 import routing.listingRoutes
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -38,7 +37,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -56,7 +55,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -93,7 +92,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -110,7 +109,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -141,7 +140,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -154,7 +153,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -177,7 +176,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -200,7 +199,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -233,7 +232,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -255,7 +254,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -279,7 +278,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -303,7 +302,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -327,7 +326,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -357,7 +356,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -383,7 +382,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -408,7 +407,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -434,7 +433,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -458,7 +457,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -488,7 +487,7 @@ class ListingRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 

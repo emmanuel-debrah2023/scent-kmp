@@ -26,7 +26,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import plugins.configureSecurity
 import routing.listingRoutes
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -52,7 +51,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -82,7 +81,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -104,7 +103,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -123,7 +122,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -140,7 +139,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -161,7 +160,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -181,7 +180,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -210,7 +209,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -238,7 +237,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -262,7 +261,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -286,7 +285,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -303,7 +302,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -337,7 +336,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -376,7 +375,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -414,7 +413,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -447,7 +446,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 
@@ -476,7 +475,7 @@ class ListingLifecycleRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
 

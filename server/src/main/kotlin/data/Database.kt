@@ -2,7 +2,7 @@ package data
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import io.ktor.server.config.ApplicationConfig
+import config.DatabaseConfig
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.slf4j.LoggerFactory
@@ -19,24 +19,17 @@ private val logger = LoggerFactory.getLogger("Database")
  *   - DATABASE_PASSWORD: [your-supabase-password] (Set as a secret)
  *   - JWT_SECRET: [your-secure-key] (Set as a secret)
  * - .env files are not read in production; Render injects these directly.
+ *
+ * A missing DATABASE_URL never reaches this point: [config.loadServerConfig] rejects it at startup.
  */
-fun initDatabase(config: ApplicationConfig) {
-    val dbUrl = config.propertyOrNull("database.url")?.getString()
-    val dbUser = config.propertyOrNull("database.user")?.getString() ?: "postgres"
-    val dbPassword = config.propertyOrNull("database.password")?.getString() ?: ""
-
-    if (dbUrl.isNullOrBlank() || dbUrl == "ci-placeholder") {
-        logger.warn("DATABASE_URL is missing or set to placeholder. Skipping database initialization.")
-        return
-    }
-
-    logger.info("Initializing database with URL: ${dbUrl.substringBefore("?")}")
+fun initDatabase(config: DatabaseConfig) {
+    logger.info("Initializing database with URL: ${config.url.substringBefore("?")}")
 
     val hikariConfig =
         HikariConfig().apply {
-            jdbcUrl = dbUrl
-            username = dbUser
-            password = dbPassword
+            jdbcUrl = config.url
+            username = config.user.ifEmpty { "postgres" }
+            password = config.password
             driverClassName = "org.postgresql.Driver"
 
             // Conservative pooling for Render free tier & Supabase free tier

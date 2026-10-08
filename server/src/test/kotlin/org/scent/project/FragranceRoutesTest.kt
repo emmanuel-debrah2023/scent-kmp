@@ -38,7 +38,6 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
-import plugins.configureSecurity
 import routing.fragranceRoutes
 import java.util.Date
 import kotlin.test.BeforeTest
@@ -49,7 +48,7 @@ import kotlin.test.assertTrue
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 class FragranceRoutesTest {
-    private val jwtSecret = "secret"
+    private val jwtSecret = testJwtConfig.secret
 
     private fun generateTestToken(userId: Int): String =
         JWT
@@ -70,7 +69,7 @@ class FragranceRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { fragranceRoutes() }
             }
 
@@ -89,7 +88,7 @@ class FragranceRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { fragranceRoutes() }
             }
 
@@ -113,7 +112,7 @@ class FragranceRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { fragranceRoutes() }
             }
 
@@ -139,7 +138,7 @@ class FragranceRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { fragranceRoutes() }
             }
 
@@ -161,7 +160,7 @@ class FragranceRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { fragranceRoutes() }
             }
 
@@ -177,7 +176,7 @@ class FragranceRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { fragranceRoutes() }
             }
 
@@ -194,7 +193,7 @@ class FragranceRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { fragranceRoutes() }
             }
 

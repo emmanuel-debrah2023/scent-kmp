@@ -70,7 +70,14 @@ When the server is connected, use it for all Compose UI iteration: edit →
   `server → Tasks → application → run`).
 - Postgres 15+ needs explicit `GRANT ALL ON SCHEMA public` for the app user.
 - Server config comes from `application.conf` via env vars: `JWT_SECRET`,
-  `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`.
+  `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, plus the `CLOUDFLARE_*`
+  and `SUPABASE_*` keys. `config/ServerConfig.kt` validates it at startup and the
+  server refuses to start, naming each missing key. There are no fallback secrets.
+- **`SCENT_ENV` is `prod` or `dev`; unset means `prod`.** Only `dev` allows the
+  fake providers (`STREAM_PROVIDER`/`IMAGE_PROVIDER=fake`) and `DEV_ROUTES=true`
+  (the unauthenticated `/api/v1/dev/*` routes). Never set these on Render.
+- The client holds no secrets. `BuildConfig` ships in the APK, so server and DB
+  credentials never go in it; the client only needs the API base URL.
 - **Worktrees have no `.env`** (gitignored), so `:server:run` can't find the
   database config. From the worktree root: `ln -s <main-checkout>/.env .env`.
 - **Maestro E2E** needs a running emulator (`emulator -avd Pixel_8`) and the
