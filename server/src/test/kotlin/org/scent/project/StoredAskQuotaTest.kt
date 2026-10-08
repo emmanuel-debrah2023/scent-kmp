@@ -1,9 +1,9 @@
 package org.scent.project
 
 import askback.StoredAskQuota
+import config.DatabaseConfig
 import data.initDatabase
 import data.schema.AskQuotaUsageTable
-import io.ktor.server.config.MapApplicationConfig
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
@@ -147,13 +147,7 @@ class PostgresStoredAskQuotaTest : StoredAskQuotaContract() {
 
     // Connects through the real Flyway migrations, so the table under test is the one V3 creates.
     override fun freshDatabase() {
-        initDatabase(
-            MapApplicationConfig(
-                "database.url" to postgres.jdbcUrl,
-                "database.user" to postgres.username,
-                "database.password" to postgres.password,
-            ),
-        )
+        initDatabase(DatabaseConfig(url = postgres.jdbcUrl, user = postgres.username, password = postgres.password))
         transaction { AskQuotaUsageTable.deleteAll() }
     }
 

@@ -556,7 +556,7 @@ class DevRoutesTest {
                 configureTestSecurity()
                 routing {
                     devRoutes()
-                    authRoutes()
+                    authRoutes(testJwtTokens)
                 }
             }
             seedUser(password = "First-Passw0rd")

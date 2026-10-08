@@ -1,33 +1,35 @@
 package providers
 
+import config.ImageConfig
+import config.StreamConfig
 import org.koin.dsl.module
 
 fun providerModule(
-    fakeStream: Boolean,
-    fakeImage: Boolean,
+    stream: StreamConfig,
+    image: ImageConfig,
 ) = module {
     single<StreamProvider> {
-        if (fakeStream) {
-            FakeStreamProvider()
-        } else {
-            CloudflareStreamProvider(
-                accountId = System.getProperty("CLOUDFLARE_ACCOUNT_ID") ?: "",
-                apiToken = System.getProperty("CLOUDFLARE_API_TOKEN") ?: "",
-                webhookSecret = System.getProperty("CLOUDFLARE_WEBHOOK_SECRET") ?: "",
-            )
+        when (stream) {
+            StreamConfig.Fake -> FakeStreamProvider()
+            is StreamConfig.Cloudflare ->
+                CloudflareStreamProvider(
+                    accountId = stream.accountId,
+                    apiToken = stream.apiToken,
+                    webhookSecret = stream.webhookSecret,
+                )
         }
     }
     single<ImageProvider> {
-        if (fakeImage) {
-            FakeImageProvider()
-        } else {
-            SupabaseStorageProvider(
-                projectUrl = System.getProperty("SUPABASE_URL") ?: "",
-                serviceRoleKey = System.getProperty("SUPABASE_SERVICE_ROLE_KEY") ?: "",
-                bucket = System.getProperty("SUPABASE_STORAGE_BUCKET") ?: "listing-photos",
-            )
+        when (image) {
+            ImageConfig.Fake -> FakeImageProvider()
+            is ImageConfig.Supabase ->
+                SupabaseStorageProvider(
+                    projectUrl = image.url,
+                    serviceRoleKey = image.serviceRoleKey,
+                    bucket = image.bucket,
+                )
         }
     }
     // Bound only under fake image config, so its presence is what mounts the fake image routes.
-    if (fakeImage) single { FakeImageStore() }
+    if (image is ImageConfig.Fake) single { FakeImageStore() }
 }

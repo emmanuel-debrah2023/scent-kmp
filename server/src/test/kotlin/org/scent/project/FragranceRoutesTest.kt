@@ -50,7 +50,7 @@ import kotlin.test.assertTrue
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 class FragranceRoutesTest {
-    private val jwtSecret = "secret"
+    private val jwtSecret = testJwtConfig.secret
 
     private fun generateTestToken(userId: Int): String =
         JWT

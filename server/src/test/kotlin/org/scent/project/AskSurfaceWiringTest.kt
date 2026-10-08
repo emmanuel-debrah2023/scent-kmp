@@ -7,11 +7,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class AskSurfaceWiringTest {
-    // Boots the real module(): an unsigned request must hit the auth wall (401), not a missing route (404).
+    // Boots the real app wiring: an unsigned request must hit the auth wall (401), not a missing route (404).
     @Test
     fun `the real application mounts both ask routes behind sign in`() =
         testApplication {
-            application { module() }
+            application { configureApp(testServerConfig()) }
 
             assertEquals(HttpStatusCode.Unauthorized, client.post("/api/v1/surfaces/ask").status)
             assertEquals(HttpStatusCode.Unauthorized, client.post("/api/v1/surfaces/ask/actions").status)
