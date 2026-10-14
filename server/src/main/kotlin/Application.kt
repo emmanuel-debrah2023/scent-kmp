@@ -86,6 +86,11 @@ fun Application.module() {
             )
         }
 
+    // TODO(chore/server-dependency-injection): preferences.NotesOverlapCandidateSource is
+    //  not constructed anywhere yet. The "Ask surface routes" ticket should build it here as a
+    //  ListingCandidateSource in one line, so a later semantic-search source swaps in without
+    //  touching the agent or routes. Safe to defer: nothing calls it until those routes exist.
+    //  Replace with a Koin binding once the server has DI.
     routing {
         get("/") {
             call.respondText("Scent API is running")
