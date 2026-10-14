@@ -82,17 +82,10 @@ internal suspend fun applyWebhookUpdate(payload: WebhookPayload) {
 /**
  * @param streamProvider App-owned provider abstraction; real vs fake selected externally.
  * @param imageProvider Sibling abstraction for listing photos — see [ImageProvider].
- * @param fakeMode When true, registers a dev-only POST /fake-upload route that simulates
- *   the video provider completing an upload. Guarded so it is never registered in production.
- * @param fakeImageStore Non-null only under IMAGE_PROVIDER=fake: registers the dev-only PUT
- *   /fake-image-upload that keeps uploaded bytes in the store, and GET /fake-images/{path...}
- *   that serves them back. Never registered in production.
  */
 fun Route.mediaRoutes(
     streamProvider: StreamProvider,
     imageProvider: ImageProvider,
-    fakeMode: Boolean = false,
-    fakeImageStore: FakeImageStore? = null,
 ) {
     route("/api/v1/media") {
         authenticate("auth-jwt") {
@@ -101,10 +94,25 @@ fun Route.mediaRoutes(
             completeUploadRoute()
         }
         webhookRoute(streamProvider)
-        if (fakeMode) fakeUploadRoute()
-        fakeImageStore?.let { fakeImageUploadRoute(it) }
     }
-    fakeImageStore?.let { fakeImageServeRoute(it) }
+}
+
+/**
+ * Dev-only POST /api/v1/media/fake-upload, which simulates the video provider completing an
+ * upload. Mounted only under STREAM_PROVIDER=fake, never in production.
+ */
+fun Route.fakeStreamRoutes() {
+    route("/api/v1/media") { fakeUploadRoute() }
+}
+
+/**
+ * Dev-only image routes: PUT /api/v1/media/fake-image-upload keeps uploaded bytes in [store],
+ * and GET /fake-images/{path...} serves them back. Mounted only under IMAGE_PROVIDER=fake,
+ * never in production.
+ */
+fun Route.fakeImageRoutes(store: FakeImageStore) {
+    route("/api/v1/media") { fakeImageUploadRoute(store) }
+    fakeImageServeRoute(store)
 }
 
 private fun Route.uploadUrlRoute(streamProvider: StreamProvider) {

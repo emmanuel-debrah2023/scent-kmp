@@ -3,10 +3,12 @@ package org.scent.project
 import io.ktor.server.testing.testApplication
 import org.koin.core.context.GlobalContext
 import org.koin.ktor.ext.get
+import org.koin.ktor.ext.getKoin
 import preferences.ListingCandidateSource
 import preferences.NotesOverlapCandidateSource
 import providers.CloudflareStreamProvider
 import providers.FakeImageProvider
+import providers.FakeImageStore
 import providers.FakeStreamProvider
 import providers.ImageProvider
 import providers.StreamProvider
@@ -22,6 +24,7 @@ class KoinWiringTest {
         val stream: StreamProvider,
         val image: ImageProvider,
         val candidates: ListingCandidateSource,
+        val fakeImageStore: FakeImageStore?,
     )
 
     private fun boot(
@@ -36,7 +39,7 @@ class KoinWiringTest {
             testApplication {
                 application {
                     module()
-                    bound = Bound(get(), get(), get())
+                    bound = Bound(get(), get(), get(), getKoin().getOrNull())
                 }
                 startApplication()
             }
@@ -80,6 +83,13 @@ class KoinWiringTest {
 
         assertIs<CloudflareStreamProvider>(bound.stream)
         assertIs<FakeImageProvider>(bound.image)
+    }
+
+    @Test
+    fun `the fake image store is bound only under the fake image provider`() {
+        assertNull(boot(stream = null, image = null).fakeImageStore)
+        assertNull(boot(stream = "fake", image = null).fakeImageStore)
+        assertIs<FakeImageStore>(boot(stream = null, image = "fake").fakeImageStore)
     }
 
     @Test
