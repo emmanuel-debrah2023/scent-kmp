@@ -10,12 +10,14 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import org.koin.ktor.ext.get
+import org.koin.ktor.plugin.KoinIsolated
 import plugins.configureSecurity
-import providers.CloudflareStreamProvider
-import providers.FakeImageProvider
+import preferences.preferenceModule
 import providers.FakeImageStore
-import providers.FakeStreamProvider
-import providers.SupabaseStorageProvider
+import providers.ImageProvider
+import providers.StreamProvider
+import providers.providerModule
 import routing.authRoutes
 import routing.devRoutes
 import routing.fragranceRoutes
@@ -63,34 +65,17 @@ fun Application.module() {
     configureSecurity()
 
     val fakeMode = System.getProperty("STREAM_PROVIDER") == "fake"
-    val streamProvider =
-        if (fakeMode) {
-            FakeStreamProvider()
-        } else {
-            CloudflareStreamProvider(
-                accountId = System.getProperty("CLOUDFLARE_ACCOUNT_ID") ?: "",
-                apiToken = System.getProperty("CLOUDFLARE_API_TOKEN") ?: "",
-                webhookSecret = System.getProperty("CLOUDFLARE_WEBHOOK_SECRET") ?: "",
-            )
-        }
-
     val fakeImageMode = System.getProperty("IMAGE_PROVIDER") == "fake"
-    val imageProvider =
-        if (fakeImageMode) {
-            FakeImageProvider()
-        } else {
-            SupabaseStorageProvider(
-                projectUrl = System.getProperty("SUPABASE_URL") ?: "",
-                serviceRoleKey = System.getProperty("SUPABASE_SERVICE_ROLE_KEY") ?: "",
-                bucket = System.getProperty("SUPABASE_STORAGE_BUCKET") ?: "listing-photos",
-            )
-        }
 
-    // TODO(chore/server-dependency-injection): preferences.NotesOverlapCandidateSource is
-    //  not constructed anywhere yet. The "Ask surface routes" ticket should build it here as a
-    //  ListingCandidateSource in one line, so a later semantic-search source swaps in without
-    //  touching the agent or routes. Safe to defer: nothing calls it until those routes exist.
-    //  Replace with a Koin binding once the server has DI.
+    // KoinIsolated keeps the container on this Application, not in Koin's global context, so
+    // booting module() repeatedly in one JVM (tests) never shares or leaks bindings.
+    install(KoinIsolated) {
+        modules(preferenceModule, providerModule(fakeStream = fakeMode, fakeImage = fakeImageMode))
+    }
+    // Resolved here, at the composition root, so a missing binding fails at boot.
+    val streamProvider: StreamProvider = get()
+    val imageProvider: ImageProvider = get()
+
     routing {
         get("/") {
             call.respondText("Scent API is running")
