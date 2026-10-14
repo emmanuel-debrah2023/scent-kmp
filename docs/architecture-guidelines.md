@@ -2414,6 +2414,48 @@ class HomeViewModelTest {
 }
 ```
 
+### 5. Server Dependency Injection (Ktor)
+
+The server (`server/`) uses `io.insert-koin:koin-ktor`, on the same `koin` version as
+the clients. Sources: the Koin Ktor reference
+(insert-koin.io/docs/reference/koin-ktor/ktor) and the Ktor testing guide
+(ktor.io/docs/server-testing.html).
+
+```kotlin
+fun Application.module() {
+    install(KoinIsolated) {
+        modules(preferenceModule, providerModule(fakeStream = fakeMode, fakeImage = fakeImageMode))
+    }
+    val streamProvider: StreamProvider = get() // org.koin.ktor.ext.get, resolved at boot
+    routing { mediaRoutes(streamProvider, ...) }
+}
+```
+
+- **`Application.module()` is the composition root.** It is the only place that
+  resolves with `get()`. Route functions and classes take their dependencies as
+  parameters, exactly like the constructor-injection rule above. Resolving inside
+  a route would be service location, and would break route tests that pass fakes
+  directly.
+- **`KoinIsolated`, not `install(Koin)`.** Koin's docs make `install(Koin)` the
+  default; it starts Koin in the global context, and `KoinIsolated` is documented
+  for keeping Koin out of it. Scent chooses isolated on purpose: `testApplication`
+  boots `module()` many times in one JVM, and a global context is shared state that
+  outlives each application.
+- **One module per package, bound to the interface.**
+  `single<ListingCandidateSource> { NotesOverlapCandidateSource() }` in
+  `preferenceModule`; a configuration-dependent choice (fake vs real) is made
+  inside the module from the arguments the composition root passes in.
+- **Resolve eagerly.** Use `get()`, not `by inject()`, in `module()`, so a missing
+  binding fails at boot, not on the first request.
+- **Test wiring by booting the real module.** Use `testApplication { application { module() } }`
+  (Ktor's documented way to load modules) and resolve the bindings. Assert the
+  implementation type per configuration, and assert `GlobalContext.getOrNull()` is
+  null afterwards. See `KoinWiringTest`. `startKoin`/`stopKoin` with `KoinTest`
+  (section 4) is the client pattern, not the server one.
+- **Future:** Ktor 3.4 adds a built-in DI plugin (`ktor-server-di`), and Koin offers
+  a bridge to it. The server is on Ktor 3.3.x, so Koin stays until an ADR says
+  otherwise.
+
 ---
 
 ## Unit Testing Best Practices
