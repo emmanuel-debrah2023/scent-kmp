@@ -41,6 +41,9 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json.server)
 
+    // Dependency injection
+    implementation(libs.koin.ktor)
+
     // Database
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
