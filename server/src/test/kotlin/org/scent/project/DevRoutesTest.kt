@@ -1,6 +1,7 @@
 package org.scent.project
 
 import data.schema.FragranceMediaTable
+import data.schema.FragranceNotesTable
 import data.schema.FragrancesTable
 import data.schema.ListingMediaTable
 import data.schema.ListingsTable
@@ -42,6 +43,7 @@ import routing.SeedResponse
 import routing.SeedUserResponse
 import routing.authRoutes
 import routing.devRoutes
+import routing.seedFragrances
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -67,6 +69,7 @@ class DevRoutesTest {
                 PostHashtagsTable,
                 PostMediaTable,
                 FragrancesTable,
+                FragranceNotesTable,
                 ListingsTable,
                 MediaItemsTable,
                 ListingMediaTable,
@@ -274,6 +277,20 @@ class DevRoutesTest {
             assertTrue(body.userId > 0)
             assertEquals(5L, listingCount())
             assertEquals(5L, fragranceCount())
+        }
+
+    @Test
+    fun `seed-listings stores each seeded fragrance's notes`() =
+        withApp {
+            client.post("/api/v1/dev/seed-listings?count=${seedFragrances.size}")
+
+            val storedNotes =
+                transaction {
+                    FragranceNotesTable
+                        .selectAll()
+                        .count()
+                }
+            assertEquals(seedFragrances.sumOf { it.notes.all.size }.toLong(), storedNotes)
         }
 
     @Test

@@ -3,6 +3,7 @@ package routing
 import data.dbQuery
 import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
+import data.schema.FragranceNotesTable
 import data.schema.FragrancesTable
 import data.schema.ListingMediaTable
 import data.schema.ListingsTable
@@ -233,24 +234,6 @@ private suspend fun insertSeedVideoPost(
     }
 }
 
-private data class SeedFragrance(
-    val name: String,
-    val brand: String,
-    val price: Double,
-)
-
-private val seedFragrances =
-    listOf(
-        SeedFragrance("Aventus", "Creed", 285.0),
-        SeedFragrance("Santal 33", "Le Labo", 180.0),
-        SeedFragrance("Baccarat Rouge 540", "Maison Francis Kurkdjian", 325.0),
-        SeedFragrance("Sauvage", "Dior", 95.0),
-        SeedFragrance("Black Orchid", "Tom Ford", 140.0),
-        SeedFragrance("Bleu de Chanel", "Chanel", 110.0),
-        SeedFragrance("Oud Wood", "Tom Ford", 250.0),
-        SeedFragrance("Light Blue", "Dolce & Gabbana", 70.0),
-    )
-
 private suspend fun insertSeedListings(
     sellerId: Int,
     count: Int,
@@ -272,6 +255,12 @@ private suspend fun insertSeedListings(
                         it[FragrancesTable.condition] = condition
                         it[createdAt] = now
                     }.value
+
+            FragranceNotesTable.batchInsert(seed.notes.typed()) { (note, type) ->
+                this[FragranceNotesTable.fragranceId] = fragranceId
+                this[FragranceNotesTable.note] = note
+                this[FragranceNotesTable.noteType] = type
+            }
 
             ListingsTable.insertAndGetId {
                 it[ListingsTable.sellerId] = sellerId
