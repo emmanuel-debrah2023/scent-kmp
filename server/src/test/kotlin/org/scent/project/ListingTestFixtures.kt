@@ -27,7 +27,7 @@ import java.util.Date
  * so that file — and the newer lifecycle test file alongside it — each stay under
  * detekt's LargeClass threshold without duplicating fixture code.
  */
-internal const val LISTING_TEST_JWT_SECRET = "secret"
+internal val LISTING_TEST_JWT_SECRET = testJwtConfig.secret
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 internal fun generateTestToken(

@@ -428,3 +428,17 @@ DATABASE_PASSWORD = your-supabase-password
 GOOGLE_CLIENT_ID  = your-web-client-id.apps.googleusercontent.com   # Phase 2
 APPLE_BUNDLE_ID   = com.yourcompany.scentapp                         # Phase 3
 ```
+
+The server validates its configuration at startup (`config/ServerConfig.kt`) and refuses
+to start, logging `Refusing to start: <keys> is required`, rather than falling back to a
+default. There is no default `JWT_SECRET`. In prod mode (`SCENT_ENV` unset or `prod`) these
+must also be set, because the real stream and image providers need them:
+
+```
+CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_WEBHOOK_SECRET
+SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+```
+
+`STREAM_PROVIDER`, `IMAGE_PROVIDER`, `DEV_ROUTES` and `SCENT_ENV=dev` must **not** be set on
+Render: they are dev-only, and the server refuses to start in prod mode if a fake provider
+or `DEV_ROUTES` is set.

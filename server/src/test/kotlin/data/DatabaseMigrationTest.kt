@@ -1,6 +1,6 @@
 package data
 
-import io.ktor.server.config.MapApplicationConfig
+import config.DatabaseConfig
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.AfterClass
 import org.junit.Assume.assumeTrue
@@ -55,10 +55,10 @@ class DatabaseMigrationTest {
     }
 
     private fun testConfig() =
-        MapApplicationConfig(
-            "database.url" to postgres.jdbcUrl,
-            "database.user" to postgres.username,
-            "database.password" to postgres.password,
+        DatabaseConfig(
+            url = postgres.jdbcUrl,
+            user = postgres.username,
+            password = postgres.password,
         )
 
     @Test

@@ -33,12 +33,12 @@ import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.LoginRequest
 import org.scent.project.data.remote.dto.MeResponse
 import org.scent.project.data.remote.dto.RegisterRequest
-import plugins.generateToken
+import plugins.JwtTokenService
 import java.net.URL
 import java.security.interfaces.RSAPublicKey
 import java.util.UUID
 
-fun Route.authRoutes() {
+fun Route.authRoutes(tokens: JwtTokenService) {
     route("/api/v1/auth") {
         post("/register") {
             val request =
@@ -89,7 +89,7 @@ fun Route.authRoutes() {
                         }.value
                 }
 
-            val token = generateToken(userId, call.application)
+            val token = tokens.generateToken(userId)
             call.respond(
                 HttpStatusCode.Created,
                 AuthResponse(token, userId, request.username, request.email, request.displayName),
@@ -134,7 +134,7 @@ fun Route.authRoutes() {
                 return@post
             }
 
-            val token = generateToken(user.id, call.application)
+            val token = tokens.generateToken(user.id)
             call.respond(HttpStatusCode.OK, AuthResponse(token, user.id, user.username, user.email, user.displayName))
         }
 
@@ -147,6 +147,7 @@ fun Route.authRoutes() {
                     return@post
                 }
 
+            // TODO(fix/oauth-audience-config): read GOOGLE_CLIENT_ID via ServerConfig; the empty audience fails open.
             val verifier =
                 GoogleIdTokenVerifier
                     .Builder(
@@ -193,7 +194,7 @@ fun Route.authRoutes() {
                         .map { it[UsersTable.username] }
                         .singleOrNull() ?: email.substringBefore("@")
                 }
-            val token = generateToken(userId, call.application)
+            val token = tokens.generateToken(userId)
             call.respond(HttpStatusCode.OK, AuthResponse(token, userId, username, email, name))
         }
 
@@ -226,6 +227,7 @@ fun Route.authRoutes() {
 
             val algorithm = Algorithm.RSA256(jwk.publicKey as RSAPublicKey, null)
 
+            // TODO(fix/oauth-audience-config): read APPLE_BUNDLE_ID via ServerConfig; an unset audience fails open.
             val verified =
                 try {
                     JWT
@@ -268,7 +270,7 @@ fun Route.authRoutes() {
                         .map { it[UsersTable.username] }
                         .singleOrNull() ?: "apple_${appleId.take(10)}"
                 }
-            val token = generateToken(userId, call.application)
+            val token = tokens.generateToken(userId)
             call.respond(HttpStatusCode.OK, AuthResponse(token, userId, appleUsername, email ?: "", givenName))
         }
 

@@ -20,12 +20,13 @@ application {
 }
 
 // The application plugin's `run` task forks a new JVM — it does not inherit `-D`
-// system properties passed to the Gradle invocation itself. Forward STREAM_PROVIDER
-// and IMAGE_PROVIDER explicitly so `./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake`
-// reaches Application.kt.
+// system properties passed to the Gradle invocation itself. Forward the dev-mode flags
+// explicitly so `./gradlew :server:run -DSCENT_ENV=dev -DDEV_ROUTES=true -DSTREAM_PROVIDER=fake
+// -DIMAGE_PROVIDER=fake` reaches Application.kt.
 tasks.named<JavaExec>("run") {
-    System.getProperty("STREAM_PROVIDER")?.let { systemProperty("STREAM_PROVIDER", it) }
-    System.getProperty("IMAGE_PROVIDER")?.let { systemProperty("IMAGE_PROVIDER", it) }
+    listOf("SCENT_ENV", "DEV_ROUTES", "STREAM_PROVIDER", "IMAGE_PROVIDER").forEach { key ->
+        System.getProperty(key)?.let { systemProperty(key, it) }
+    }
 }
 
 dependencies {

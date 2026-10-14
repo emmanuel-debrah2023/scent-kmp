@@ -59,22 +59,22 @@ uses the built-in `client` — no `module()`, no `MapApplicationConfig`:
 testApplication {
     application {
         install(ContentNegotiation) { json() }
-        configureSecurity()           // plugins.configureSecurity — defaults to secret "secret"
+        configureTestSecurity()       // installs JWT auth with testJwtConfig (ServerTestFixtures.kt)
         routing { listingRoutes() }   // just the group under test
     }
 
     val owner = seedUser("alice")
-    val token = generateTestToken(owner)   // HMAC256("secret"), issuer/audience match configureSecurity's defaults
+    val token = generateTestToken(owner)   // HMAC256(testJwtConfig.secret), issuer/audience match testJwtConfig
 
     val res = client.get("/api/v1/listings/$id") { bearerAuth(token) }
     assertEquals(HttpStatusCode.OK, res.status)
 }
 ```
 
-Only reach for `environment { config = MapApplicationConfig("jwt.secret" to ...) }`
-if a test needs a *non-default* secret/issuer (e.g. asserting a mis-signed token
-is rejected) — `configureSecurity()` reads `jwt.*` config when present and only
-falls back to `"secret"` when it's absent.
+To test the real wiring, build the app from a typed config with
+`application { configureApp(testServerConfig(...)) }` (no database needed), or boot
+`module()` with `environment { config = MapApplicationConfig(...) }` to assert startup
+aborts on missing keys (see `StartupConfigTest`). There is no fallback secret.
 
 ## Minting test tokens
 
@@ -84,7 +84,7 @@ Match `ListingTestFixtures.generateTestToken` — same lib the server verifies w
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 
-internal fun generateTestToken(userId: Int, secret: String = "secret"): String =
+internal fun generateTestToken(userId: Int, secret: String = LISTING_TEST_JWT_SECRET): String =
     JWT.create()
         .withAudience("fragrances-users")
         .withIssuer("fragrances-app")

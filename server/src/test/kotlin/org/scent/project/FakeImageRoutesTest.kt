@@ -33,7 +33,6 @@ import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
-import plugins.configureSecurity
 import providers.CloudflareStreamProvider
 import providers.FakeImageProvider
 import providers.FakeImageStore
@@ -79,7 +78,7 @@ class FakeImageRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing {
                     mediaRoutes(
                         CloudflareStreamProvider("unused", "unused", "unused"),

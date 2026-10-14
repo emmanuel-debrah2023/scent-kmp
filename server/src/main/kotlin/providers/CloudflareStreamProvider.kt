@@ -47,7 +47,7 @@ class CloudflareStreamProvider(
         body: String,
         signatureHeader: String,
     ): Boolean {
-        if (webhookSecret.isBlank()) return true
+        if (webhookSecret.isBlank()) return false
         val (timestamp, receivedHex) = parseSignatureHeader(signatureHeader) ?: return false
         val computed = computeHmac(timestamp, body)
         val received = decodeHex(receivedHex) ?: return false
