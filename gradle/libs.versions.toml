@@ -1,5 +1,5 @@
 [versions]
-agp = "8.9.1"
+agp = "8.10.1"
 android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
@@ -11,7 +11,7 @@ androidx-lifecycle = "2.9.6"
 androidx-testExt = "1.3.0"
 composeMultiplatform = "1.10.2"
 junit = "4.13.2"
-kotlin = "2.2.0"
+kotlin = "2.3.21"
 turbine = "1.2.0"
 mockk = "1.13.17"
 ktlint-plugin = "12.1.2"
@@ -28,7 +28,7 @@ sqlite = "2.6.2"
 # Last KSP on the <kotlin>-<ksp> scheme. Deliberately not the newest: KSP moved
 # to plain semver at 2.3.0, and that line needs AGP >= 8.10.0 while this project
 # is on 8.9.1. Upgrading AGP unblocks it — see chore/agp-ksp-alignment.
-ksp = "2.2.21-2.0.5"
+ksp = "2.3.11"
 koin = "4.1.1"
 coil = "3.3.0"
 postgresql = "42.7.3"
