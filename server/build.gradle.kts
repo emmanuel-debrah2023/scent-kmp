@@ -86,3 +86,13 @@ tasks.withType<Tar> {
 tasks.withType<Zip> {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+// Opt-in live OpenRouter check (see docs/ai-agents.md). Off by default so allTests never hits the network.
+val liveSmoke = providers.gradleProperty("liveSmoke").isPresent
+
+tasks.withType<Test> {
+    if (liveSmoke) {
+        systemProperty("scent.liveSmoke", "true")
+        outputs.upToDateWhen { false }
+    }
+}
