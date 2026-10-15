@@ -4,6 +4,10 @@ import agent.AgentLlm
 import agent.AgentProvider
 import ai.koog.prompt.executor.clients.openrouter.OpenRouterLLMClient
 import ai.koog.prompt.executor.ollama.client.OllamaClient
+import askback.AskBackAgent
+import askback.FakeAskBackAgent
+import askback.FallbackAskBackAgent
+import askback.RulesAskBackAgent
 import io.ktor.server.testing.testApplication
 import org.koin.core.context.GlobalContext
 import org.koin.ktor.ext.get
@@ -31,6 +35,7 @@ class KoinWiringTest {
         val candidates: ListingCandidateSource,
         val fakeImageStore: FakeImageStore?,
         val agent: AgentLlm,
+        val askBack: AskBackAgent,
     )
 
     private fun boot(
@@ -38,18 +43,20 @@ class KoinWiringTest {
         image: String?,
         openRouterKey: String? = null,
         ollamaUrl: String? = null,
+        askBackMode: String? = null,
     ): Bound {
         val previous = KEYS.associateWith { System.getProperty(it) }
         setOrClear(STREAM_PROVIDER, stream)
         setOrClear(IMAGE_PROVIDER, image)
         setOrClear(OPENROUTER_API_KEY, openRouterKey)
         setOrClear(OLLAMA_BASE_URL, ollamaUrl)
+        setOrClear(ASK_BACK_AGENT, askBackMode)
         try {
             var bound: Bound? = null
             testApplication {
                 application {
                     module()
-                    bound = Bound(get(), get(), get(), getKoin().getOrNull(), get())
+                    bound = Bound(get(), get(), get(), getKoin().getOrNull(), get(), get())
                 }
                 startApplication()
             }
@@ -141,6 +148,22 @@ class KoinWiringTest {
     }
 
     @Test
+    fun `by default the ask back agent is the model with the rules agent behind it`() {
+        assertIs<FallbackAskBackAgent>(boot(stream = null, image = null).askBack)
+    }
+
+    @Test
+    fun `the rules mode binds the rules agent and the fake mode binds the fake`() {
+        assertIs<RulesAskBackAgent>(boot(stream = null, image = null, askBackMode = "rules").askBack)
+        assertIs<FakeAskBackAgent>(boot(stream = null, image = null, askBackMode = " FAKE ").askBack)
+    }
+
+    @Test
+    fun `an unknown ask back mode falls back to the default`() {
+        assertIs<FallbackAskBackAgent>(boot(stream = null, image = null, askBackMode = "banana").askBack)
+    }
+
+    @Test
     fun `booting again in the same JVM picks up the new config`() {
         assertIs<FakeStreamProvider>(boot(stream = "fake", image = null).stream)
         assertIs<CloudflareStreamProvider>(boot(stream = null, image = null).stream)
@@ -158,6 +181,7 @@ class KoinWiringTest {
         const val IMAGE_PROVIDER = "IMAGE_PROVIDER"
         const val OPENROUTER_API_KEY = "OPENROUTER_API_KEY"
         const val OLLAMA_BASE_URL = "OLLAMA_BASE_URL"
-        val KEYS = listOf(STREAM_PROVIDER, IMAGE_PROVIDER, OPENROUTER_API_KEY, OLLAMA_BASE_URL)
+        const val ASK_BACK_AGENT = "ASK_BACK_AGENT"
+        val KEYS = listOf(STREAM_PROVIDER, IMAGE_PROVIDER, OPENROUTER_API_KEY, OLLAMA_BASE_URL, ASK_BACK_AGENT)
     }
 }

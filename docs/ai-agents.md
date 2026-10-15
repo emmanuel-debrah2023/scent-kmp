@@ -62,6 +62,34 @@ and go. For a model you chose, a 429 or a "only available on agentic harnesses" 
 skipped with the reason, not as a pass. Anything else fails: a bad key, network errors, an empty reply,
 or any error on the default model.
 
+## Ask-back agent
+
+`AskBackAgent` (`server/.../askback`) turns a shopper's free text into preferences, picks which
+questions to ask and writes the heading, button label and one 'why' line per result. Kotlin builds
+every option and price; the model only chooses and words. The route that serves it is
+`feature/ask-surface-routes`.
+
+| Environment variable | Effect |
+|---|---|
+| `ASK_BACK_AGENT=fake` | Canned gift answer, no model. For E2E. |
+| `ASK_BACK_AGENT=rules` | No model: asks every missing question, why lines from the fragrance's own notes. |
+| unset (default) | The model, with the rules agent behind it (`FallbackAskBackAgent`). |
+| `AGENT_MODEL` | Model id. Default `nvidia/nemotron-3-super-120b-a12b:free` (OpenRouter) or `llama3.2` (Ollama). |
+
+- The reply is untrusted. `AskBackValidator` is the safety boundary: enums, a budget that appears as a
+  number in the query, question ids from the planner, no digits, £ or links in any model-written text,
+  and why lines may only name notes the fragrance has. A broken rule triggers one retry, then rules.
+- Provider failures (429, 403, timeout, not configured) come back as `AppError.AgentError`, never
+  thrown, are never retried, and fall back to the rules answer. Only the error type and status are
+  logged, never the query or the provider's body.
+- Koog logs full prompts at DEBUG, so `logback.xml` pins `ai.koog` to INFO.
+- Eval: `./gradlew :server:test -PliveSmoke --tests '*AskBackEvalLiveTest'` (key in the environment)
+  runs 22 prompts, paced at 3.5 s, and writes `server/build/eval/ask-back.csv`. A free account allows
+  about 50 requests a day. A recorded run is in `docs/evals/ask-back.csv`: 22 of 22 answered and valid
+  first try, 19 of 22 matching the expected preferences, median latency about 10 s (max 16 s) on
+  `nvidia/nemotron-3-super-120b-a12b:free`. A free model will not meet a 3 s route budget, so the
+  route's timeout and rules fallback matter more than the model's accuracy.
+
 ## Privacy and limits
 
 Free models can log or train on prompts, and free tiers are rate limited. Do not send personal data

@@ -2,6 +2,8 @@ package org.scent.project
 
 import agent.AgentLlm
 import agent.agentModule
+import askback.AskBackAgent
+import askback.askBackModule
 import data.initDatabase
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.serialization.kotlinx.json.json
@@ -83,6 +85,10 @@ fun Application.module() {
                 openRouterApiKey = System.getProperty("OPENROUTER_API_KEY"),
                 ollamaBaseUrl = System.getProperty("OLLAMA_BASE_URL"),
             ),
+            askBackModule(
+                mode = System.getProperty("ASK_BACK_AGENT"),
+                modelOverride = System.getProperty("AGENT_MODEL"),
+            ),
         )
     }
     // Resolved here, at the composition root, so a missing binding fails at boot.
@@ -90,6 +96,8 @@ fun Application.module() {
     val imageProvider: ImageProvider = get()
     val fakeImageStore: FakeImageStore? = getKoin().getOrNull()
     val agentLlm: AgentLlm = get()
+    // TODO(feature/ask-surface-routes): hand this to the ask route; resolving it now fails boot on a bad binding.
+    get<AskBackAgent>()
 
     routing {
         get("/") {

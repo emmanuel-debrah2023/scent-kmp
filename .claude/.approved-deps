@@ -14,6 +14,7 @@ io.insert-koin:koin-ktor
 io.nlopez.compose.rules:detekt
 org.flywaydb:flyway-core
 org.flywaydb:flyway-database-postgresql
+org.jetbrains.kotlinx:kotlinx-coroutines-test
 org.robolectric:robolectric
 org.testcontainers:postgresql
 org.testcontainers:testcontainers

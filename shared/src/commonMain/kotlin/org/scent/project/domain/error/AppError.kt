@@ -157,6 +157,37 @@ sealed class AppError {
         ) : StorageError()
     }
 
+    /** The ask-back assistant could not answer. Every case is expected, never thrown. */
+    sealed class AgentError : AppError() {
+        data class NotConfigured(
+            override val message: String = "The assistant is not configured",
+            override val cause: Throwable? = null,
+        ) : AgentError()
+
+        data class RateLimited(
+            override val message: String = "The assistant is busy. Try again shortly",
+            override val cause: Throwable? = null,
+        ) : AgentError()
+
+        data class Unavailable(
+            val statusCode: Int? = null,
+            override val message: String = "The assistant is unavailable (Code: $statusCode)",
+            override val cause: Throwable? = null,
+        ) : AgentError()
+
+        data class TimedOut(
+            override val message: String = "The assistant took too long to answer",
+            override val cause: Throwable? = null,
+        ) : AgentError()
+
+        /** The model replied, but the reply broke a rule; [reason] names the rule, never the reply. */
+        data class InvalidOutput(
+            val reason: String,
+            override val message: String = "The assistant's answer was rejected: $reason",
+            override val cause: Throwable? = null,
+        ) : AgentError()
+    }
+
     data class Unknown(
         override val message: String = "An unexpected error occurred",
         override val cause: Throwable? = null,
