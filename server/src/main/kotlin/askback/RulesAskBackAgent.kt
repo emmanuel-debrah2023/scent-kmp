@@ -9,7 +9,7 @@ import preferences.ScentPreferences
 
 const val RULES_HEADING = "A few quick questions"
 const val RULES_BUTTON = "Show picks"
-private const val GENERIC_WHY = "A good match for what you asked for"
+const val GENERIC_WHY = "A good match for what you asked for"
 private const val NOTES_PER_LINE = 2
 
 /**
