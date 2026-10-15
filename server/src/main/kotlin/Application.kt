@@ -18,12 +18,14 @@ import org.koin.ktor.ext.get
 import org.koin.ktor.ext.getKoin
 import org.koin.ktor.plugin.KoinIsolated
 import plugins.configureSecurity
+import preferences.ListingCandidateSource
 import preferences.preferenceModule
 import providers.FakeImageStore
 import providers.ImageProvider
 import providers.StreamProvider
 import providers.providerModule
 import routing.agentRoutes
+import routing.askSurfaceRoutes
 import routing.authRoutes
 import routing.devRoutes
 import routing.fakeImageRoutes
@@ -88,6 +90,7 @@ fun Application.module() {
             askBackModule(
                 mode = System.getProperty("ASK_BACK_AGENT"),
                 modelOverride = System.getProperty("AGENT_MODEL"),
+                budgetMillis = System.getProperty("ASK_BACK_BUDGET_MS"),
             ),
         )
     }
@@ -96,14 +99,15 @@ fun Application.module() {
     val imageProvider: ImageProvider = get()
     val fakeImageStore: FakeImageStore? = getKoin().getOrNull()
     val agentLlm: AgentLlm = get()
-    // TODO(feature/ask-surface-routes): hand this to the ask route; resolving it now fails boot on a bad binding.
-    get<AskBackAgent>()
+    val askBackAgent: AskBackAgent = get()
+    val candidateSource: ListingCandidateSource = get()
 
     routing {
         get("/") {
             call.respondText("Scent API is running")
         }
         agentRoutes(agentLlm)
+        askSurfaceRoutes(askBackAgent, candidateSource)
         authRoutes()
         fragranceRoutes()
         listingRoutes()

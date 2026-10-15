@@ -31,6 +31,32 @@ OpenRouter wins when both are set. This is a selection order, not a runtime fail
 `GET /api/v1/agent/health` reports `configured` or `not_configured` and which provider. It is a temporary
 smoke check and never calls the model.
 
+## Ask surface routes
+
+Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the server's ContentNegotiation
+`Json`, which writes explicit nulls and would break the one-message-key envelope).
+
+| Route | Body | Returns |
+|---|---|---|
+| `POST /api/v1/surfaces/ask` | `{"query": "..."}` (1 to 500 characters) | `{"messages": [...]}`: createSurface, updateDataModel, updateComponents; or straight to results when nothing is left to ask |
+| `POST /api/v1/surfaces/ask/actions` | an `A2uiClientMessage` with `action.name` `answer_questions` or `edit_answers` | updateDataModel and updateComponents on the request's own surface; never createSurface |
+
+- **Surface ids:** every ask mints a fresh `ask-<uuid v4>`, shared by all messages in the batch, because v0.9
+  makes a duplicate createSurface an error. The server is stateless, so it only checks an incoming id's shape,
+  not that it issued it; that is enough since the id just routes the reply and the context is re-validated.
+  The client must send `deleteSurface` for its previous ask surface before applying a new one.
+- **Stateless answers:** the client echoes its answers in the action context (`intent`, `family`, `budget`,
+  `size`). Each value is re-checked (known enum names, a finite budget above 0), unknown keys are ignored and a
+  budget above the live maximum is clamped. `edit_answers` makes no model call and replays identically.
+- **Data model paths:** `/answers/{intent,family,budget,size}`, `/options/{family,size}` (`{value,label}`),
+  `/budget/{min,max,step}` (whole pounds, step 5), `/summary`, `/results/<i>/{name,brand,price,why}`. Prices are
+  formatted strings (`£75`). Every fact lives here; components carry only wording and `DataBinding` paths.
+- **Time budget:** each model step gets `ASK_BACK_BUDGET_MS` (default 12000, max 25000). Past it the model is
+  cancelled, its late answer discarded and the rules answer returned. Straight-to-results makes two model steps,
+  so the worst case is about 24 s.
+- **Errors:** invalid input is a 400, storage or assistant failures a 503, with a short `ErrorResponse`; an
+  expected failure is never a 500.
+
 ## A2UI contracts
 
 `:contracts` holds the A2UI v0.9 message types (`A2uiServerMessage`, `A2uiClientMessage`) and the
