@@ -1,3 +1,6 @@
+ai.koog:agents-core
+ai.koog:http-client-ktor
+ai.koog:prompt-executor-openrouter-client
 androidx.compose.ui:ui-test-junit4
 androidx.compose.ui:ui-test-manifest
 androidx.room

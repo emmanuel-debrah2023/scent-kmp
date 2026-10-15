@@ -1,5 +1,9 @@
 package org.scent.project
 
+import agent.AgentLlm
+import agent.AgentProvider
+import ai.koog.prompt.executor.clients.openrouter.OpenRouterLLMClient
+import ai.koog.prompt.executor.ollama.client.OllamaClient
 import io.ktor.server.testing.testApplication
 import org.koin.core.context.GlobalContext
 import org.koin.ktor.ext.get
@@ -14,6 +18,7 @@ import providers.ImageProvider
 import providers.StreamProvider
 import providers.SupabaseStorageProvider
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -25,21 +30,26 @@ class KoinWiringTest {
         val image: ImageProvider,
         val candidates: ListingCandidateSource,
         val fakeImageStore: FakeImageStore?,
+        val agent: AgentLlm,
     )
 
     private fun boot(
         stream: String?,
         image: String?,
+        openRouterKey: String? = null,
+        ollamaUrl: String? = null,
     ): Bound {
         val previous = KEYS.associateWith { System.getProperty(it) }
         setOrClear(STREAM_PROVIDER, stream)
         setOrClear(IMAGE_PROVIDER, image)
+        setOrClear(OPENROUTER_API_KEY, openRouterKey)
+        setOrClear(OLLAMA_BASE_URL, ollamaUrl)
         try {
             var bound: Bound? = null
             testApplication {
                 application {
                     module()
-                    bound = Bound(get(), get(), get(), getKoin().getOrNull())
+                    bound = Bound(get(), get(), get(), getKoin().getOrNull(), get())
                 }
                 startApplication()
             }
@@ -93,6 +103,44 @@ class KoinWiringTest {
     }
 
     @Test
+    fun `no agent config leaves the agent not configured and still boots`() {
+        assertIs<AgentLlm.NotConfigured>(boot(stream = null, image = null).agent)
+    }
+
+    @Test
+    fun `blank agent config counts as missing`() {
+        val bound = boot(stream = null, image = null, openRouterKey = "   ", ollamaUrl = "")
+
+        assertIs<AgentLlm.NotConfigured>(bound.agent)
+    }
+
+    @Test
+    fun `an openrouter key configures the agent with an openrouter client`() {
+        val agent = boot(stream = null, image = null, openRouterKey = "test-key").agent
+
+        val configured = assertIs<AgentLlm.Configured>(agent)
+        assertEquals(AgentProvider.OPENROUTER, configured.provider)
+        assertIs<OpenRouterLLMClient>(configured.client)
+    }
+
+    @Test
+    fun `an ollama url alone configures the agent with an ollama client`() {
+        val agent = boot(stream = null, image = null, ollamaUrl = "http://localhost:11434").agent
+
+        val configured = assertIs<AgentLlm.Configured>(agent)
+        assertEquals(AgentProvider.OLLAMA, configured.provider)
+        assertIs<OllamaClient>(configured.client)
+    }
+
+    @Test
+    fun `openrouter wins when both openrouter and ollama are configured`() {
+        val agent =
+            boot(stream = null, image = null, openRouterKey = "test-key", ollamaUrl = "http://localhost:11434").agent
+
+        assertEquals(AgentProvider.OPENROUTER, assertIs<AgentLlm.Configured>(agent).provider)
+    }
+
+    @Test
     fun `booting again in the same JVM picks up the new config`() {
         assertIs<FakeStreamProvider>(boot(stream = "fake", image = null).stream)
         assertIs<CloudflareStreamProvider>(boot(stream = null, image = null).stream)
@@ -108,6 +156,8 @@ class KoinWiringTest {
     private companion object {
         const val STREAM_PROVIDER = "STREAM_PROVIDER"
         const val IMAGE_PROVIDER = "IMAGE_PROVIDER"
-        val KEYS = listOf(STREAM_PROVIDER, IMAGE_PROVIDER)
+        const val OPENROUTER_API_KEY = "OPENROUTER_API_KEY"
+        const val OLLAMA_BASE_URL = "OLLAMA_BASE_URL"
+        val KEYS = listOf(STREAM_PROVIDER, IMAGE_PROVIDER, OPENROUTER_API_KEY, OLLAMA_BASE_URL)
     }
 }

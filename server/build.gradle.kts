@@ -44,6 +44,11 @@ dependencies {
     // Dependency injection
     implementation(libs.koin.ktor)
 
+    // AI agents (Koog)
+    implementation(libs.koog.agents.core)
+    implementation(libs.koog.prompt.executor.openrouter)
+    implementation(libs.koog.http.client.ktor)
+
     // Database
     implementation(libs.exposed.core)
     implementation(libs.exposed.dao)
