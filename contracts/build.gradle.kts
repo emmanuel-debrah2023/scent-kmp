@@ -51,3 +51,20 @@ android {
                 .toInt()
     }
 }
+
+// Writes the catalog JSON Schema generated from the Kotlin types (never hand-edited) to build output.
+val generateCatalogSchema by tasks.registering(JavaExec::class) {
+    val jvmMain =
+        kotlin.targets
+            .getByName("jvm")
+            .compilations
+            .getByName("main")
+    val schemaFile = layout.buildDirectory.file("generated/a2ui/scent-v1.catalog.schema.json")
+    dependsOn(jvmMain.compileTaskProvider)
+    classpath(jvmMain.output.allOutputs, jvmMain.runtimeDependencyFiles)
+    mainClass.set("org.scent.project.data.remote.a2ui.schema.WriteCatalogFileKt")
+    args(schemaFile.get().asFile.absolutePath)
+    outputs.file(schemaFile)
+}
+
+tasks.named("assemble") { dependsOn(generateCatalogSchema) }
