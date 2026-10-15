@@ -64,6 +64,8 @@ Copy `.env.example` to `.env` and fill in your database and Cloudflare credentia
 ./gradlew :server:run
 ```
 
+To enable the AI agent foundation, set `OPENROUTER_API_KEY` (hosted free models) or `OLLAMA_BASE_URL` (local Ollama); see [`docs/ai-agents.md`](docs/ai-agents.md). With neither set the server runs as normal and `GET /api/v1/agent/health` reports `not_configured`.
+
 To seed the local feed with sample posts (requires `STREAM_PROVIDER=fake`):
 
 ```bash

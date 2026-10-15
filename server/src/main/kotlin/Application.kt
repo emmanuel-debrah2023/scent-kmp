@@ -1,5 +1,7 @@
 package org.scent.project
 
+import agent.AgentLlm
+import agent.agentModule
 import data.initDatabase
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.serialization.kotlinx.json.json
@@ -19,6 +21,7 @@ import providers.FakeImageStore
 import providers.ImageProvider
 import providers.StreamProvider
 import providers.providerModule
+import routing.agentRoutes
 import routing.authRoutes
 import routing.devRoutes
 import routing.fakeImageRoutes
@@ -73,17 +76,26 @@ fun Application.module() {
     // KoinIsolated keeps the container on this Application, not in Koin's global context, so
     // booting module() repeatedly in one JVM (tests) never shares or leaks bindings.
     install(KoinIsolated) {
-        modules(preferenceModule, providerModule(fakeStream = fakeMode, fakeImage = fakeImageMode))
+        modules(
+            preferenceModule,
+            providerModule(fakeStream = fakeMode, fakeImage = fakeImageMode),
+            agentModule(
+                openRouterApiKey = System.getProperty("OPENROUTER_API_KEY"),
+                ollamaBaseUrl = System.getProperty("OLLAMA_BASE_URL"),
+            ),
+        )
     }
     // Resolved here, at the composition root, so a missing binding fails at boot.
     val streamProvider: StreamProvider = get()
     val imageProvider: ImageProvider = get()
     val fakeImageStore: FakeImageStore? = getKoin().getOrNull()
+    val agentLlm: AgentLlm = get()
 
     routing {
         get("/") {
             call.respondText("Scent API is running")
         }
+        agentRoutes(agentLlm)
         authRoutes()
         fragranceRoutes()
         listingRoutes()
