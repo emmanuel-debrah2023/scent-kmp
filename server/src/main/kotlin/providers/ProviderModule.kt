@@ -28,4 +28,6 @@ fun providerModule(
             )
         }
     }
+    // Bound only under fake image config, so its presence is what mounts the fake image routes.
+    if (fakeImage) single { FakeImageStore() }
 }

@@ -81,6 +81,25 @@ class DevRoutesGuardTest {
             assertDevRouteStatus(RESET_LISTINGS_PATH, HttpStatusCode.BadRequest)
         }
 
+    @Test
+    fun `fake-upload is not mounted under production config`() =
+        withProviders(stream = null, image = null) {
+            assertDevRouteStatus(FAKE_UPLOAD_PATH, HttpStatusCode.NotFound)
+        }
+
+    @Test
+    fun `fake-upload is mounted when the fake stream provider is configured`() =
+        withProviders(stream = "fake", image = null) {
+            // 400 for the missing uid proves the route exists; only the guard can produce a 404.
+            assertDevRouteStatus(FAKE_UPLOAD_PATH, HttpStatusCode.BadRequest)
+        }
+
+    @Test
+    fun `fake-upload is not mounted by the fake image provider alone`() =
+        withProviders(stream = null, image = "fake") {
+            assertDevRouteStatus(FAKE_UPLOAD_PATH, HttpStatusCode.NotFound)
+        }
+
     private fun getStatusAndType(path: String): Pair<HttpStatusCode, String?> {
         var result: Pair<HttpStatusCode, String?>? = null
         testApplication {
@@ -143,6 +162,7 @@ class DevRoutesGuardTest {
     private companion object {
         const val SEED_USER_PATH = "/api/v1/dev/seed-user"
         const val SEED_VIDEO_PATH = "/api/v1/dev/assets/seed-video.mp4"
+        const val FAKE_UPLOAD_PATH = "/api/v1/media/fake-upload"
         const val RESET_LISTINGS_PATH = "/api/v1/dev/reset-listings"
         const val STREAM_PROVIDER = "STREAM_PROVIDER"
         const val IMAGE_PROVIDER = "IMAGE_PROVIDER"

@@ -37,6 +37,7 @@ import plugins.configureSecurity
 import providers.CloudflareStreamProvider
 import providers.FakeImageProvider
 import providers.FakeImageStore
+import routing.fakeImageRoutes
 import routing.mediaRoutes
 import java.util.UUID
 import kotlin.test.BeforeTest
@@ -81,11 +82,8 @@ class FakeImageRoutesTest {
                 install(ContentNegotiation) { json() }
                 configureSecurity()
                 routing {
-                    mediaRoutes(
-                        CloudflareStreamProvider("unused", "unused", "unused"),
-                        FakeImageProvider(),
-                        fakeImageStore = FakeImageStore(),
-                    )
+                    mediaRoutes(CloudflareStreamProvider("unused", "unused", "unused"), FakeImageProvider())
+                    fakeImageRoutes(FakeImageStore())
                 }
             }
             block()

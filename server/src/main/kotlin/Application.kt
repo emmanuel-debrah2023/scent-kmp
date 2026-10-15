@@ -11,6 +11,7 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import org.koin.ktor.ext.get
+import org.koin.ktor.ext.getKoin
 import org.koin.ktor.plugin.KoinIsolated
 import plugins.configureSecurity
 import preferences.preferenceModule
@@ -20,6 +21,8 @@ import providers.StreamProvider
 import providers.providerModule
 import routing.authRoutes
 import routing.devRoutes
+import routing.fakeImageRoutes
+import routing.fakeStreamRoutes
 import routing.fragranceRoutes
 import routing.listingRoutes
 import routing.mediaRoutes
@@ -75,6 +78,7 @@ fun Application.module() {
     // Resolved here, at the composition root, so a missing binding fails at boot.
     val streamProvider: StreamProvider = get()
     val imageProvider: ImageProvider = get()
+    val fakeImageStore: FakeImageStore? = getKoin().getOrNull()
 
     routing {
         get("/") {
@@ -83,7 +87,9 @@ fun Application.module() {
         authRoutes()
         fragranceRoutes()
         listingRoutes()
-        mediaRoutes(streamProvider, imageProvider, fakeMode, if (fakeImageMode) FakeImageStore() else null)
+        mediaRoutes(streamProvider, imageProvider)
+        if (fakeMode) fakeStreamRoutes()
+        fakeImageStore?.let { fakeImageRoutes(it) }
         postRoutes()
         userRoutes()
         if (fakeMode || fakeImageMode) devRoutes()

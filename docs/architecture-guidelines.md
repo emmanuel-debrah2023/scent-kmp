@@ -2447,6 +2447,13 @@ fun Application.module() {
   inside the module from the arguments the composition root passes in.
 - **Resolve eagerly.** Use `get()`, not `by inject()`, in `module()`, so a missing
   binding fails at boot, not on the first request.
+- **Dev-only routes are separate functions mounted from the composition root.**
+  `fakeStreamRoutes()` and `fakeImageRoutes(store)` live beside the production
+  `mediaRoutes(...)`, which takes no dev flags. An optional dependency such as
+  `FakeImageStore` is bound only under its config and read with
+  `getKoin().getOrNull()`; its presence is what mounts the routes. This is the one
+  case where `get()` is not used, because the binding is optional by design. A guard
+  test must pin both the absent and the mounted case (`DevRoutesGuardTest`).
 - **Test wiring by booting the real module.** Use `testApplication { application { module() } }`
   (Ktor's documented way to load modules) and resolve the bindings. Assert the
   implementation type per configuration, and assert `GlobalContext.getOrNull()` is
