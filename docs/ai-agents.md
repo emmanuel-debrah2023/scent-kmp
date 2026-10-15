@@ -31,6 +31,22 @@ OpenRouter wins when both are set. This is a selection order, not a runtime fail
 `GET /api/v1/agent/health` reports `configured` or `not_configured` and which provider. It is a temporary
 smoke check and never calls the model.
 
+## Live smoke test
+
+`OpenRouterLiveSmokeTest` is the one sanctioned exception to "no test hits the network". It is off by
+default, so `allTests`, the pre-push gate and CI never run it, and CI must never hold an OpenRouter key.
+Run it from a terminal where `OPENROUTER_API_KEY` is exported (never put the key in a file):
+
+```
+./gradlew :server:test -PliveSmoke --tests '*OpenRouterLiveSmokeTest'
+```
+
+It boots the real `module()` and asks one free model to reply `pong`. The default is
+`nvidia/nemotron-3-super-120b-a12b:free`; set `OPENROUTER_MODEL` to try another, since free models come
+and go. For a model you chose, a 429 or a "only available on agentic harnesses" 403 is reported as
+skipped with the reason, not as a pass. Anything else fails: a bad key, network errors, an empty reply,
+or any error on the default model.
+
 ## Privacy and limits
 
 Free models can log or train on prompts, and free tiers are rate limited. Do not send personal data
