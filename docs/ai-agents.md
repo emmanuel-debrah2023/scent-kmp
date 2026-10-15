@@ -85,7 +85,10 @@ every option and price; the model only chooses and words. The route that serves 
 - Koog logs full prompts at DEBUG, so `logback.xml` pins `ai.koog` to INFO.
 - Eval: `./gradlew :server:test -PliveSmoke --tests '*AskBackEvalLiveTest'` (key in the environment)
   runs 22 prompts, paced at 3.5 s, and writes `server/build/eval/ask-back.csv`. A free account allows
-  about 50 requests a day.
+  about 50 requests a day. A recorded run is in `docs/evals/ask-back.csv`: 22 of 22 answered and valid
+  first try, 19 of 22 matching the expected preferences, median latency about 10 s (max 16 s) on
+  `nvidia/nemotron-3-super-120b-a12b:free`. A free model will not meet a 3 s route budget, so the
+  route's timeout and rules fallback matter more than the model's accuracy.
 
 ## Privacy and limits
 
