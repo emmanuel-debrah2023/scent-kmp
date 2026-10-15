@@ -31,6 +31,21 @@ OpenRouter wins when both are set. This is a selection order, not a runtime fail
 `GET /api/v1/agent/health` reports `configured` or `not_configured` and which provider. It is a temporary
 smoke check and never calls the model.
 
+## A2UI contracts
+
+`:contracts` holds the A2UI v0.9 message types (`A2uiServerMessage`, `A2uiClientMessage`) and the
+`scent/v1` catalog (`ScentComponent`, `ScentAction`) for android, ios and jvm. Message types live here and
+nowhere else: `a2ui-4k` pulls in Compose Desktop, A2CUI needs Java 21 and is alpha, and the official
+Kotlin SDK pulls in Google ADK. The renderer ticket adapts these types into its library.
+
+- Props that carry facts (options, prices, names) are `DataBinding` JSON Pointers, never literals.
+- Unknown component names decode to `ScentComponent.Unknown`, so one new component does not drop a surface.
+- `A2uiJson` decodes as leniently as `JsonConfig` but omits absent keys (`encodeDefaults = false`,
+  `explicitNulls = false`), the only deviation: the envelope carries exactly one message key.
+- `./gradlew :contracts:generateCatalogSchema` writes the catalog JSON Schema, generated from the Kotlin
+  types, to `contracts/build/generated/a2ui/scent-v1.catalog.schema.json`. The ask-back agent does not put
+  it in its prompt; Kotlin builds every component.
+
 ## Live smoke test
 
 `OpenRouterLiveSmokeTest` is the one sanctioned exception to "no test hits the network". It is off by
