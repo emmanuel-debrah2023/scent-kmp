@@ -191,6 +191,7 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    debugImplementation(libs.hotswan.preview)
     detektPlugins(libs.detekt.compose)
 }
 
