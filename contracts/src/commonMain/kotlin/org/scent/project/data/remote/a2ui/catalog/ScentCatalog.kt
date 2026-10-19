@@ -31,6 +31,8 @@ sealed interface ScentComponent {
         override val id: String? = null,
         @SchemaDescription("Heading or body wording shown as written")
         val text: String? = null,
+        @SchemaDescription("A2UI text variant: h1 to h5 are announced as headings; caption and body are plain text")
+        val variant: String? = null,
     ) : ScentComponent
 
     @Serializable
@@ -100,4 +102,14 @@ sealed interface ScentComponent {
     data class Unknown(
         override val id: String? = null,
     ) : ScentComponent
+}
+
+/** The A2UI v0.9 text variants the scent/v1 catalog uses. */
+object TextVariant {
+    const val HEADING = "h2"
+    const val BODY = "body"
+
+    /** h1 to h5 are headings; anything else, or no variant, is plain text. */
+    fun isHeading(variant: String?): Boolean =
+        variant != null && variant.length == 2 && variant[0] == 'h' && variant[1] in '1'..'5'
 }

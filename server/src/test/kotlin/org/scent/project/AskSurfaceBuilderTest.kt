@@ -13,6 +13,7 @@ import org.scent.project.data.remote.a2ui.A2uiServerMessage
 import org.scent.project.data.remote.a2ui.DataBinding
 import org.scent.project.data.remote.a2ui.catalog.SCENT_CATALOG_ID
 import org.scent.project.data.remote.a2ui.catalog.ScentComponent
+import org.scent.project.data.remote.a2ui.catalog.TextVariant
 import org.scent.project.domain.model.ListingKind
 import preferences.Intent
 import preferences.ListingCandidate
@@ -324,6 +325,17 @@ class AskSurfaceBuilderTest {
                 assertFalse(text.contains("Secret"), "candidate name or brand in component text: $text")
             }
         }
+    }
+
+    @Test
+    fun `the question heading is a heading variant so clients can announce it`() {
+        val heading =
+            AskSurfaceBuilder.initial(id, askBack()).components().filterIsInstance<ScentComponent.Text>().single {
+                it.id ==
+                    "heading"
+            }
+
+        assertTrue(TextVariant.isHeading(heading.variant))
     }
 
     @Test

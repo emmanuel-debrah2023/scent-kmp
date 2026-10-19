@@ -23,7 +23,7 @@ class ScentCatalogTest {
     private val full: List<ScentComponent> =
         listOf(
             ScentComponent.Column("c", listOf("a", "b")),
-            ScentComponent.Text("t", "Who is it for?"),
+            ScentComponent.Text("t", "Who is it for?", "h2"),
             ScentComponent.Button("b", "Show picks", action),
             ScentComponent.ChoicePicker("p", "Who for?", DataBinding("/opts"), DataBinding("/answers/intent")),
             ScentComponent.RangeSlider(
