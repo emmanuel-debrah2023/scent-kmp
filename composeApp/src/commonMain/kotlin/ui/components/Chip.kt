@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,8 +27,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ui.accessibility.accessibleClickable
 import ui.accessibility.accessibleToggle
@@ -115,9 +119,15 @@ fun AppliedFilterChip(
 }
 
 /**
- * A single-select option chip for a filter sheet facet — filled [primary][MaterialTheme.colorScheme.primary]
- * when [selected], outlined otherwise. Unlike [AppliedFilterChip] this has one tap
- * target for the whole chip; there's nothing to remove until the sheet is applied.
+ * A single-select option chip for a filter sheet facet or a question — filled
+ * [primary][MaterialTheme.colorScheme.primary] when [selected], outlined otherwise. Unlike
+ * [AppliedFilterChip] this has one tap target for the whole chip; there's nothing to remove until
+ * the sheet is applied.
+ *
+ * The pill is drawn [height] tall but the tap target is never smaller than
+ * [ui.theme.ScentSpacing.inlineActionMinTouchTarget] in either direction, so a short label or a
+ * [ui.theme.ScentSpacing.chipHeight] pill is still easy to hit. Pass a taller [height] where the
+ * design draws the pill at the full touch height.
  */
 @Composable
 fun SelectableChip(
@@ -125,34 +135,88 @@ fun SelectableChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    height: Dp = ScentThemeExtras.spacing.chipHeight,
 ) {
-    val spacing = ScentThemeExtras.spacing
-    Row(
+    Box(
         modifier =
             modifier
-                .height(spacing.chipHeight)
-                .clip(ChipShape)
-                .then(
-                    if (selected) {
-                        Modifier.background(MaterialTheme.colorScheme.primary)
-                    } else {
-                        Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, ChipShape)
-                    },
-                ).accessibleToggle(
+                .heightIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
+                .widthIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
+                .accessibleToggle(
                     value = selected,
                     label = label,
                     role = Role.RadioButton,
                     onValueChange = { onClick() },
-                ).padding(horizontal = spacing.sm),
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .height(height)
+                    .clip(ChipShape)
+                    .selectionFill(selected, ChipShape)
+                    .padding(horizontal = ScentThemeExtras.spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = selectionContentColor(selected),
+            )
+        }
+    }
+}
+
+/**
+ * A single-select option tile: a rounded rectangle with a left-aligned [label], for a choice with
+ * a few longer options (a bottle size) rather than a wrapping run of short ones. Same selection
+ * look and radio semantics as [SelectableChip]; it is at least
+ * [ui.theme.ScentSpacing.inlineActionMinTouchTarget] tall.
+ */
+@Composable
+fun SelectableTile(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .heightIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
+                .clip(MaterialTheme.shapes.medium)
+                .selectionFill(selected, MaterialTheme.shapes.medium)
+                .accessibleToggle(
+                    value = selected,
+                    label = label,
+                    role = Role.RadioButton,
+                    onValueChange = { onClick() },
+                ).padding(horizontal = ScentThemeExtras.spacing.sm, vertical = ScentThemeExtras.spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.labelLarge,
+            color = selectionContentColor(selected),
         )
     }
 }
+
+@Composable
+private fun Modifier.selectionFill(
+    selected: Boolean,
+    shape: Shape,
+): Modifier =
+    if (selected) {
+        background(MaterialTheme.colorScheme.primary)
+    } else {
+        border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+    }
+
+@Composable
+private fun selectionContentColor(selected: Boolean) =
+    if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
 
 // No "full" pill radius token exists in ScentShapes — RoundedCornerShape(percent = 50)
 // is the one literal shape value in this file, used only for the chip pill silhouette.
