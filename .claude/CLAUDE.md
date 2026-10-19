@@ -30,6 +30,23 @@ When the server is connected, use it for all Compose UI iteration: edit →
 `hotswan_reload([<file>])` → `hotswan_take_screenshot` → decide.
 
 - Check `hotswan_get_status`, then `hotswan_start` until status is `WATCHING`.
+- **Install with the flag.** `composeApp/build.gradle.kts` only applies the
+  `hotswan.compiler` plugin when `hotswanEnabled` is set (it breaks `allTests`
+  on a bare JVM). Without it the app has no HotSwan runtime and every reload
+  fails with "no hot-reload-enabled Gradle module" or "app closed the
+  connection without replying". Whenever HotSwan is needed, install with
+  `./gradlew :composeApp:installDebug -PhotswanEnabled=true`, then launch
+  `org.scent.project/.MainActivity`. `hotswan_build_and_install` did **not**
+  fix this when tried; prefer the Gradle command. Never add the flag to
+  `gradle.properties`, since it would apply to the pre-push gate too.
+- Verify the runtime is up: `adb shell run-as org.scent.project ls files`
+  should list `hotswan_v2_port`, and logcat should show `HotSwanV2: v2 server
+  listening`. Re-install with the flag after any plain `installDebug` or
+  Android Studio Run, which replace the instrumented APK.
+- The file watcher auto-applies literal edits, so a manual `hotswan_reload`
+  straight after an edit can race it and report a connection error even though
+  the change landed. Check logcat (`literal-patch: applied`) or screenshot
+  before treating it as a failure.
 - Reload *after* editing, one logical change per reload. On failure read
   `hotswan_get_logs`.
 - Screenshot **only** when the change is complete, never a broken intermediate.
