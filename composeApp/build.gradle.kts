@@ -112,6 +112,8 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.turbine)
             implementation(libs.kotlinx.coroutines.test)
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+            implementation(compose.uiTest)
         }
         val androidUnitTest by getting {
             dependencies {
