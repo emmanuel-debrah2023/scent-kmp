@@ -91,5 +91,4 @@ class ChoiceChipsTest {
 
         options.forEach { composeRule.onNodeWithContentDescription(it).assertHeightIsAtLeast(44.dp) }
     }
-
 }

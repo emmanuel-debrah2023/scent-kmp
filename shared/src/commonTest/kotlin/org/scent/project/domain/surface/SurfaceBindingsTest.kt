@@ -45,6 +45,14 @@ class SurfaceBindingsTest {
             ),
             result,
         )
+        assertEquals(1, result?.selectedIndex)
+    }
+
+    @Test
+    fun `choicePicker has no selected index when nothing is selected`() {
+        val data = surface("""{"options":{"family":[{"value":"FRESH","label":"Fresh"}]}}""")
+
+        assertNull(choicePicker(data, picker)?.selectedIndex)
     }
 
     @Test
@@ -198,7 +206,7 @@ class SurfaceBindingsTest {
     private val card = SurfaceNode.RecommendationCard("card", "/results/1/name", "/results/1/price", "/results/1/why")
 
     @Test
-    fun `recommendation reads the name, price and why of its own result`() {
+    fun `recommendation reads the name and price and why of its own result`() {
         val data =
             surface(
                 """{"results":[{"name":"A","price":"£1","why":"a"},{"name":"Cedar","price":"£76","why":"Dry wood"}]}""",

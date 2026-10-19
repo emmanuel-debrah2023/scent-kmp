@@ -17,7 +17,10 @@ data class ChoicePickerBinding(
     val label: String,
     val options: List<ChoiceOption>,
     val selected: String?,
-)
+) {
+    /** Where [selected] sits in [options], or null while nothing is chosen. */
+    val selectedIndex: Int? get() = options.indexOfFirst { it.value == selected }.takeIf { it >= 0 }
+}
 
 /**
  * A slider over [positions], lowest to highest. Positions are what the user can pick, so the slider
@@ -108,6 +111,8 @@ object SurfaceBindings {
 
     // From max(min, step) up to max in whole steps, always ending on max. The floor of one step keeps a
     // budget of zero out of reach, which the server rejects.
+    // TODO(feature/ask-surface-catalog-gaps): the server should clamp its minimum to at least 1 (AskSurfaceBuilder),
+    //  after which this floor can go.
     private fun positions(
         min: Double?,
         max: Double?,

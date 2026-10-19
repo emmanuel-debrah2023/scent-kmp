@@ -49,12 +49,10 @@ private fun SurfaceNodeContent(
             }
         is SurfaceNode.Text -> SurfaceText(node, modifier)
         is SurfaceNode.Button -> SurfaceButton(surface.id, node, onEvent, modifier)
-        // TODO(feature/a2ui-ask-back-components): render ChoicePicker, RangeSlider, PreferenceSummary and
-        //  RecommendationCard; until then they show the fallback.
-        is SurfaceNode.ChoicePicker,
-        is SurfaceNode.RangeSlider,
-        is SurfaceNode.PreferenceSummary,
-        is SurfaceNode.RecommendationCard,
+        is SurfaceNode.ChoicePicker -> SurfaceChoicePicker(surface, node, onEvent, modifier)
+        is SurfaceNode.RangeSlider -> SurfaceRangeSlider(surface, node, onEvent, modifier)
+        is SurfaceNode.PreferenceSummary -> SurfacePreferenceSummary(surface, node, onEvent, modifier)
+        is SurfaceNode.RecommendationCard -> SurfaceRecommendationCard(surface, node, modifier)
         is SurfaceNode.Unsupported,
         null,
         -> SurfaceFallback(modifier)
