@@ -27,7 +27,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -155,68 +154,23 @@ fun SelectableChip(
                 Modifier
                     .height(height)
                     .clip(ChipShape)
-                    .selectionFill(selected, ChipShape)
-                    .padding(horizontal = ScentThemeExtras.spacing.sm),
+                    .then(
+                        if (selected) {
+                            Modifier.background(MaterialTheme.colorScheme.primary)
+                        } else {
+                            Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, ChipShape)
+                        },
+                    ).padding(horizontal = ScentThemeExtras.spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = selectionContentColor(selected),
+                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
 }
-
-/**
- * A single-select option tile: a rounded rectangle with a left-aligned [label], for a choice with
- * a few longer options (a bottle size) rather than a wrapping run of short ones. Same selection
- * look and radio semantics as [SelectableChip]; it is at least
- * [ui.theme.ScentSpacing.inlineActionMinTouchTarget] tall.
- */
-@Composable
-fun SelectableTile(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier =
-            modifier
-                .heightIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
-                .clip(MaterialTheme.shapes.medium)
-                .selectionFill(selected, MaterialTheme.shapes.medium)
-                .accessibleToggle(
-                    value = selected,
-                    label = label,
-                    role = Role.RadioButton,
-                    onValueChange = { onClick() },
-                ).padding(horizontal = ScentThemeExtras.spacing.sm, vertical = ScentThemeExtras.spacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = selectionContentColor(selected),
-        )
-    }
-}
-
-@Composable
-private fun Modifier.selectionFill(
-    selected: Boolean,
-    shape: Shape,
-): Modifier =
-    if (selected) {
-        background(MaterialTheme.colorScheme.primary)
-    } else {
-        border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-    }
-
-@Composable
-private fun selectionContentColor(selected: Boolean) =
-    if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
 
 // No "full" pill radius token exists in ScentShapes — RoundedCornerShape(percent = 50)
 // is the one literal shape value in this file, used only for the chip pill silhouette.

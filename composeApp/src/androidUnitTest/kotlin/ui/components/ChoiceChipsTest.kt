@@ -20,11 +20,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import ui.testing.composeHostActivityRule
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class ChoiceGroupsTest {
+class ChoiceChipsTest {
     @get:Rule(order = 0)
     val hostActivity = composeHostActivityRule()
 
@@ -35,17 +34,10 @@ class ChoiceGroupsTest {
 
     private fun show(
         selectedIndex: Int? = 1,
-        tiles: Boolean = false,
         onSelect: (Int) -> Unit = {},
     ) {
         composeRule.setContent {
-            MaterialTheme {
-                if (tiles) {
-                    ChoiceTiles("Scent family", options, selectedIndex, onSelect)
-                } else {
-                    ChoiceChips("Scent family", options, selectedIndex, onSelect)
-                }
-            }
+            MaterialTheme { ChoiceChips("Scent family", options, selectedIndex, onSelect) }
         }
     }
 
@@ -100,20 +92,4 @@ class ChoiceGroupsTest {
         options.forEach { composeRule.onNodeWithContentDescription(it).assertHeightIsAtLeast(44.dp) }
     }
 
-    @Test
-    fun `tiles are at least 44dp tall`() {
-        show(tiles = true)
-
-        options.forEach { composeRule.onNodeWithContentDescription(it).assertHeightIsAtLeast(44.dp) }
-    }
-
-    @Test
-    fun `tiles lay out two to a row`() {
-        show(tiles = true)
-
-        fun top(label: String) = composeRule.onNodeWithContentDescription(label).fetchSemanticsNode().boundsInRoot.top
-
-        assertEquals(top("Fresh"), top("Woody"))
-        assertTrue(top("Spicy") > top("Fresh"))
-    }
 }

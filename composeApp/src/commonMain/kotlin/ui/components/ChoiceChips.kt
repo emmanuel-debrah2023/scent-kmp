@@ -15,12 +15,12 @@ import ui.accessibility.accessibleSelectableGroup
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
-private const val TILES_PER_ROW = 2
-
 /**
  * A question with short single-select answers as a wrapping run of [SelectableChip]s, drawn at the
  * full touch height. [selectedIndex] is null while nothing is chosen; [onSelect] reports the index of
  * the tapped option, including one that is already selected.
+ *
+ * The options are one selectable group and [label] sits outside it as a heading.
  */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
@@ -31,7 +31,8 @@ fun ChoiceChips(
     onSelect: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ChoiceGroup(label, modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs)) {
+        FieldLabel(text = label, modifier = Modifier.accessibleHeading())
         FlowRow(
             modifier = Modifier.fillMaxWidth().accessibleSelectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
@@ -49,49 +50,6 @@ fun ChoiceChips(
     }
 }
 
-/**
- * As [ChoiceChips], for a few longer answers: [SelectableTile]s sharing the width, two to a row.
- */
-@Composable
-@OptIn(ExperimentalLayoutApi::class)
-fun ChoiceTiles(
-    label: String,
-    options: List<String>,
-    selectedIndex: Int?,
-    onSelect: (index: Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    ChoiceGroup(label, modifier) {
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().accessibleSelectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
-            maxItemsInEachRow = TILES_PER_ROW,
-        ) {
-            options.forEachIndexed { index, option ->
-                SelectableTile(
-                    label = option,
-                    selected = index == selectedIndex,
-                    onClick = { onSelect(index) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChoiceGroup(
-    label: String,
-    modifier: Modifier = Modifier,
-    options: @Composable () -> Unit,
-) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs)) {
-        FieldLabel(text = label, modifier = Modifier.accessibleHeading())
-        options()
-    }
-}
-
 @Preview
 @Composable
 private fun ChoiceChipsPreview() {
@@ -101,21 +59,6 @@ private fun ChoiceChipsPreview() {
                 label = "Scent family",
                 options = listOf("Fresh", "Woody", "Spicy", "Not sure"),
                 selectedIndex = 1,
-                onSelect = {},
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun ChoiceTilesPreview() {
-    ScentTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            ChoiceTiles(
-                label = "Gift a",
-                options = listOf("Full bottle", "Decant set to try"),
-                selectedIndex = 0,
                 onSelect = {},
             )
         }
