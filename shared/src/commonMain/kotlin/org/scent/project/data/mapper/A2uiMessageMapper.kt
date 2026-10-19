@@ -2,8 +2,8 @@ package org.scent.project.data.mapper
 
 import kotlinx.serialization.SerializationException
 import org.scent.project.data.remote.a2ui.A2UI_VERSION
-import org.scent.project.data.remote.a2ui.A2uiJson
 import org.scent.project.data.remote.a2ui.A2uiClientMessage
+import org.scent.project.data.remote.a2ui.A2uiJson
 import org.scent.project.data.remote.a2ui.A2uiMessageBatch
 import org.scent.project.data.remote.a2ui.A2uiServerMessage
 import org.scent.project.data.remote.a2ui.ClientAction
