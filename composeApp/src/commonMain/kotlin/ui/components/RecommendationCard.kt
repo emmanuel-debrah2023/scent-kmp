@@ -1,18 +1,18 @@
 package ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import ui.accessibility.clearedDescription
 import ui.theme.ScentTheme
@@ -32,41 +32,42 @@ fun RecommendationCard(
     modifier: Modifier = Modifier,
 ) {
     val description = listOf(name, price, why).filter(String::isNotBlank).joinToString(", ")
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
-                .clearedDescription(description)
-                .padding(ScentThemeExtras.spacing.cardPadding),
-        verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
+    Card(
+        modifier = modifier.fillMaxWidth().clearedDescription(description),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = ScentThemeExtras.elevation.card),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
-            verticalAlignment = Alignment.Bottom,
+        Column(
+            modifier = Modifier.padding(ScentThemeExtras.spacing.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
         ) {
-            Text(
-                text = name,
-                style = ScentThemeExtras.listingRowFragranceName,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            if (price.isNotBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
+                verticalAlignment = Alignment.Bottom,
+            ) {
                 Text(
-                    text = price,
-                    style = ScentThemeExtras.listingRowPrice,
-                    color = MaterialTheme.colorScheme.primary,
+                    text = name,
+                    style = ScentThemeExtras.listingRowFragranceName,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                if (price.isNotBlank()) {
+                    Text(
+                        text = price,
+                        style = ScentThemeExtras.listingRowPrice,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            if (why.isNotBlank()) {
+                Text(
+                    text = why,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-        }
-        if (why.isNotBlank()) {
-            Text(
-                text = why,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
         }
     }
 }
