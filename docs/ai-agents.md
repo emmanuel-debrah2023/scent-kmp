@@ -62,7 +62,7 @@ Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the s
 `:contracts` holds the A2UI v0.9 message types (`A2uiServerMessage`, `A2uiClientMessage`) and the
 `scent/v1` catalog (`ScentComponent`, `ScentAction`) for android, ios and jvm. Message types live here and
 nowhere else: `a2ui-4k` pulls in Compose Desktop, A2CUI needs Java 21 and is alpha, and the official
-Kotlin SDK pulls in Google ADK. The renderer ticket adapts these types into its library.
+Kotlin SDK pulls in Google ADK. The client engine (ADR-0003) reads these same types; no renderer library sits between them.
 
 - Props that carry facts (options, prices, names) are `DataBinding` JSON Pointers, never literals.
 - Unknown component names decode to `ScentComponent.Unknown`, so one new component does not drop a surface.

@@ -21,6 +21,7 @@ import org.scent.project.data.remote.a2ui.catalog.A2uiEvent
 import org.scent.project.data.remote.a2ui.catalog.SCENT_CATALOG_ID
 import org.scent.project.data.remote.a2ui.catalog.ScentAction
 import org.scent.project.data.remote.a2ui.catalog.ScentComponent
+import org.scent.project.data.remote.a2ui.catalog.TextVariant
 import preferences.BudgetQuestion
 import preferences.FamilyQuestion
 import preferences.Intent
@@ -152,7 +153,7 @@ object AskSurfaceBuilder {
         val components =
             listOf(
                 ScentComponent.Column("root", listOf("heading") + inputs.mapNotNull { it.id } + "submit"),
-                ScentComponent.Text("heading", heading),
+                ScentComponent.Text("heading", heading, TextVariant.HEADING),
             ) + inputs + ScentComponent.Button("submit", buttonLabel, submit(ScentAction.ANSWER_QUESTIONS))
         return listOf(dataModel(surfaceId, data), components(surfaceId, components))
     }

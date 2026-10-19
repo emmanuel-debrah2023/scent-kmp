@@ -157,6 +157,16 @@ sealed class AppError {
         ) : StorageError()
     }
 
+    /** A server-driven surface message could not be applied. Never carries user text, only where. */
+    sealed class SurfaceError : AppError() {
+        data class Invalid(
+            val surfaceId: String? = null,
+            val path: String? = null,
+            override val message: String = "The surface update was rejected",
+            override val cause: Throwable? = null,
+        ) : SurfaceError()
+    }
+
     /** The ask-back assistant could not answer. Every case is expected, never thrown. */
     sealed class AgentError : AppError() {
         data class NotConfigured(
