@@ -1,12 +1,17 @@
 package ui.surface
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.serialization.json.JsonObject
 import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.Surface
 import org.scent.project.domain.surface.SurfaceNode
 import ui.theme.ScentTheme
+import ui.theme.ScentThemeExtras
 
 private val previewSurface =
     Surface(
@@ -28,6 +33,12 @@ private val previewSurface =
 @Composable
 private fun ScentSurfacePreview() {
     ScentTheme {
-        ScentSurface(surface = previewSurface, onEvent = {})
+        Surface(color = MaterialTheme.colorScheme.background) {
+            ScentSurface(
+                surface = previewSurface,
+                onEvent = {},
+                modifier = Modifier.padding(ScentThemeExtras.spacing.screenPadding),
+            )
+        }
     }
 }

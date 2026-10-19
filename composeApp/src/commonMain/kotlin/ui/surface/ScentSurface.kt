@@ -42,7 +42,7 @@ private fun SurfaceNodeContent(
     val node = surface.nodes[nodeId]?.takeIf { nodeId !in ancestors }
     when (node) {
         is SurfaceNode.Column ->
-            Column(modifier, verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm)) {
+            Column(modifier, verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.md)) {
                 node.children.forEach { childId ->
                     key(childId) { SurfaceNodeContent(surface, childId, onEvent, ancestors + nodeId) }
                 }
