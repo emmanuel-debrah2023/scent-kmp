@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import ui.accessibility.accessibleClickable
 import ui.theme.ScentTheme
@@ -69,7 +70,7 @@ fun PreferenceSummaryBar(
         ) {
             Text(
                 text = changeLabel,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = ScentThemeExtras.interactive,
             )
         }

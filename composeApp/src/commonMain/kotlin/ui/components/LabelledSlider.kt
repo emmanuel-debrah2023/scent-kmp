@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +29,7 @@ import kotlin.math.roundToInt
  * changes.
  */
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun LabelledSlider(
     label: String,
     valueLabel: String,
@@ -60,6 +63,10 @@ fun LabelledSlider(
             modifier = Modifier.fillMaxWidth().accessibleState(valueLabel),
             valueRange = 0f..lastStop.toFloat(),
             steps = lastStop - 1,
+            // Snapping is by stop, but a mark per stop would crowd a budget slider with dozens of them.
+            track = { sliderState ->
+                SliderDefaults.Track(sliderState = sliderState, drawStopIndicator = null, drawTick = { _, _ -> })
+            },
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             RangeEndLabel(startLabel)
