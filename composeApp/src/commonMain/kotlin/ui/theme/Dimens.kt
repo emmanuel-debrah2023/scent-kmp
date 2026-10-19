@@ -27,6 +27,9 @@ data class ScentSpacing(
     val authMaxWidth: Dp = 384.dp,
     val cardImageHeight: Dp = 200.dp,
     val chipHeight: Dp = 32.dp,
+    // Option chips that answer a question (ChoiceChips): taller than a filter chip, still inside the
+    // inlineActionMinTouchTarget box they sit in.
+    val choiceChipHeight: Dp = 40.dp,
     val chipMarkerSize: Dp = 8.dp, // Gold dot marking a chip as an applied filter
     val cardHeroHeight: Dp = 172.dp,
     // For small inline tap targets (a text link, an icon-only affordance) — distinct

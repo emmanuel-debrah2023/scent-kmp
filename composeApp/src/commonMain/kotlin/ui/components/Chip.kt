@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -125,8 +126,8 @@ fun AppliedFilterChip(
  *
  * The pill is drawn [height] tall but the tap target is never smaller than
  * [ui.theme.ScentSpacing.inlineActionMinTouchTarget] in either direction, so a short label or a
- * [ui.theme.ScentSpacing.chipHeight] pill is still easy to hit. Pass a taller [height] where the
- * design draws the pill at the full touch height.
+ * [ui.theme.ScentSpacing.chipHeight] pill is still easy to hit. Pass a taller [height], a wider
+ * [horizontalPadding] and a larger [textStyle] where a design wants a roomier chip.
  */
 @Composable
 fun SelectableChip(
@@ -135,6 +136,8 @@ fun SelectableChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     height: Dp = ScentThemeExtras.spacing.chipHeight,
+    horizontalPadding: Dp = ScentThemeExtras.spacing.sm,
+    textStyle: TextStyle = MaterialTheme.typography.labelMedium,
 ) {
     Box(
         modifier =
@@ -160,12 +163,12 @@ fun SelectableChip(
                         } else {
                             Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, ChipShape)
                         },
-                    ).padding(horizontal = ScentThemeExtras.spacing.sm),
+                    ).padding(horizontal = horizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = textStyle,
                 color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
             )
         }
