@@ -262,6 +262,16 @@ class AskViewModelTest {
     }
 
     @Test
+    fun `a component with no action fails the screen without calling the server`() {
+        askAndShowQuestions()
+
+        viewModel.onSurfaceEvent(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "heading"))
+
+        assertIs<AppError.SurfaceError.Invalid>(assertIs<AskPhase.Failed>(viewModel.uiState.value.phase).error)
+        coVerify(exactly = 0) { sendAskAction(any()) }
+    }
+
+    @Test
     fun `startOver returns to the empty entry and keeps the query`() {
         askAndShowQuestions()
 

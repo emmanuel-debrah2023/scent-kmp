@@ -56,9 +56,9 @@ class AskViewModel(
         val before = _uiState.value.phase
         launchRoundTrip {
             _uiState.update { it.copy(queryError = null, phase = AskPhase.Asking) }
-            startAsk(query).fold(
-                ifLeft = { error -> onAskFailed(error, before) },
-                ifRight = { messages -> onAskAnswered(messages) },
+            startAsk(query).handleResult(
+                onError = { error -> onAskFailed(error, before) },
+                onSuccess = { messages -> onAskAnswered(messages) },
             )
         }
     }
@@ -139,9 +139,9 @@ class AskViewModel(
         // A second tap while the first is with the server would send the same answers twice.
         if (showing.pending != null) return
         val surface = surfaces.surfaces[event.surfaceId] ?: return
-        SurfaceActionBuilder.build(surface, event.componentId, timestamp()).fold(
-            ifLeft = { error -> _uiState.update { it.copy(phase = AskPhase.Failed(error)) } },
-            ifRight = ::sendAction,
+        SurfaceActionBuilder.build(surface, event.componentId, timestamp()).handleResult(
+            onError = { error -> _uiState.update { it.copy(phase = AskPhase.Failed(error)) } },
+            onSuccess = ::sendAction,
         )
     }
 
@@ -150,9 +150,9 @@ class AskViewModel(
         lastAction = action
         launchRoundTrip {
             updateShowing { it.copy(pending = pending, actionError = null) }
-            sendAskAction(action).fold(
-                ifLeft = { error -> updateShowing { it.copy(pending = null, actionError = error) } },
-                ifRight = { messages -> onActionAnswered(messages) },
+            sendAskAction(action).handleResult(
+                onError = { error -> updateShowing { it.copy(pending = null, actionError = error) } },
+                onSuccess = { messages -> onActionAnswered(messages) },
             )
         }
     }
