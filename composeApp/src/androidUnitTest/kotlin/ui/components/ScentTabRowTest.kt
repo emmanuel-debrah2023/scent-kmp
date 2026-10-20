@@ -65,9 +65,9 @@ class ScentTabRowTest {
     }
 
     @Test
-    fun `a tab is at least 44dp tall`() {
+    fun `a tab is at least the 52dp button height`() {
         show(selectedIndex = 0)
 
-        composeRule.onNodeWithText("Search").assertHeightIsAtLeast(44.dp)
+        composeRule.onNodeWithText("Search").assertHeightIsAtLeast(52.dp)
     }
 }
