@@ -44,7 +44,8 @@ Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the s
 - **Surface ids:** every ask mints a fresh `ask-<uuid v4>`, shared by all messages in the batch, because v0.9
   makes a duplicate createSurface an error. The server is stateless, so it only checks an incoming id's shape,
   not that it issued it; that is enough since the id just routes the reply and the context is re-validated.
-  The client must send `deleteSurface` for its previous ask surface before applying a new one.
+  In v0.9 `deleteSurface` is a server-to-client message, so the client never sends one: before applying a
+  new ask's batch it applies a local delete of its previous ask surface, in the same step.
 - **Stateless answers:** the client echoes its answers in the action context (`intent`, `family`, `budget`,
   `size`). Each value is re-checked (known enum names, a finite budget above 0), unknown keys are ignored and a
   budget above the live maximum is clamped. `edit_answers` makes no model call and replays identically.
@@ -95,10 +96,13 @@ questions to ask and writes the heading, button label and one 'why' line per res
 every option and price; the model only chooses and words. The route that serves it is
 `feature/ask-surface-routes`.
 
-| Environment variable | Effect |
+`ASK_BACK_AGENT` is a JVM system property, not an environment variable: pass it with `-D` (for example
+`./gradlew :server:run -DASK_BACK_AGENT=fake`), because `Application.kt` reads it with `System.getProperty`.
+
+| Setting | Effect |
 |---|---|
-| `ASK_BACK_AGENT=fake` | Canned gift answer, no model. For E2E. |
-| `ASK_BACK_AGENT=rules` | No model: asks every missing question, why lines from the fragrance's own notes. |
+| `-DASK_BACK_AGENT=fake` | Canned gift answer, no model. For E2E. |
+| `-DASK_BACK_AGENT=rules` | No model: asks every missing question, why lines from the fragrance's own notes. |
 | unset (default) | The model, with the rules agent behind it (`FallbackAskBackAgent`). |
 | `AGENT_MODEL` | Model id. Default `nvidia/nemotron-3-super-120b-a12b:free` (OpenRouter) or `llama3.2` (Ollama). |
 
