@@ -12,6 +12,7 @@ import ui.navigation.HomeRoute
 import ui.navigation.MarketplaceRoute
 import ui.navigation.ProfileRoute
 import ui.navigation.SearchRoute
+import ui.navigation.SearchSubTab
 import ui.navigation.StartDestination
 
 // Debug builds only. The release source set has a no-op with the same signature,
@@ -26,6 +27,7 @@ private val e2eRoutes: Map<String, StartDestination> =
     mapOf(
         "home" to StartDestination.Home(HomeRoute.Feed),
         "search" to StartDestination.Search(SearchRoute.Search),
+        "search/ask" to StartDestination.Search(SearchRoute.Search, SearchSubTab.ASK),
         "marketplace" to StartDestination.Marketplace(MarketplaceRoute.Listings),
         "profile" to StartDestination.Profile(ProfileRoute.Profile),
         "profile/create-listing" to StartDestination.Profile(ProfileRoute.CreateListing),

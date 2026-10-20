@@ -35,6 +35,10 @@ sealed interface HomeRoute {
     ) : HomeRoute
 }
 
+// The two views the Search tab root switches between. A view of the root, not a route: it has no
+// back-stack entry, so back from either one leaves the tab.
+enum class SearchSubTab { SEARCH, ASK }
+
 // Search — cross-content search (fragrances, listings, posts, users)
 sealed interface SearchRoute {
     data object Search : SearchRoute

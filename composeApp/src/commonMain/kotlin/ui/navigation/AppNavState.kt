@@ -21,6 +21,9 @@ class AppNavState(
 class MainNavState {
     var selectedTab: Tab by mutableStateOf(Tab.HOME)
 
+    /** Which view the Search tab root shows. Held here so a start destination can pick it; not persisted. */
+    var searchSubTab: SearchSubTab by mutableStateOf(SearchSubTab.SEARCH)
+
     val homeNav = NavigationState<HomeRoute>(HomeRoute.Feed)
     val searchNav = NavigationState<SearchRoute>(SearchRoute.Search)
     val profileNav = NavigationState<ProfileRoute>(ProfileRoute.Profile)
@@ -47,6 +50,7 @@ class MainNavState {
             }
             is StartDestination.Search -> {
                 selectedTab = Tab.SEARCH
+                searchSubTab = destination.subTab
                 searchNav.navigateTo(destination.route)
             }
             is StartDestination.Profile -> {
