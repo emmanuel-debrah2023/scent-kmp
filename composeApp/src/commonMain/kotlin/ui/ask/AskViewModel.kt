@@ -99,6 +99,8 @@ class AskViewModel(
                 // A rejected query is a problem with the field, not with the screen: nothing was asked.
                 it.copy(queryError = error, phase = before)
             } else {
+                // Deliberate: a new ask is a fresh top-level request, so its failure replaces any surface
+                // on screen. The query is kept, so retry() asks again.
                 it.copy(phase = AskPhase.Failed(error))
             }
         }
@@ -140,7 +142,12 @@ class AskViewModel(
         if (showing.pending != null) return
         val surface = surfaces.surfaces[event.surfaceId] ?: return
         SurfaceActionBuilder.build(surface, event.componentId, timestamp()).handleResult(
-            onError = { error -> _uiState.update { it.copy(phase = AskPhase.Failed(error)) } },
+            onError = { error ->
+                // Mid-edit, not a fresh request: keep the surface and answers, and clear the last action so
+                // retry() cannot resend a stale one.
+                lastAction = null
+                updateShowing { it.copy(actionError = error) }
+            },
             onSuccess = ::sendAction,
         )
     }
