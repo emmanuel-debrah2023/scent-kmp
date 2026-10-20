@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,7 +28,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ui.accessibility.accessibleClickable
 import ui.accessibility.accessibleToggle
@@ -115,9 +119,15 @@ fun AppliedFilterChip(
 }
 
 /**
- * A single-select option chip for a filter sheet facet — filled [primary][MaterialTheme.colorScheme.primary]
- * when [selected], outlined otherwise. Unlike [AppliedFilterChip] this has one tap
- * target for the whole chip; there's nothing to remove until the sheet is applied.
+ * A single-select option chip for a filter sheet facet or a question — filled
+ * [primary][MaterialTheme.colorScheme.primary] when [selected], outlined otherwise. Unlike
+ * [AppliedFilterChip] this has one tap target for the whole chip; there's nothing to remove until
+ * the sheet is applied.
+ *
+ * The pill is drawn [height] tall but the tap target is never smaller than
+ * [ui.theme.ScentSpacing.inlineActionMinTouchTarget] in either direction, so a short label or a
+ * [ui.theme.ScentSpacing.chipHeight] pill is still easy to hit. Pass a taller [height], a wider
+ * [horizontalPadding] and a larger [textStyle] where a design wants a roomier chip.
  */
 @Composable
 fun SelectableChip(
@@ -125,32 +135,43 @@ fun SelectableChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    height: Dp = ScentThemeExtras.spacing.chipHeight,
+    horizontalPadding: Dp = ScentThemeExtras.spacing.sm,
+    textStyle: TextStyle = MaterialTheme.typography.labelMedium,
 ) {
-    val spacing = ScentThemeExtras.spacing
-    Row(
+    Box(
         modifier =
             modifier
-                .height(spacing.chipHeight)
-                .clip(ChipShape)
-                .then(
-                    if (selected) {
-                        Modifier.background(MaterialTheme.colorScheme.primary)
-                    } else {
-                        Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, ChipShape)
-                    },
-                ).accessibleToggle(
+                .heightIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
+                .widthIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
+                .accessibleToggle(
                     value = selected,
                     label = label,
                     role = Role.RadioButton,
                     onValueChange = { onClick() },
-                ).padding(horizontal = spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+                ),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-        )
+        Row(
+            modifier =
+                Modifier
+                    .height(height)
+                    .clip(ChipShape)
+                    .then(
+                        if (selected) {
+                            Modifier.background(MaterialTheme.colorScheme.primary)
+                        } else {
+                            Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, ChipShape)
+                        },
+                    ).padding(horizontal = horizontalPadding),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = textStyle,
+                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 

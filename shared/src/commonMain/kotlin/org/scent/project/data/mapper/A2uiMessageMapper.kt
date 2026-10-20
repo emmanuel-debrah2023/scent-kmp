@@ -1,7 +1,9 @@
 package org.scent.project.data.mapper
 
+import kotlinx.serialization.SerializationException
 import org.scent.project.data.remote.a2ui.A2UI_VERSION
 import org.scent.project.data.remote.a2ui.A2uiClientMessage
+import org.scent.project.data.remote.a2ui.A2uiJson
 import org.scent.project.data.remote.a2ui.A2uiMessageBatch
 import org.scent.project.data.remote.a2ui.A2uiServerMessage
 import org.scent.project.data.remote.a2ui.ClientAction
@@ -33,6 +35,19 @@ private val acceptedVersions = setOf(A2UI_VERSION, "v0.9.1")
  * client cannot show becomes [SurfaceNode.Unsupported] instead of failing the batch.
  */
 object A2uiMessageMapper {
+    /**
+     * Decodes a server batch from its JSON text and maps it, so callers outside `:shared` (which cannot see
+     * the `:contracts` types) can read a batch. Text that is not a batch is a Left, never a throw.
+     */
+    fun decodeBatch(text: String): Result<List<SurfaceMessage>> =
+        try {
+            A2uiJson.decodeFromString<A2uiMessageBatch>(text).toSurfaceMessages()
+        } catch (cause: SerializationException) {
+            invalid(null, null, "Batch could not be decoded", cause)
+        } catch (cause: IllegalArgumentException) {
+            invalid(null, null, "Batch could not be decoded", cause)
+        }
+
     /** All or nothing: one bad message rejects the batch. */
     fun A2uiMessageBatch.toSurfaceMessages(): Result<List<SurfaceMessage>> {
         val list = messages ?: return invalid(null, "/messages", "Batch has no messages")
@@ -183,5 +198,6 @@ object A2uiMessageMapper {
         surfaceId: String?,
         path: String?,
         message: String,
-    ): Result<Nothing> = AppError.SurfaceError.Invalid(surfaceId, path, message).asLeft()
+        cause: Throwable? = null,
+    ): Result<Nothing> = AppError.SurfaceError.Invalid(surfaceId, path, message, cause).asLeft()
 }

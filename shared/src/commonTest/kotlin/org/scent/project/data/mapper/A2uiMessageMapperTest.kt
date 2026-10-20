@@ -1,5 +1,6 @@
 package org.scent.project.data.mapper
 
+import org.scent.project.data.mapper.A2uiMessageMapper.decodeBatch
 import org.scent.project.data.mapper.A2uiMessageMapper.toClientMessage
 import org.scent.project.data.mapper.A2uiMessageMapper.toSurfaceMessage
 import org.scent.project.data.mapper.A2uiMessageMapper.toSurfaceMessages
@@ -251,5 +252,28 @@ class A2uiMessageMapperTest {
         assertEquals("s1", error?.surfaceId)
         assertEquals("/components/x", error?.path)
         assertEquals("Component not supported", error?.message)
+    }
+
+    // decodeBatch
+
+    @Test
+    fun `decodeBatch maps a valid batch to surface messages`() {
+        val json =
+            """{"messages":[{"version":"v0.9","createSurface":{"surfaceId":"s","catalogId":"$catalog"}},""" +
+                """{"version":"v0.9","deleteSurface":{"surfaceId":"s"}}]}"""
+
+        val result = decodeBatch(json).getOrNull()
+
+        assertEquals(listOf(SurfaceMessage.Create("s", catalog), SurfaceMessage.Delete("s")), result)
+    }
+
+    @Test
+    fun `decodeBatch rejects text that is not JSON as an invalid surface`() {
+        assertRejected(decodeBatch("not json"), "decode")
+    }
+
+    @Test
+    fun `decodeBatch rejects a batch with a broken message`() {
+        assertRejected(decodeBatch("""{"messages":[{"version":"v0.1","deleteSurface":{"surfaceId":"s"}}]}"""))
     }
 }

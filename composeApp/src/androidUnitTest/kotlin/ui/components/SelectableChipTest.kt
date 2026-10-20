@@ -7,13 +7,16 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,5 +78,17 @@ class SelectableChipTest {
         composeRule.onNodeWithContentDescription("New").performClick()
 
         assertEquals(1, clicks)
+    }
+
+    @Test
+    fun `chip claims a 44dp touch target even with a short label`() {
+        composeRule.setContent {
+            MaterialTheme { SelectableChip(label = "A", selected = false, onClick = {}) }
+        }
+
+        composeRule
+            .onNodeWithContentDescription("A")
+            .assertHeightIsAtLeast(44.dp)
+            .assertWidthIsAtLeast(44.dp)
     }
 }

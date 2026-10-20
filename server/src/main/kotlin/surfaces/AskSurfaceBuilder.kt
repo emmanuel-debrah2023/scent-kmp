@@ -231,6 +231,9 @@ object AskSurfaceBuilder {
         )
 
     // Whole pounds, rounded outward so the real cheapest and dearest listings are inside the slider.
+    // TODO(feature/ask-surface-catalog-gaps): floor() can make the minimum 0, and AnswerContext rejects a budget
+    //  of 0 or less. The client slider starts at one step (SurfaceBindings), so this is harmless until another
+    //  client reads the minimum; clamp it to at least 1 here.
     private fun bounds(questions: List<QuestionSpec>): Pair<Int, Int>? =
         questions.filterIsInstance<BudgetQuestion>().firstOrNull()?.let {
             floor(it.range.min).toInt() to

@@ -3,6 +3,7 @@ package ui.accessibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.CollectionInfo
@@ -116,6 +117,13 @@ fun Modifier.accessibleToggle(
 ): Modifier =
     toggleable(value = value, onValueChange = onValueChange, role = role)
         .clearAndSetSemantics { contentDescription = label }
+
+/**
+ * Marks the container of a set of single-select options (radio chips, tiles) so a screen reader
+ * announces them as one group. Each option inside is an [accessibleToggle] with `Role.RadioButton`;
+ * keep the group's label outside the container, as a heading.
+ */
+fun Modifier.accessibleSelectableGroup(): Modifier = selectableGroup()
 
 /** Exposes extra actions beyond the default click (e.g. "Remove from wishlist" on a card). */
 fun Modifier.withCustomActions(vararg actions: CustomAccessibilityAction): Modifier =
