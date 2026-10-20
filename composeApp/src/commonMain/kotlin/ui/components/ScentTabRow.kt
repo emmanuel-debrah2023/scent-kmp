@@ -36,7 +36,7 @@ object ScentTabRowDefaults {
  *
  * Each tab is exposed to a screen reader as a selectable tab ([Role.Tab]) announced with its
  * [labels] entry and its selected state, and the row as one selectable group. Every tab is at
- * least 44dp tall, the app's minimum inline touch target.
+ * least as tall as a button (the 52dp button-height token).
  */
 @Composable
 fun ScentTabRow(
@@ -59,7 +59,7 @@ fun ScentTabRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
-                    modifier = Modifier.heightIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget),
+                    modifier = Modifier.heightIn(min = ScentThemeExtras.spacing.buttonHeight),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
