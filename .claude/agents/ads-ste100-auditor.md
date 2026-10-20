@@ -44,7 +44,11 @@ class registered in the correct Koin module with the correct scope; interfaces
 bound, not implementations.
 
 **ViewModels** — single `StateFlow<UiState<T>>`; errors via `SharedFlow<AppError>`;
-no business logic; no platform types; `viewModelScope` only.
+no business logic; no platform types; `viewModelScope` only. Exception: a
+multi-phase A2UI surface screen may use one `StateFlow<XUiState>` with a sealed
+`phase` if it meets every condition in `.claude/rules/ads-viewmodel-uistate.md`
+(failure keeps the surface and edits, no `isLoading` booleans, `handleResult`);
+check those conditions rather than flagging the shape.
 
 **Navigation** — per-tab `NavigationState`; shared destinations still duplicated
 per tab (flag any attempt to unify them); callbacks passed down, never
