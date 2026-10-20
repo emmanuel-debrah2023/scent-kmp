@@ -996,6 +996,50 @@ class HomeViewModel(
 }
 ```
 
+#### Exception: multi-phase A2UI surface screens
+
+`UiState<T>` assumes a screen goes Idle, Loading, then Success or Error, and that
+Error replaces the body. An A2UI surface screen does not fit: the server composes
+a surface, the user edits it (answers a question, moves a slider), and each action
+is a further round trip. If that round trip fails, the surface and the user's
+edits must stay on screen with a retry. Mapping this onto `UiState.Loading` /
+`UiState.Error` would throw them away.
+
+So a screen that drives a server-composed surface through repeated round trips
+(the Ask tab, and later surface screens of the same shape) may expose one
+`StateFlow<XUiState>` with a sealed `phase`, in place of `UiState<T>`:
+
+```kotlin
+data class AskUiState(
+    val query: String = "",
+    val queryError: AppError.ValidationError? = null,
+    val phase: AskPhase = AskPhase.Entry,
+)
+
+sealed interface AskPhase {
+    data object Entry : AskPhase
+    data object Asking : AskPhase
+    data class Showing(val surface: Surface, val pending: Pending?, val actionError: AppError?) : AskPhase
+    data class Failed(val error: AppError) : AskPhase
+}
+```
+
+The exception is narrow. The screen must still follow every other rule here:
+- One read-only `StateFlow` backed by a private `MutableStateFlow`.
+- `phase` is sealed, its failure cases carry an `AppError`, and it encodes loading,
+  so there is no separate `isLoading` / `errorMessage`. A flag the phase cannot
+  express (for example "slow after 5 s") is allowed.
+- Failures live in the state, so the screen can show them next to the retry.
+- Results are consumed with `handleResult`. The reducer's `SurfaceState` stays
+  private to the ViewModel, or is resolved into the phase.
+- A part of the screen that is a plain load-then-show, with nothing to preserve,
+  still uses `UiState<T>`.
+- ViewModel tests assert each phase transition, including a failed round trip that
+  keeps the prior surface and answers.
+
+If a surface screen only loads once and shows the result, it is not a case for
+this exception: use `UiState<T>`.
+
 ### 4. Composable Error Handling
 
 #### Base Error Screen Component
@@ -1884,7 +1928,7 @@ Because each tab already owns an isolated back stack, the per-tab `NavigationSta
 ### ✅ DO
 - ✅ Always return `Either<AppError, T>` from repositories
 - ✅ Use sealed classes for all error types
-- ✅ Handle errors in ViewModels with `UiState`
+- ✅ Handle errors in ViewModels with `UiState` (multi-phase A2UI surface screens may use a sealed phase; see section 3)
 - ✅ Display errors using base error screen components
 - ✅ Validate inputs before making network calls
 - ✅ Use meaningful error messages for users
