@@ -2,6 +2,7 @@ package org.scent.project
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import data.schema.CollectionStatus
 import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
@@ -11,12 +12,14 @@ import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.MediaType
 import data.schema.ReviewsTable
+import data.schema.UserFragranceCollectionTable
 import data.schema.UsersTable
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
@@ -57,7 +60,29 @@ internal fun initListingTestDatabase() {
             ReviewsTable,
             ListingsTable,
             ListingMediaTable,
+            UserFragranceCollectionTable,
         )
+    }
+}
+
+/** Seeds one collection row, for tests that need an entry to exist before the call under test. */
+@OptIn(kotlin.time.ExperimentalTime::class)
+internal fun seedCollectionEntry(
+    userId: Int,
+    fragranceId: Int,
+    status: CollectionStatus = CollectionStatus.OWNS,
+    personalNotes: String? = null,
+    bottleSizeMl: Int? = null,
+) {
+    transaction {
+        UserFragranceCollectionTable.insert {
+            it[UserFragranceCollectionTable.userId] = userId
+            it[UserFragranceCollectionTable.fragranceId] = fragranceId
+            it[UserFragranceCollectionTable.status] = status
+            it[UserFragranceCollectionTable.personalNotes] = personalNotes
+            it[UserFragranceCollectionTable.bottleSizeMl] = bottleSizeMl
+            it[addedAt] = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        }
     }
 }
 
