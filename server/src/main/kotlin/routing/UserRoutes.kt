@@ -148,7 +148,11 @@ private suspend fun handleUpdateUser(call: ApplicationCall) {
     call.respond(HttpStatusCode.OK, buildUserResponse(targetUserId, updatedRow))
 }
 
-/** Extracts the JWT subject's user id — mirrors [routing.ListingRoutes]'s own copy. */
+/**
+ * Extracts the JWT subject's user id — mirrors [routing.ListingRoutes]'s own copy.
+ *
+ * TODO(chore/shared-principal-user-id): one of three private copies; replace with a shared helper in plugins/Security.kt.
+ */
 private fun ApplicationCall.requireUserId(): Int? =
     this
         .principal<JWTPrincipal>()
@@ -324,7 +328,7 @@ private fun buildPostDto(
     )
 }
 
-private fun buildEmbeddedFragrance(
+internal fun buildEmbeddedFragrance(
     id: Int,
     row: org.jetbrains.exposed.v1.core.ResultRow,
 ): FragranceResponse =
