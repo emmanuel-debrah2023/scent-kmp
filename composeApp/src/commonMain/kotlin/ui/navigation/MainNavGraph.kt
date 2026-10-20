@@ -1,6 +1,7 @@
 package ui.navigation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -12,7 +13,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.scent.project.domain.model.AuthUser
+import ui.ask.AskScreen
 import ui.components.BlendedScaffold
+import ui.components.ScentTabRow
 import ui.home.ScentHomeHost
 import ui.listing.CreateListingScreen
 import ui.listing.EditListingScreen
@@ -23,6 +26,7 @@ import ui.profile.ProfileFollowingScreen
 import ui.profile.ProfileNavActions
 import ui.profile.ProfileScreen
 import ui.profile.SettingsScreen
+import ui.theme.ScentThemeExtras
 
 @Composable
 fun MainGraph(
@@ -45,7 +49,12 @@ fun MainGraph(
                 Box(modifier = Modifier.padding(innerPadding)) {
                     when (nav.selectedTab) {
                         Tab.HOME -> Unit
-                        Tab.SEARCH -> SearchNavHost(nav.searchNav)
+                        Tab.SEARCH ->
+                            SearchNavHost(
+                                nav = nav.searchNav,
+                                subTab = nav.searchSubTab,
+                                onSubTabSelected = { nav.searchSubTab = it },
+                            )
                         Tab.PROFILE ->
                             ProfileNavHost(nav.profileNav, user, onLogout, snackbarHostState)
                         Tab.MARKETPLACE -> MarketplaceNavHost(nav.marketplaceNav, snackbarHostState)
@@ -63,15 +72,45 @@ fun MainGraph(
 // ─────────────────────────────────────────────
 
 @Composable
-private fun SearchNavHost(nav: NavigationState<SearchRoute>) {
+private fun SearchNavHost(
+    nav: NavigationState<SearchRoute>,
+    subTab: SearchSubTab,
+    onSubTabSelected: (SearchSubTab) -> Unit,
+) {
     val current by nav.current
     when (current) {
-        is SearchRoute.Search -> PlaceholderScreen("Search")
+        is SearchRoute.Search -> SearchRoot(subTab, onSubTabSelected)
         is SearchRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
         is SearchRoute.ListingDetail -> PlaceholderScreen("Listing Detail")
         is SearchRoute.UserProfile -> PlaceholderScreen("User Profile")
     }
 }
+
+@Composable
+private fun SearchRoot(
+    subTab: SearchSubTab,
+    onSubTabSelected: (SearchSubTab) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        ScentTabRow(
+            labels = SearchSubTab.entries.map { it.label },
+            selectedIndex = subTab.ordinal,
+            onTabSelected = { onSubTabSelected(SearchSubTab.entries[it]) },
+            modifier = Modifier.padding(horizontal = ScentThemeExtras.spacing.screenPadding),
+        )
+        when (subTab) {
+            SearchSubTab.SEARCH -> PlaceholderScreen("Search")
+            SearchSubTab.ASK -> AskScreen(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+private val SearchSubTab.label: String
+    get() =
+        when (this) {
+            SearchSubTab.SEARCH -> "Search"
+            SearchSubTab.ASK -> "Ask"
+        }
 
 @Composable
 private fun ProfileNavHost(
