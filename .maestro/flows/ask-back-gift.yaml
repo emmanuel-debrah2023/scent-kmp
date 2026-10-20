@@ -1,0 +1,43 @@
+appId: org.scent.project
+---
+# Proves a signed-in user can ask for a gift in free text, answer the questions the assistant composes,
+# see picks, and reopen their answers.
+# Needs the server started by e2e-up.sh, which sets ASK_BACK_AGENT=fake: a canned gift answer, no model.
+- runFlow:
+    file: ../subflows/start-authenticated.yaml
+    env:
+      E2E_ROUTE: search/ask
+- extendedWaitUntil:
+    visible: "Ask"
+    timeout: 15000
+- assertVisible: "Ask"
+
+- tapOn: "What are you looking for?"
+- assertVisible:
+    containsChild: "What are you looking for?"
+    focused: true
+- inputText: "a gift for my dad"
+- assertVisible: "a gift for my dad"
+- hideKeyboard
+- tapOn: "ASK"
+- extendedWaitUntil:
+    visible: "Let's find the right gift"
+    timeout: 15000
+- assertVisible: "Let's find the right gift"
+
+- tapOn: "Woody"
+- assertVisible:
+    text: "Woody"
+    checked: true
+
+- tapOn: "SHOW GIFTS"
+- extendedWaitUntil:
+    visible: ".*Easy to wear and easy to give.*"
+    timeout: 15000
+- assertVisible: ".*Easy to wear and easy to give.*"
+
+- tapOn: "Change"
+- extendedWaitUntil:
+    visible: "Change your answers"
+    timeout: 15000
+- assertVisible: "Change your answers"
