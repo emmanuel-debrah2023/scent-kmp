@@ -1,6 +1,8 @@
 package ui.components
 
 import android.app.Application
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,13 +19,16 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.text.input.ImeAction
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import ui.testing.composeHostActivityRule
+import kotlin.test.assertEquals
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -77,6 +82,26 @@ class ScentTextFieldSemanticsTest {
         composeRule.onNode(hasSetTextAction()).performClick()
 
         composeRule.onNode(hasSetTextAction()).assertIsFocused()
+    }
+
+    @Test
+    fun `the Send ime action reaches keyboardActions`() {
+        var sends = 0
+        composeRule.setContent {
+            MaterialTheme {
+                ScentTextField(
+                    value = "",
+                    onValueChange = {},
+                    label = "Ask",
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { sends++ }),
+                )
+            }
+        }
+
+        composeRule.onNode(hasSetTextAction()).performImeAction()
+
+        assertEquals(1, sends)
     }
 
     @Test
