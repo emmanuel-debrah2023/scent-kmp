@@ -1030,6 +1030,12 @@ The exception is narrow. The screen must still follow every other rule here:
   so there is no separate `isLoading` / `errorMessage`. A flag the phase cannot
   express (for example "slow after 5 s") is allowed.
 - Failures live in the state, so the screen can show them next to the retry.
+- A failed *follow-up action* on a showing surface keeps the surface and the user's
+  edits. A failed *fresh top-level request* (for example a new ask while a surface
+  is showing) is a new request, not a follow-up, so it may replace the surface with
+  a failure phase. Keep the request input (the query) so the retry costs nothing.
+- Field-level validation held beside the phase (for example `queryError`) is
+  allowed; it is not an `errorMessage` string.
 - Results are consumed with `handleResult`. The reducer's `SurfaceState` stays
   private to the ViewModel, or is resolved into the phase.
 - A part of the screen that is a plain load-then-show, with nothing to preserve,
@@ -2748,6 +2754,10 @@ class FragranceDatabaseTest {
 ```
 
 ### 9. MockK for Advanced Mocking (Optional)
+
+Project convention: **ViewModel tests use MockK** (in `androidUnitTest` only, mocking
+use cases, which are `open` for this). API and repository tests use hand-written fakes.
+Pure-logic tests stay in `commonTest`.
 
 ```kotlin
 // For complex scenarios where fakes aren't sufficient
