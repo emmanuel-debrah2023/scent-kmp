@@ -27,6 +27,7 @@ import providers.providerModule
 import routing.agentRoutes
 import routing.askSurfaceRoutes
 import routing.authRoutes
+import routing.collectionStatusRoutes
 import routing.devRoutes
 import routing.fakeImageRoutes
 import routing.fakeStreamRoutes
@@ -109,6 +110,7 @@ fun Application.module() {
         agentRoutes(agentLlm)
         askSurfaceRoutes(askBackAgent, candidateSource)
         authRoutes()
+        collectionStatusRoutes()
         fragranceRoutes()
         listingRoutes()
         mediaRoutes(streamProvider, imageProvider)

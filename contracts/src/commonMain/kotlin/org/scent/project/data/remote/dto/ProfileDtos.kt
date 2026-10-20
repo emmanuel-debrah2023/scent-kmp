@@ -11,6 +11,15 @@ data class CollectionEntryDto(
     val fragrance: FragranceResponse? = null,
 )
 
+/**
+ * Body of PUT /api/v1/me/collection/{fragranceId}. [status] is a plain string, not the server's enum,
+ * so an unknown value reaches the route as data and becomes a 400 there instead of a decode failure.
+ */
+@Serializable
+data class SetCollectionStatusRequest(
+    val status: String? = null,
+)
+
 @Serializable
 data class ReviewDto(
     val id: Int? = null, // TODO: server-guaranteed invariant — make non-nullable
