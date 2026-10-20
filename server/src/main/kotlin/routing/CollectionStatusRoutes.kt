@@ -46,12 +46,10 @@ private suspend fun handleSetStatus(call: ApplicationCall) {
             fragranceId == null -> AppError.ValidationError.InvalidInput("fragrance ID").asLeft()
             else -> parseStatus(call.receiveText()).flatMap { setCollectionStatus(userId, fragranceId, it) }
         }
-    val entry = result.getOrNull()
-    if (entry != null) {
-        call.respond(HttpStatusCode.OK, entry)
-    } else {
-        respondError(call, result.leftOrNull())
-    }
+    result.fold(
+        ifLeft = { respondError(call, it) },
+        ifRight = { call.respond(HttpStatusCode.OK, it) },
+    )
 }
 
 private suspend fun handleRemoveStatus(call: ApplicationCall) {
@@ -63,11 +61,10 @@ private suspend fun handleRemoveStatus(call: ApplicationCall) {
             fragranceId == null -> AppError.ValidationError.InvalidInput("fragrance ID").asLeft()
             else -> removeCollectionStatus(userId, fragranceId)
         }
-    if (result.isRight) {
-        call.respond(HttpStatusCode.NoContent)
-    } else {
-        respondError(call, result.leftOrNull())
-    }
+    result.fold(
+        ifLeft = { respondError(call, it) },
+        ifRight = { call.respond(HttpStatusCode.NoContent) },
+    )
 }
 
 private fun ApplicationCall.fragranceId(): Int? = parameters["fragranceId"]?.toIntOrNull()
@@ -88,13 +85,13 @@ private fun parseStatus(body: String): Result<CollectionStatus> {
 
 private suspend fun respondError(
     call: ApplicationCall,
-    error: AppError?,
+    error: AppError,
 ) {
     call.respond(error.toStatus(), ErrorResponse(error.toMessage()))
 }
 
 // Expected failures are never a 500: bad input is the caller's, storage is ours.
-private fun AppError?.toStatus(): HttpStatusCode =
+private fun AppError.toStatus(): HttpStatusCode =
     when (this) {
         is AppError.AuthError -> HttpStatusCode.Unauthorized
         is AppError.ValidationError -> HttpStatusCode.BadRequest
@@ -104,7 +101,7 @@ private fun AppError?.toStatus(): HttpStatusCode =
     }
 
 // Only messages this feature wrote are echoed; a storage error's cause never reaches the caller.
-private fun AppError?.toMessage(): String =
+private fun AppError.toMessage(): String =
     when (this) {
         is AppError.AuthError, is AppError.ValidationError, is AppError.NetworkError.NotFound -> message
         else -> "Could not update your collection. Please try again shortly"
