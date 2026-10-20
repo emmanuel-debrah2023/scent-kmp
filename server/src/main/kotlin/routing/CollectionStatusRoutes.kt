@@ -41,10 +41,10 @@ private suspend fun handleSetStatus(call: ApplicationCall) {
     val userId = call.requireUserId()
     val fragranceId = call.fragranceId()
     val result =
-        when {
-            userId == null -> AppError.AuthError.Unauthorized("Invalid token").asLeft()
-            fragranceId == null -> AppError.ValidationError.InvalidInput("fragrance ID").asLeft()
-            else -> parseStatus(call.receiveText()).flatMap { setCollectionStatus(userId, fragranceId, it) }
+        if (fragranceId == null) {
+            AppError.ValidationError.InvalidInput("fragrance ID").asLeft()
+        } else {
+            parseStatus(call.receiveText()).flatMap { setCollectionStatus(userId, fragranceId, it) }
         }
     result.fold(
         ifLeft = { respondError(call, it) },
@@ -56,10 +56,10 @@ private suspend fun handleRemoveStatus(call: ApplicationCall) {
     val userId = call.requireUserId()
     val fragranceId = call.fragranceId()
     val result =
-        when {
-            userId == null -> AppError.AuthError.Unauthorized("Invalid token").asLeft()
-            fragranceId == null -> AppError.ValidationError.InvalidInput("fragrance ID").asLeft()
-            else -> removeCollectionStatus(userId, fragranceId)
+        if (fragranceId == null) {
+            AppError.ValidationError.InvalidInput("fragrance ID").asLeft()
+        } else {
+            removeCollectionStatus(userId, fragranceId)
         }
     result.fold(
         ifLeft = { respondError(call, it) },
@@ -109,9 +109,7 @@ private fun AppError.toMessage(): String =
 
 // TODO(chore/shared-principal-user-id): third private copy, after UserRoutes.kt and ListingRoutes.kt.
 //  Move one shared helper beside the JWT plugin in plugins/Security.kt and delete all three copies.
-private fun ApplicationCall.requireUserId(): Int? =
-    this
-        .principal<JWTPrincipal>()
-        ?.payload
-        ?.getClaim("userId")
-        ?.asInt()
+private fun ApplicationCall.requireUserId(): Int =
+    checkNotNull(principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asInt()) {
+        "auth-jwt validate rejects tokens without a userId claim, so a principal always has one"
+    }
