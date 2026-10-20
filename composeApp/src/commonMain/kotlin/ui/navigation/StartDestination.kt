@@ -12,6 +12,7 @@ sealed interface StartDestination {
 
     data class Search(
         val route: SearchRoute,
+        val subTab: SearchSubTab = SearchSubTab.SEARCH,
     ) : StartDestination
 
     data class Profile(

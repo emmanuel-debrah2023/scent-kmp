@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -53,7 +54,8 @@ import ui.theme.ScentThemeExtras
  * wins when both are set, so a field never shows stale help text next to a live error.
  * [singleLine]/[minLines] mirror [androidx.compose.foundation.text.BasicTextField]'s own
  * params for a multi-line field (e.g. a bio); the fixed [ui.theme.ScentSpacing.buttonHeight]
- * only applies when [singleLine] is true.
+ * only applies when [singleLine] is true. [keyboardActions] handles the IME action chosen in
+ * [keyboardOptions] (e.g. Send).
  */
 @Composable
 fun ScentTextField(
@@ -70,6 +72,7 @@ fun ScentTextField(
     minLines: Int = 1,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -129,6 +132,7 @@ fun ScentTextField(
             minLines = minLines,
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
             decorationBox = { innerTextField ->
                 Box(contentAlignment = Alignment.CenterStart) {
                     if (value.isEmpty() && placeholder.isNotEmpty()) {

@@ -17,12 +17,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ui.accessibility.accessibleLiveRegion
+import ui.accessibility.mergedGroup
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
@@ -34,7 +37,11 @@ enum class ErrorStateVariant {
 
 /**
  * A full-screen error/empty placeholder for a failed or fruitless request.
- * [variant] selects the icon; copy and action are always caller-supplied.
+ * [variant] selects the icon; copy and actions are always caller-supplied. A secondary action
+ * ([secondaryActionLabel] and [onSecondaryAction], e.g. "Start over") sits below the main one as a
+ * text button. When [announce] is true the title and message are read together as one assertive
+ * live region, so a screen reader speaks the failure when it appears without focus moving; the
+ * buttons stay outside it as their own controls.
  */
 @Composable
 fun ErrorState(
@@ -44,6 +51,9 @@ fun ErrorState(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    secondaryActionLabel: String? = null,
+    onSecondaryAction: (() -> Unit)? = null,
+    announce: Boolean = false,
 ) {
     val icon =
         when (variant) {
@@ -69,18 +79,24 @@ fun ErrorState(
             modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeLarge),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        Column(
+            modifier = if (announce) Modifier.mergedGroup().accessibleLiveRegion(polite = false) else Modifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(spacing.sm),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(spacing.xs))
             OutlinedButton(
@@ -94,6 +110,14 @@ fun ErrorState(
             ) {
                 Text(
                     text = actionLabel,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+            }
+        }
+        if (secondaryActionLabel != null && onSecondaryAction != null) {
+            TextButton(onClick = onSecondaryAction) {
+                Text(
+                    text = secondaryActionLabel,
                     style = MaterialTheme.typography.titleSmall,
                 )
             }

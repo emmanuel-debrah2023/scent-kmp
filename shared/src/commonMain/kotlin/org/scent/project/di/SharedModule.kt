@@ -3,6 +3,8 @@ package org.scent.project.di
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.scent.project.data.local.TokenStorageFactory
+import org.scent.project.data.remote.api.AskSurfaceApi
+import org.scent.project.data.remote.api.AskSurfaceApiImpl
 import org.scent.project.data.remote.api.AuthApi
 import org.scent.project.data.remote.api.AuthApiImpl
 import org.scent.project.data.remote.api.CollectionApi
@@ -24,6 +26,7 @@ import org.scent.project.data.remote.api.SocialApiImpl
 import org.scent.project.data.remote.api.UserApi
 import org.scent.project.data.remote.api.UserApiImpl
 import org.scent.project.data.remote.createHttpClient
+import org.scent.project.data.repository.AskSurfaceRepositoryImpl
 import org.scent.project.data.repository.AuthRepositoryImpl
 import org.scent.project.data.repository.CollectionRepositoryImpl
 import org.scent.project.data.repository.FragranceRepositoryImpl
@@ -34,6 +37,7 @@ import org.scent.project.data.repository.ProfileRepositoryImpl
 import org.scent.project.data.repository.ReviewRepositoryImpl
 import org.scent.project.data.repository.SocialRepositoryImpl
 import org.scent.project.data.repository.UserRepositoryImpl
+import org.scent.project.domain.repository.AskSurfaceRepository
 import org.scent.project.domain.repository.AuthRepository
 import org.scent.project.domain.repository.CollectionRepository
 import org.scent.project.domain.repository.FragranceRepository
@@ -58,7 +62,9 @@ import org.scent.project.domain.usecase.LogoutUseCase
 import org.scent.project.domain.usecase.ObserveAuthStateUseCase
 import org.scent.project.domain.usecase.RegisterUseCase
 import org.scent.project.domain.usecase.SearchFragrancesUseCase
+import org.scent.project.domain.usecase.SendAskActionUseCase
 import org.scent.project.domain.usecase.SetListingActiveUseCase
+import org.scent.project.domain.usecase.StartAskUseCase
 import org.scent.project.domain.usecase.ToggleFollowUseCase
 import org.scent.project.domain.usecase.UpdateListingUseCase
 import org.scent.project.domain.usecase.UploadListingPhotoUseCase
@@ -90,7 +96,11 @@ fun sharedModule(
 
     single { MediaApiImpl(httpClient = get(), baseUrl = baseUrl) } bind MediaApi::class
 
+    single { AskSurfaceApiImpl(httpClient = get(), baseUrl = baseUrl) } bind AskSurfaceApi::class
+
     // Repositories
+    single { AskSurfaceRepositoryImpl(api = get(), tokenStorage = get()) } bind AskSurfaceRepository::class
+
     single {
         AuthRepositoryImpl(api = get(), tokenStorage = get(), userDao = get(), validator = get())
     } bind AuthRepository::class
@@ -189,6 +199,11 @@ fun sharedModule(
     factory { UploadListingPhotoUseCase(repository = get()) }
 
     factory { ToggleFollowUseCase() }
+
+    // Ask surface
+    factory { StartAskUseCase(repository = get()) }
+
+    factory { SendAskActionUseCase(repository = get()) }
 
     // Profile
     factory { GetUserWishlistUseCase(repository = get()) }
