@@ -26,6 +26,10 @@ discard them. All of these hold, or the screen uses `UiState<T>`:
   flag the phase cannot express (e.g. "slow after 5 s") is allowed;
 - failures live in the state so the screen can show them beside the retry; the
   inherited `SharedFlow` is not the only channel;
+- a failed follow-up action keeps the surface and edits; a failed fresh
+  top-level request (a new ask while a surface shows) may replace the surface
+  with a failure phase, keeping the request input for the retry;
+- field-level validation held beside the phase (e.g. `queryError`) is allowed;
 - results are still consumed with `handleResult`, and the reducer's
   `SurfaceState` stays private to the ViewModel or is resolved into the phase;
 - a sub-part that is a plain load-then-show (no state to preserve) still uses
