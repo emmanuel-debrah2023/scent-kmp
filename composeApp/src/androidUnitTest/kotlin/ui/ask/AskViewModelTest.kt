@@ -262,13 +262,58 @@ class AskViewModelTest {
     }
 
     @Test
-    fun `a component with no action fails the screen without calling the server`() {
+    fun `a component with no action sets actionError and keeps the surface without calling the server`() {
         askAndShowQuestions()
+        val before = showing().surface
 
         viewModel.onSurfaceEvent(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "heading"))
 
-        assertIs<AppError.SurfaceError.Invalid>(assertIs<AskPhase.Failed>(viewModel.uiState.value.phase).error)
+        assertIs<AppError.SurfaceError.Invalid>(showing().actionError)
+        assertEquals(before, showing().surface)
         coVerify(exactly = 0) { sendAskAction(any()) }
+    }
+
+    @Test
+    fun `asking shows Asking while the use case runs and Showing once it completes`() =
+        runTest {
+            val gate = CompletableDeferred<Result<List<SurfaceMessage>>>()
+            coEvery { startAsk(any()) } coAnswers { gate.await() }
+            viewModel.onQueryChange("a gift for my dad")
+
+            viewModel.submit()
+            assertEquals(AskPhase.Asking, viewModel.uiState.value.phase)
+            gate.complete(questions.asRight())
+
+            assertEquals(ASK_SURFACE_ID, showing().surface.id)
+        }
+
+    @Test
+    fun `a failed re-ask from Showing replaces the surface with Failed and retry asks again`() {
+        askAndShowQuestions()
+        coEvery { startAsk("again") } returns AppError.NetworkError.NoConnection().asLeft()
+        viewModel.onQueryChange("again")
+
+        viewModel.submit()
+
+        assertIs<AppError.NetworkError.NoConnection>(assertIs<AskPhase.Failed>(viewModel.uiState.value.phase).error)
+        assertEquals("again", viewModel.uiState.value.query)
+        coEvery { startAsk("again") } returns questions.asRight()
+        viewModel.retry()
+        assertEquals(ASK_SURFACE_ID, showing().surface.id)
+    }
+
+    @Test
+    fun `an action reply the reducer rejects keeps the surface and sets actionError`() {
+        askAndShowQuestions()
+        val before = showing().surface
+        val foreign = batch(AskFixtures.RESULTS.replace(ASK_SURFACE_ID, "ask-other"))
+        coEvery { sendAskAction(any()) } returns foreign.asRight()
+
+        viewModel.onSurfaceEvent(answerEvent())
+
+        assertIs<AppError.SurfaceError.Invalid>(showing().actionError)
+        assertEquals(before, showing().surface)
+        assertNull(showing().pending)
     }
 
     @Test
