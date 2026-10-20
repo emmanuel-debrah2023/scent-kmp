@@ -42,7 +42,7 @@ abstract class AskContentTest {
     private fun liveRegion(mode: LiveRegionMode) = SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, mode)
 
     @Test
-    fun `entry shows the labelled field, its helper and the pane title`() =
+    fun `entry shows the labelled field with its helper and the pane title`() =
         runComposeUiTest {
             setContent { MaterialTheme { AskContent(AskUiState().toUiModel(), AskActions.noOp()) } }
 
