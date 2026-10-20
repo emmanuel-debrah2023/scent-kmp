@@ -28,6 +28,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
@@ -230,6 +231,42 @@ class CollectionStatusRoutesTest {
 
             assertEquals(HttpStatusCode.Unauthorized, client.setStatus(status("OWNS"), bearer = forged).status)
             assertEquals(HttpStatusCode.Unauthorized, client.remove(bearer = forged).status)
+        }
+
+    @Test
+    fun `a validly signed token with no userId claim is a 401`() =
+        withApp {
+            val noClaim =
+                com.auth0.jwt.JWT
+                    .create()
+                    .withAudience("fragrances-users")
+                    .withIssuer("fragrances-app")
+                    .withClaim("userId", null as Int?)
+                    .sign(
+                        com.auth0.jwt.algorithms.Algorithm
+                            .HMAC256(LISTING_TEST_JWT_SECRET),
+                    )
+
+            assertEquals(HttpStatusCode.Unauthorized, client.setStatus(status("OWNS"), bearer = noClaim).status)
+            assertEquals(HttpStatusCode.Unauthorized, client.remove(bearer = noClaim).status)
+            assertEquals(0L, totalRows())
+        }
+
+    // storage failure
+
+    @Test
+    fun `a database failure is a 503 with a generic message on both methods`() =
+        withApp {
+            transaction { SchemaUtils.drop(UserFragranceCollectionTable) }
+
+            val put = client.setStatus(status("OWNS"))
+            val delete = client.remove()
+
+            assertEquals(HttpStatusCode.ServiceUnavailable, put.status)
+            assertEquals(HttpStatusCode.ServiceUnavailable, delete.status)
+            val message = "Could not update your collection. Please try again shortly"
+            assertEquals(message, put.message())
+            assertEquals(message, delete.message())
         }
 
     // validation
