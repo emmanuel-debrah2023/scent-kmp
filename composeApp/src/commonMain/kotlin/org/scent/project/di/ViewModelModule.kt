@@ -3,6 +3,7 @@ package org.scent.project.di
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import org.scent.project.domain.model.AuthUser
+import ui.ask.AskViewModel
 import ui.auth.AuthViewModel
 import ui.auth.SessionViewModel
 import ui.feed.FeedViewModel
@@ -20,9 +21,11 @@ import ui.profile.ProfileReviewsViewModel
 import ui.profile.ProfileViewModel
 import ui.profile.SettingsViewModel
 import ui.video.VideoViewModel
+import kotlin.time.Clock
 
 val viewModelModule =
     module {
+        viewModel { AskViewModel(get(), get(), timestamp = { Clock.System.now().toString() }) }
         viewModel { AuthViewModel(get(), get(), get()) }
         viewModel { SessionViewModel(get(), get()) }
         viewModel { FeedViewModel(get(), get()) }

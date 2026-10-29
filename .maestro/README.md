@@ -142,8 +142,9 @@ reaches the app as the `e2eRoute` launch argument:
       E2E_ROUTE: marketplace
 ```
 
-Accepted routes are `home`, `search`, `marketplace`, `profile` and
-`profile/create-listing` (the list lives in `E2eLaunchArguments.kt`). An
+Accepted routes are `home`, `search`, `search/ask` (the Search tab with its Ask sub-tab
+selected), `marketplace`, `profile` and `profile/create-listing` (the list lives in
+`E2eLaunchArguments.kt`). An
 unknown route is logged and the app starts on Home, so assert the target
 screen straight after the subflow rather than trusting the route.
 

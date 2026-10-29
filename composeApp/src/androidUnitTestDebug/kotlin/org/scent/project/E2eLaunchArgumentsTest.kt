@@ -7,6 +7,8 @@ import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
 import ui.navigation.MarketplaceRoute
 import ui.navigation.ProfileRoute
+import ui.navigation.SearchRoute
+import ui.navigation.SearchSubTab
 import ui.navigation.StartDestination
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -73,6 +75,13 @@ class E2eLaunchArgumentsTest {
         val result = parseE2eRoute("profile/create-listing")
 
         assertEquals(StartDestination.Profile(ProfileRoute.CreateListing), result.getOrNull())
+    }
+
+    @Test
+    fun `parseE2eRoute maps search ask to the Search tab with the Ask sub-tab selected`() {
+        val result = parseE2eRoute("search/ask")
+
+        assertEquals(StartDestination.Search(SearchRoute.Search, SearchSubTab.ASK), result.getOrNull())
     }
 
     @Test
