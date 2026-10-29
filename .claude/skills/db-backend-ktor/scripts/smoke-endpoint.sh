@@ -41,7 +41,7 @@ echo "-- bootstrap user"
 STAMP=$(date +%s)
 REG=$(curl -sf --max-time "$MAXTIME" -X POST "$BASE/api/v1/auth/register" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"smoke${STAMP}\",\"email\":\"smoke${STAMP}@test.com\",\"password\":\"password123\"}")
+  -d "{\"username\":\"smoke${STAMP}\",\"email\":\"smoke${STAMP}@test.com\",\"password\":\"password123\",\"displayName\":\"Smoke Test\"}")
 TOKEN=$(echo "$REG" | jq -r .token)
 [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ] || { echo "  ✘ could not obtain token: $REG"; exit 1; }
 echo "  ✔ token obtained"
@@ -64,7 +64,7 @@ check "garbage token rejected" 401 "$C"
 # review the output manually for ownership routes.
 REG2=$(curl -sf --max-time "$MAXTIME" -X POST "$BASE/api/v1/auth/register" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"smokeb${STAMP}\",\"email\":\"smokeb${STAMP}@test.com\",\"password\":\"password123\"}")
+  -d "{\"username\":\"smokeb${STAMP}\",\"email\":\"smokeb${STAMP}@test.com\",\"password\":\"password123\",\"displayName\":\"Smoke Test\"}")
 TOKEN2=$(echo "$REG2" | jq -r .token)
 C=$(req "$TOKEN2")
 if [ "${C:0:1}" != "5" ]; then echo "  ✔ second user's token handled without server error ($C)"; pass=$((pass+1));

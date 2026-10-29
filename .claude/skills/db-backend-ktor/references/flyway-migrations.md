@@ -1,35 +1,31 @@
 # Flyway Migrations for the Ktor + Exposed + Postgres Server
 
-Current state: the server still uses Exposed's
-`SchemaUtils.createMissingTablesAndColumns()` on boot (`data/Database.kt`). The
-schema is already non-trivial — users, fragrances, media, posts, listings,
-listing media, orders, reviews — and `createMissingTablesAndColumns` can't
-rename, drop, backfill, or change types, and gives no history of what changed.
-Several tickets are blocked on this (`chore/introduce-flyway`,
-`chore/tighten-listing-fill-columns` — the listing fill columns are nullable
-only because boot-time DDL can't add `NOT NULL`). This is overdue, not
-hypothetical.
+Current state: Flyway is live. `initDatabase(config)` in
+`server/src/main/kotlin/data/Database.kt` builds the Hikari pool, calls
+`Database.connect`, then runs Flyway against the `public` schema with
+`classpath:db/migration`. Exposed no longer creates or alters tables in
+production. Migrations so far:
+
+- `V1__Initial_schema.sql`: a `pg_dump` baseline of the schema at adoption.
+- `V2__Tighten_listings_kind_to_not_null.sql`: backfills `listings.kind` and
+  adds `NOT NULL`.
+
+`server/src/main/resources/db/migration/README.md` is the step-by-step for
+adding one, including the pre-commit hook that blocks schema changes without a
+migration.
 
 Based on: plusmobileapps.com Ktor + Postgres + Flyway guide and its sample repo
 (github.com/plusmobileapps/ktor-postgres-flyway-sample).
 
-Pin `flyway-core` and `flyway-database-postgresql` in `gradle/libs.versions.toml`
-alongside the other versions rather than a local `val` — the snippets below use
-an inline version for readability only.
+## Dependencies
 
-## Dependencies (`server/build.gradle.kts`)
+Versions live in `gradle/libs.versions.toml` (`flyway`, currently 10.17.0) and
+`server/build.gradle.kts` consumes the catalog entries:
 
 ```kotlin
-val flywayVersion = "10.12.0"
-
-buildscript {
-    repositories { mavenCentral() }
-    dependencies { classpath("org.flywaydb:flyway-database-postgresql:$flywayVersion") }
-}
-
 dependencies {
-    implementation("org.flywaydb:flyway-core:$flywayVersion")
-    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
 }
 ```
 
@@ -38,26 +34,10 @@ dependencies {
 Location: `server/src/main/resources/db/migration/`
 Naming: `V<version>__<Description>.sql` (double underscore).
 
-```sql
--- V1__Create_users_table.sql
-CREATE TABLE users (
-    id             SERIAL PRIMARY KEY,
-    username       VARCHAR(50)  NOT NULL UNIQUE,
-    email          VARCHAR(100) NOT NULL UNIQUE,
-    password_hash  VARCHAR(255),
-    google_id      VARCHAR(255) UNIQUE,
-    apple_id       VARCHAR(255) UNIQUE,
-    display_name   VARCHAR(100) NOT NULL,
-    avatar_url     VARCHAR(255),
-    bio            TEXT,
-    is_seller      BOOLEAN NOT NULL DEFAULT FALSE,
-    follower_count INTEGER NOT NULL DEFAULT 0,
-    created_at     TIMESTAMP NOT NULL
-);
-```
+Example (a later migration, so it never edits shipped history):
 
 ```sql
--- V2__Add_refresh_tokens.sql
+-- V3__Add_refresh_tokens.sql
 CREATE TABLE refresh_tokens (
     id         SERIAL PRIMARY KEY,
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -73,45 +53,44 @@ Rules:
 - Keep the Exposed table objects in sync manually — Exposed defines what the
   code *expects*; Flyway defines what the DB *is*.
 
-## Run migrations at startup (replaces `createMissingTablesAndColumns`)
+## How migrations run at startup
 
-`Database.connect` / `transaction` imports are Exposed 1.x
-(`org.jetbrains.exposed.v1.jdbc.*`). Flyway runs against the raw `DataSource`
-and doesn't touch Exposed.
+Flyway runs against the raw `DataSource` and doesn't touch Exposed (whose
+imports are `org.jetbrains.exposed.v1.jdbc.*`). The real code, in order:
 
 ```kotlin
-private fun migrate(dataSource: DataSource) {
-    Flyway.configure()
-        .dataSource(dataSource)
-        .load()
-        .migrate()          // throws FlywayException on failure — let it crash the boot
-}
+val dataSource = HikariDataSource(hikariConfig)
+Database.connect(dataSource)
 
-// order matters: migrate BEFORE Database.connect / any Exposed usage
-init {
-    val ds = hikariDataSource()
-    migrate(ds)
-    Database.connect(ds)
-}
+Flyway
+    .configure()
+    .dataSource(dataSource)
+    .schemas("public")
+    .locations("classpath:db/migration")
+    .load()
+    .migrate()
 ```
 
-Let migration failures crash startup rather than logging and continuing — a
-server running against a half-migrated schema produces confusing downstream
-errors.
+`migrate()` throws `FlywayException` on failure and nothing catches it, so a
+bad migration stops the boot. Keep it that way: a server running against a
+half-migrated schema produces confusing downstream errors. The whole function
+returns early, with no migration, when `DATABASE_URL` is blank or
+`ci-placeholder`.
 
-## Adopting Flyway on an existing (already-populated) database
+## Adopting Flyway on an existing database
 
-The tables already exist from `createMissingTablesAndColumns`, so a plain V1
-`CREATE TABLE` will fail. Options:
-
-1. Write `V1` to match the current schema exactly, then baseline:
-   `.baselineOnMigrate(true).baselineVersion("1")` — Flyway records V1 as
-   applied without running it on existing DBs, while fresh DBs run it.
-2. Or (staging/local only) drop and recreate from migrations.
+Done already, kept for context. The tables pre-dated Flyway, so `V1` was
+written as a `pg_dump` of the live schema. `Database.kt` does not set
+`baselineOnMigrate`, so a populated database that has no
+`flyway_schema_history` table needs a one-off `flyway baseline` (or a rebuild
+from migrations in staging or local) before the app will start against it.
 
 ## Tests
 
-Reuse migrations in the H2 test database so tests exercise the real schema:
+The current server tests do not use Flyway. They connect to an in-memory H2
+database and call `SchemaUtils.create(...)` for the tables they need (for
+example `initListingTestDatabase()` in `ListingTestFixtures.kt`). To make tests
+exercise the real schema instead, run the migrations against H2:
 
 ```kotlin
 val flyway = Flyway.configure()

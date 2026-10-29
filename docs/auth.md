@@ -44,10 +44,11 @@ GET  /api/v1/auth/me        →  Protected route, decode userId from token, retu
 | File | Purpose |
 |---|---|
 | `plugins/Security.kt` | JWT plugin install, token verifier, `generateToken()` helper |
-| `routes/AuthRoutes.kt` | Register, login, /me routes |
-| `models/AuthModels.kt` | `RegisterRequest`, `LoginRequest`, `AuthResponse`, `ErrorResponse` |
+| `routing/AuthRoutes.kt` | Register, login, /me routes |
+| `contracts/.../data/remote/dto/AuthDtos.kt` | Shared `RegisterRequest`, `LoginRequest`, `AuthResponse`, `MeResponse`, `ErrorResponse` |
+| `models/AuthModels.kt` | Server-only `GoogleAuthRequest`, `AppleAuthRequest` |
 | `application.conf` | JWT secret, issuer, audience, database config via env vars |
-| `Database.kt` | `initDatabase()` — Exposed `SchemaUtils.createMissingTablesAndColumns()` |
+| `Database.kt` | `initDatabase()` builds the Hikari pool, connects Exposed, then runs Flyway migrations from `db/migration` |
 
 ### application.conf Structure
 
@@ -106,8 +107,11 @@ shared/src/androidMain/kotlin/
 ```kotlin
 authenticate("auth-jwt") {
     get("/some-protected-route") {
-        val principal = call.principal<JWTPrincipal>()
-        val userId = principal!!.payload.getClaim("userId").asInt()
+        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asInt()
+        if (userId == null) {
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token"))
+            return@get
+        }
         // scope all DB queries to this userId
     }
 }
@@ -385,36 +389,40 @@ object Users : IntIdTable("users") {
 
 ## Dependencies Summary
 
+Versions live in `gradle/libs.versions.toml` (Ktor is currently 3.3.3), and each
+module consumes the catalog entries. Do not pin versions inline.
+
 ### server/build.gradle.kts
 ```kotlin
-implementation("io.ktor:ktor-server-auth:2.3.12")
-implementation("io.ktor:ktor-server-auth-jwt:2.3.12")
-implementation("org.mindrot:jbcrypt:0.4")
-implementation("com.google.auth:google-auth-library-oauth2-http:1.23.0") // Phase 2
-implementation("com.auth0:jwks-rsa:0.22.1")                              // Phase 3
-implementation("com.auth0:java-jwt:4.4.0")                               // Phase 3
+implementation(libs.ktor.server.auth)
+implementation(libs.ktor.server.auth.jwt)
+implementation(libs.jbcrypt)
+implementation(libs.java.jwt)
+implementation(libs.google.auth)        // Phase 2
+implementation(libs.google.api.client)  // Phase 2
+implementation(libs.jwks.rsa)           // Phase 3
 ```
 
 ### shared/build.gradle.kts
 ```kotlin
 // commonMain
-implementation("io.ktor:ktor-client-core:2.3.12")
-implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
-implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
-implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+implementation(libs.ktor.client.core)
+implementation(libs.ktor.client.content.negotiation)
+implementation(libs.ktor.serialization.kotlinx.json)
+implementation(libs.ktor.client.auth)
+implementation(libs.kotlinx.coroutines.core)
 
 // androidMain
-implementation("io.ktor:ktor-client-okhttp:2.3.12")
-implementation("androidx.datastore:datastore-preferences:1.1.1")
+implementation(libs.ktor.client.okhttp)
+implementation(libs.androidx.datastore.preferences)
 
 // iosMain
-implementation("io.ktor:ktor-client-darwin:2.3.12")
+implementation(libs.ktor.client.darwin)
 ```
 
-### androidApp/build.gradle.kts
-```kotlin
-implementation("com.google.android.gms:play-services-auth:21.2.0") // Phase 2
-```
+### Android client (Phase 2, not yet added)
+There is no `androidApp` module and `play-services-auth` is not in the version
+catalog yet. Add it to the catalog when Phase 2 starts.
 
 ---
 

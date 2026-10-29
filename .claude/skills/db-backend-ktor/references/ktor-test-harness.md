@@ -109,14 +109,21 @@ class AuthRoutesTest {
 
         val reg = client.post("/api/v1/auth/register") {
             contentType(ContentType.Application.Json)
-            setBody(RegisterRequest("alice", "alice@test.com", "password123"))
+            setBody(
+                RegisterRequest(
+                    email = "alice@test.com",
+                    password = "password123",
+                    username = "alice",
+                    displayName = "Alice",
+                ),
+            )
         }
-        assertEquals(HttpStatusCode.OK, reg.status)
+        assertEquals(HttpStatusCode.Created, reg.status)
         val token = reg.body<AuthResponse>().token
 
         val me = client.get("/api/v1/auth/me") { bearerAuth(token) }
         assertEquals(HttpStatusCode.OK, me.status)
-        assertEquals("alice@test.com", me.body<UserResponse>().email)
+        assertEquals("alice@test.com", me.body<MeResponse>().email)
     }
 
     @Test
