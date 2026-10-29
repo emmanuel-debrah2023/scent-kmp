@@ -6,8 +6,6 @@ import data.schema.CollectionStatus
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -22,6 +20,7 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
+import plugins.requireUserId
 
 /**
  * The signed-in user's own collection status for one fragrance. The user is always the token's, never
@@ -105,11 +104,4 @@ private fun AppError.toMessage(): String =
     when (this) {
         is AppError.AuthError, is AppError.ValidationError, is AppError.NetworkError.NotFound -> message
         else -> "Could not update your collection. Please try again shortly"
-    }
-
-// TODO(chore/shared-principal-user-id): third private copy, after UserRoutes.kt and ListingRoutes.kt.
-//  Move one shared helper beside the JWT plugin in plugins/Security.kt and delete all three copies.
-private fun ApplicationCall.requireUserId(): Int =
-    checkNotNull(principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asInt()) {
-        "auth-jwt validate rejects tokens without a userId claim, so a principal always has one"
     }

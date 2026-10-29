@@ -11,10 +11,7 @@ import data.schema.MediaItemsTable
 import data.schema.ReviewsTable
 import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -56,6 +53,7 @@ import org.scent.project.domain.model.FillSource
 import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.usecase.MAX_LISTING_PHOTOS
 import org.scent.project.domain.usecase.MIN_LISTING_PHOTOS
+import plugins.requireUserId
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @OptIn(kotlin.time.ExperimentalTime::class)
@@ -220,12 +218,7 @@ fun Route.listingRoutes() {
             // Declared before GET /{id} — a literal "mine" would otherwise be swallowed
             // by the {id} path param and fail the toIntOrNull() parse as a 400.
             get("/mine") {
-                val userId =
-                    this.call.requireUserId()
-                        ?: return@get this.call.respond(
-                            HttpStatusCode.Unauthorized,
-                            ErrorResponse("Invalid token"),
-                        )
+                val userId = this.call.requireUserId()
 
                 val listings =
                     dbQuery {
@@ -269,12 +262,7 @@ fun Route.listingRoutes() {
 
         authenticate("auth-jwt") {
             post {
-                val userId =
-                    this.call.requireUserId()
-                        ?: return@post this.call.respond(
-                            HttpStatusCode.Unauthorized,
-                            ErrorResponse("Invalid token"),
-                        )
+                val userId = this.call.requireUserId()
 
                 val request =
                     runCatching { this.call.receive<CreateListingServerRequest>() }
@@ -381,12 +369,7 @@ fun Route.listingRoutes() {
             }
 
             patch("/{id}") {
-                val userId =
-                    this.call.requireUserId()
-                        ?: return@patch this.call.respond(
-                            HttpStatusCode.Unauthorized,
-                            ErrorResponse("Invalid token"),
-                        )
+                val userId = this.call.requireUserId()
 
                 val listingId =
                     this.call.parameters["id"]?.toIntOrNull()
@@ -529,12 +512,7 @@ fun Route.listingRoutes() {
             }
 
             delete("/{id}") {
-                val userId =
-                    this.call.requireUserId()
-                        ?: return@delete this.call.respond(
-                            HttpStatusCode.Unauthorized,
-                            ErrorResponse("Invalid token"),
-                        )
+                val userId = this.call.requireUserId()
 
                 val listingId =
                     this.call.parameters["id"]?.toIntOrNull()
@@ -582,18 +560,6 @@ fun Route.listingRoutes() {
         }
     }
 }
-
-/** Extracts the JWT subject's user id, deduplicating what was previously copy-pasted
- *  across every authenticated route in this file. Returns null on a missing/malformed
- *  token; callers decide how to respond.
- *
- *  TODO(chore/shared-principal-user-id): one of three private copies; replace with a shared helper in plugins/Security.kt. */
-private fun ApplicationCall.requireUserId(): Int? =
-    this
-        .principal<JWTPrincipal>()
-        ?.payload
-        ?.getClaim("userId")
-        ?.asInt()
 
 /**
  * True when every id in [mediaIds] is a READY row uploaded by [userId]. An empty list
