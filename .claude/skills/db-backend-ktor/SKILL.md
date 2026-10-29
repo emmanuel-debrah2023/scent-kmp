@@ -9,13 +9,13 @@ Everything for verifying the Scent Ktor backend locally and against staging: cur
 
 ## Project facts (assume these unless told otherwise)
 
-- **Stack:** Ktor 3.1.1, Exposed 1.3.1, PostgreSQL, HOCON config (`application.conf`) driven by env vars. Versions are pinned in `gradle/libs.versions.toml` (`ktor`, `exposed`) — check there first.
+- **Stack:** Ktor 3.3.3, Exposed 1.3.1, Flyway 10.17.0, PostgreSQL, HOCON config (`application.conf`) driven by env vars. Versions are pinned in `gradle/libs.versions.toml` (`ktor`, `exposed`) — check there first.
 - **Exposed 1.x namespace:** imports moved to `org.jetbrains.exposed.v1.*` (e.g. `org.jetbrains.exposed.v1.jdbc.SchemaUtils`, `org.jetbrains.exposed.v1.jdbc.transactions.transaction`). Code samples written against Exposed 0.x `org.jetbrains.exposed.sql.*` will not compile.
 - **Auth:** JWT HMAC256, 24h expiry, claims `userId` (Int) + issuer `fragrances-app` + audience `fragrances-users`; BCrypt password hashes. `plugins/Security.kt` `configureSecurity()` falls back to secret `"secret"` / issuer `fragrances-app` / audience `fragrances-users` when no `jwt.*` config is present — that's why route tests can mint tokens with just `HMAC256("secret")`.
 - **Endpoints:** `/api/v1/auth/{register,login,me}` plus `fragrances`, `listings` (+ `listings/{id}` PATCH/DELETE, `listings/brands`), `media` (`image-upload-url`, `{uid}/complete`), and `posts` route groups. Check `server/src/main/kotlin/routing/` for the current surface.
 - **Env vars:** `JWT_SECRET`, `DATABASE_URL` (JDBC), `DATABASE_USER`, `DATABASE_PASSWORD`; media/storage adds `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, and `IMAGE_PROVIDER` / `STREAM_PROVIDER` (`fake` for local dev). See `.env.template`.
 - **Deploy:** Render free tier (cold starts 30–60s) + Supabase Postgres (`?sslmode=require`)
-- **Schema:** still `SchemaUtils.createMissingTablesAndColumns()` on boot in `initDatabase(config)` (`server/src/main/kotlin/data/Database.kt`), behind a pooled `HikariDataSource`. Flyway is not adopted yet — tracked as `chore/introduce-flyway`. Boot-time DDL is skipped when `DATABASE_URL` is blank or `ci-placeholder`.
+- **Schema:** Flyway versioned migrations in `server/src/main/resources/db/migration/` (V1 baseline, V2 `listings.kind` NOT NULL). `initDatabase(config)` in `server/src/main/kotlin/data/Database.kt` builds a pooled `HikariDataSource`, connects Exposed, then runs Flyway; a failed migration stops the boot. Boot-time DB setup is skipped when `DATABASE_URL` is blank or `ci-placeholder`. Server tests use in-memory H2 with `SchemaUtils.create`, not Flyway.
 - **Android emulator** reaches the host via `http://10.0.2.2:8080`, needs cleartext traffic allowed in debug
 
 ## Workflow: pick the right lane

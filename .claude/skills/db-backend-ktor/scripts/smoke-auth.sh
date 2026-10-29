@@ -24,7 +24,7 @@ echo "== Target: $BASE"
 echo "-- register"
 REG=$(curl -sf --max-time "$MAXTIME" -X POST "$BASE/register" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$USERNAME\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
+  -d "{\"username\":\"$USERNAME\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"displayName\":\"Smoke Test\"}")
 TOKEN=$(echo "$REG" | jq -r .token)
 [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ] && { echo "  ✔ token returned"; pass=$((pass+1)); } \
   || { echo "  ✘ no token in register response: $REG"; fail=$((fail+1)); }
@@ -66,7 +66,7 @@ check "garbage token rejected" 401 "$C"
 
 C=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/register" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"dupe$STAMP\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
+  -d "{\"username\":\"dupe$STAMP\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"displayName\":\"Smoke Test\"}")
 # accept either 409 or 400 depending on how the route reports duplicates
 if [ "$C" = "409" ] || [ "$C" = "400" ]; then echo "  ✔ duplicate email rejected ($C)"; pass=$((pass+1));
 else echo "  ✘ duplicate email — expected 409/400, got $C"; fail=$((fail+1)); fi

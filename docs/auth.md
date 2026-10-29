@@ -45,9 +45,10 @@ GET  /api/v1/auth/me        →  Protected route, decode userId from token, retu
 |---|---|
 | `plugins/Security.kt` | JWT plugin install, token verifier, `generateToken()` helper |
 | `routes/AuthRoutes.kt` | Register, login, /me routes |
-| `models/AuthModels.kt` | `RegisterRequest`, `LoginRequest`, `AuthResponse`, `ErrorResponse` |
+| `contracts/.../data/remote/dto/AuthDtos.kt` | Shared `RegisterRequest`, `LoginRequest`, `AuthResponse`, `MeResponse`, `ErrorResponse` |
+| `models/AuthModels.kt` | Server-only `GoogleAuthRequest`, `AppleAuthRequest` |
 | `application.conf` | JWT secret, issuer, audience, database config via env vars |
-| `Database.kt` | `initDatabase()` — Exposed `SchemaUtils.createMissingTablesAndColumns()` |
+| `Database.kt` | `initDatabase()` builds the Hikari pool, connects Exposed, then runs Flyway migrations from `db/migration` |
 
 ### application.conf Structure
 
@@ -106,8 +107,11 @@ shared/src/androidMain/kotlin/
 ```kotlin
 authenticate("auth-jwt") {
     get("/some-protected-route") {
-        val principal = call.principal<JWTPrincipal>()
-        val userId = principal!!.payload.getClaim("userId").asInt()
+        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asInt()
+        if (userId == null) {
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token"))
+            return@get
+        }
         // scope all DB queries to this userId
     }
 }
