@@ -8,23 +8,18 @@ All database schema changes go through Flyway migrations. This directory tracks 
 
 Update `Schema.kt` or `SchemaEntities.kt` in `server/src/main/kotlin/data/schema/`.
 
-### 2. Generate the migration file
+### 2. Write the migration SQL
 
-Create a throwaway test database and apply your changes:
+Migrations are hand-written SQL. Exposed does not create or alter tables in
+production (Flyway does), so there is nothing to generate from. Write only the
+change, for example `ALTER TABLE`, `CREATE TABLE` or `CREATE INDEX`, and
+backfill any rows before adding a `NOT NULL` constraint (see
+`V2__Tighten_listings_kind_to_not_null.sql`).
 
-```bash
-# Create a temporary database for schema testing
-psql -U postgres -c "CREATE DATABASE temp_schema_test;"
-
-# Run your app or a test that triggers SchemaUtils.createMissingTablesAndColumns()
-# against this database to generate the full new schema
-
-# Dump the schema
-pg_dump -U postgres --schema-only temp_schema_test > migration.sql
-
-# Clean up
-psql -U postgres -c "DROP DATABASE temp_schema_test;"
-```
+To check the SQL, apply it to a throwaway local database that already has the
+earlier migrations (see **Testing migrations locally** below) and compare it
+with your Exposed table definitions. Exposed defines what the code expects;
+the migration defines what the database is.
 
 ### 3. Name your migration file
 
@@ -40,19 +35,7 @@ V<version>__<description>.sql
 
 Example: `V2__add_user_preferences_table.sql`
 
-### 4. Edit the migration file
-
-The pg_dump output includes database-specific metadata and comments. Keep the essential SQL:
-- CREATE TABLE statements
-- ALTER TABLE statements for constraints
-- CREATE INDEX statements (if needed)
-
-Remove:
-- PostgreSQL comments like `-- Dumped by pg_dump`
-- SET statements (these are env-specific)
-- Comments about owners (e.g., `ALTER TABLE public.users OWNER TO postgres`)
-
-### 5. Stage and commit
+### 4. Stage and commit
 
 ```bash
 git add server/src/main/resources/db/migration/V<N>__<description>.sql
