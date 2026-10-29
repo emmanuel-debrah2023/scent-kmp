@@ -44,7 +44,7 @@ GET  /api/v1/auth/me        →  Protected route, decode userId from token, retu
 | File | Purpose |
 |---|---|
 | `plugins/Security.kt` | JWT plugin install, token verifier, `generateToken()` helper |
-| `routes/AuthRoutes.kt` | Register, login, /me routes |
+| `routing/AuthRoutes.kt` | Register, login, /me routes |
 | `contracts/.../data/remote/dto/AuthDtos.kt` | Shared `RegisterRequest`, `LoginRequest`, `AuthResponse`, `MeResponse`, `ErrorResponse` |
 | `models/AuthModels.kt` | Server-only `GoogleAuthRequest`, `AppleAuthRequest` |
 | `application.conf` | JWT secret, issuer, audience, database config via env vars |
