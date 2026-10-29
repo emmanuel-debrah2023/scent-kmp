@@ -15,8 +15,6 @@ import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -45,6 +43,7 @@ import org.scent.project.data.remote.dto.UserCollectionResponseDto
 import org.scent.project.data.remote.dto.UserResponse
 import org.scent.project.data.remote.dto.UserReviewsResponseDto
 import org.scent.project.domain.validation.Validator
+import plugins.requireUserId
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 fun Route.userRoutes() {
@@ -101,15 +100,11 @@ fun Route.userRoutes() {
  * body shape, validation, not-found) before it ever touches [UsersTable].
  */
 private suspend fun handleUpdateUser(call: ApplicationCall) {
-    val authUserId =
-        call.requireUserId()
-            ?: return call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Invalid token"))
-
     val targetUserId =
         call.parameters["id"]?.toIntOrNull()
             ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
 
-    if (authUserId != targetUserId) {
+    if (call.requireUserId() != targetUserId) {
         return call.respond(HttpStatusCode.Forbidden, ErrorResponse("You can only edit your own profile"))
     }
 
@@ -147,18 +142,6 @@ private suspend fun handleUpdateUser(call: ApplicationCall) {
     val updatedRow = dbQuery { UsersTable.selectAll().where { UsersTable.id eq targetUserId }.single() }
     call.respond(HttpStatusCode.OK, buildUserResponse(targetUserId, updatedRow))
 }
-
-/**
- * Extracts the JWT subject's user id — mirrors [routing.ListingRoutes]'s own copy.
- *
- * TODO(chore/shared-principal-user-id): one of three private copies; replace with a shared helper in plugins/Security.kt.
- */
-private fun ApplicationCall.requireUserId(): Int? =
-    this
-        .principal<JWTPrincipal>()
-        ?.payload
-        ?.getClaim("userId")
-        ?.asInt()
 
 private fun buildUserResponse(
     userId: Int,
