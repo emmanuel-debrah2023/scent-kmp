@@ -36,6 +36,8 @@ fun Application.configureSecurity() {
                     null
                 }
             }
+            // TODO(fix/jwt-challenge-error-response): the 401 body is plain text while every other error is an
+            //  ErrorResponse JSON object, so clients cannot decode it. Change it and the tests that rely on it together.
             challenge { _, _ ->
                 call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired")
             }

@@ -585,7 +585,9 @@ fun Route.listingRoutes() {
 
 /** Extracts the JWT subject's user id, deduplicating what was previously copy-pasted
  *  across every authenticated route in this file. Returns null on a missing/malformed
- *  token; callers decide how to respond. */
+ *  token; callers decide how to respond.
+ *
+ *  TODO(chore/shared-principal-user-id): one of three private copies; replace with a shared helper in plugins/Security.kt. */
 private fun ApplicationCall.requireUserId(): Int? =
     this
         .principal<JWTPrincipal>()
