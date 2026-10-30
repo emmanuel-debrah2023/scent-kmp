@@ -9,11 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +24,7 @@ import org.scent.project.domain.model.User
 import ui.accessibility.accessiblePane
 import ui.accessibility.mergedGroup
 import ui.base.UiState
+import ui.components.BackButton
 import ui.components.EmptyState
 import ui.components.ErrorState
 import ui.components.ErrorStateVariant
@@ -75,9 +72,7 @@ internal fun ConnectionsScreenContent(
                 .accessiblePane(title),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
+            BackButton(onBack = onBack)
             Text(text = title, style = MaterialTheme.typography.titleLarge)
         }
 

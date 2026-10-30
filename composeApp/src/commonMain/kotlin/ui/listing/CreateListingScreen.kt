@@ -8,10 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -37,6 +33,7 @@ import ui.accessibility.accessibleToggle
 import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
 import ui.base.UiState
+import ui.components.BackButton
 import ui.components.CONDITION_OPTIONS
 import ui.components.ScentTextField
 import ui.components.SelectableChip
@@ -113,9 +110,7 @@ private fun CreateListingContent(
         verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.lg),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
+            BackButton(onBack = onBack)
             Text(text = "Create Listing", style = MaterialTheme.typography.titleLarge)
         }
 
