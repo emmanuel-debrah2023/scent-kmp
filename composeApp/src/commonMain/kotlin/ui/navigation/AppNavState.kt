@@ -39,7 +39,29 @@ class MainNavState {
                 Tab.MARKETPLACE -> marketplaceNav
             }
 
-    fun goBack(): Boolean = activeNav.goBack()
+    /** True while [onBackPressed] has something to do; false at Home root, where the platform owns back. */
+    val canHandleBack: Boolean
+        get() = activeNav.canGoBack || selectedTab != Tab.HOME
+
+    /** Bottom-nav tap. Re-tapping the active tab pops it to its root; another tab is switched to. */
+    fun selectTab(tab: Tab) {
+        if (tab == selectedTab) {
+            activeNav.popToRoot()
+        } else {
+            selectedTab = tab
+        }
+    }
+
+    /** Pop within the tab, else switch to Home; false at Home root so the system handles back. */
+    fun onBackPressed(): Boolean =
+        when {
+            activeNav.goBack() -> true
+            selectedTab != Tab.HOME -> {
+                selectedTab = Tab.HOME
+                true
+            }
+            else -> false
+        }
 
     /** Selects the destination's tab and pushes its route; a tab root is a no-op push. */
     fun open(destination: StartDestination) {
