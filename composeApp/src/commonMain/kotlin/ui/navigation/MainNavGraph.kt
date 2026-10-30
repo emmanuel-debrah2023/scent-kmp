@@ -13,7 +13,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.scent.project.domain.model.AuthUser
+import ui.accessibility.accessiblePane
 import ui.ask.AskScreen
+import ui.components.BackButton
 import ui.components.BlendedScaffold
 import ui.components.ScentTabRow
 import ui.home.ScentHomeHost
@@ -34,16 +36,22 @@ fun MainGraph(
     nav: MainNavState,
     onLogout: () -> Unit,
 ) {
+    MainBackHandler(nav)
     when (nav.selectedTab) {
-        Tab.HOME ->
+        Tab.HOME -> {
+            val homeRoute by nav.homeNav.current
             ScentHomeHost(
-                onNavTabSelected = { nav.selectedTab = Tab.entries[it] },
+                route = homeRoute,
+                onOpenVideo = { url -> nav.homeNav.navigateTo(HomeRoute.VideoDetail(url)) },
+                onBack = { nav.onBackPressed() },
+                onNavTabSelected = { nav.selectTab(Tab.entries[it]) },
             )
+        }
         else -> {
             val snackbarHostState = remember { SnackbarHostState() }
             BlendedScaffold(
                 selectedTab = nav.selectedTab.ordinal,
-                onTabSelected = { nav.selectedTab = Tab.entries[it] },
+                onTabSelected = { nav.selectTab(Tab.entries[it]) },
                 snackbarHostState = snackbarHostState,
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)) {
@@ -65,6 +73,12 @@ fun MainGraph(
     }
 }
 
+/** Disabled at Home root so the system plays its own back-to-home animation. */
+@Composable
+internal fun MainBackHandler(nav: MainNavState) {
+    SystemBackHandler(enabled = nav.canHandleBack) { nav.onBackPressed() }
+}
+
 // ─────────────────────────────────────────────
 // Per-tab nav hosts
 // Each reads current route via derivedStateOf for scoped recomposition.
@@ -80,9 +94,9 @@ private fun SearchNavHost(
     val current by nav.current
     when (current) {
         is SearchRoute.Search -> SearchRoot(subTab, onSubTabSelected)
-        is SearchRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
-        is SearchRoute.ListingDetail -> PlaceholderScreen("Listing Detail")
-        is SearchRoute.UserProfile -> PlaceholderScreen("User Profile")
+        is SearchRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail", onBack = { nav.goBack() })
+        is SearchRoute.ListingDetail -> PlaceholderScreen("Listing Detail", onBack = { nav.goBack() })
+        is SearchRoute.UserProfile -> PlaceholderScreen("User Profile", onBack = { nav.goBack() })
     }
 }
 
@@ -99,7 +113,7 @@ private fun SearchRoot(
             modifier = Modifier.padding(horizontal = ScentThemeExtras.spacing.screenPadding),
         )
         when (subTab) {
-            SearchSubTab.SEARCH -> PlaceholderScreen("Search")
+            SearchSubTab.SEARCH -> PlaceholderRootScreen("Search")
             SearchSubTab.ASK -> AskScreen(modifier = Modifier.weight(1f))
         }
     }
@@ -171,7 +185,7 @@ private fun ProfileNavHost(
                 userId = user.id,
                 onBack = { nav.goBack() },
             )
-        is ProfileRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
+        is ProfileRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail", onBack = { nav.goBack() })
     }
 }
 
@@ -187,8 +201,8 @@ private fun MarketplaceNavHost(
                 onListingClick = { id -> nav.navigateTo(MarketplaceRoute.ListingDetail(id)) },
                 snackbarHostState = snackbarHostState,
             )
-        is MarketplaceRoute.ListingDetail -> PlaceholderScreen("Listing Detail")
-        is MarketplaceRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail")
+        is MarketplaceRoute.ListingDetail -> PlaceholderScreen("Listing Detail", onBack = { nav.goBack() })
+        is MarketplaceRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail", onBack = { nav.goBack() })
     }
 }
 
@@ -197,12 +211,32 @@ private fun MarketplaceNavHost(
 // ─────────────────────────────────────────────
 
 @Composable
-private fun PlaceholderScreen(name: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+internal fun PlaceholderScreen(
+    name: String,
+    onBack: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize().accessiblePane(name)) {
+        BackButton(onBack = onBack, modifier = Modifier.align(Alignment.TopStart))
+        PlaceholderTitle(name, Modifier.align(Alignment.Center))
     }
+}
+
+@Composable
+private fun PlaceholderRootScreen(name: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PlaceholderTitle(name)
+    }
+}
+
+@Composable
+private fun PlaceholderTitle(
+    name: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = name,
+        modifier = modifier,
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

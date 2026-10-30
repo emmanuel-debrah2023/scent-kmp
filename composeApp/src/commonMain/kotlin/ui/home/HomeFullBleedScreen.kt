@@ -112,7 +112,7 @@ fun HomeFullBleedScreen(
         selectedTab = navTab,
         onTabSelected = {
             navTab = it
-            if (it != 0) onNavTabSelected(it)
+            onNavTabSelected(it)
         },
         modifier = modifier,
         listState = listState,

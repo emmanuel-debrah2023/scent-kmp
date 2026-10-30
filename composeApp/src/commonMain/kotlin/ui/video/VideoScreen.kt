@@ -7,11 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +21,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.core.parameter.parametersOf
 import ui.base.UiState
+import ui.components.BackButton
 import ui.components.VideoPlayer
 
 @OptIn(KoinExperimentalAPI::class)
@@ -52,11 +49,10 @@ fun VideoScreen(
                 )
             else -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
-        IconButton(
-            onClick = onBackClick,
+        BackButton(
+            onBack = onBackClick,
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
-        ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-        }
+            tint = Color.White,
+        )
     }
 }

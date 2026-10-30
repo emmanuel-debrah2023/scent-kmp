@@ -29,7 +29,7 @@ onOpenFragrance = { id -> searchState.navigateTo(SearchRoute.FragranceDetail(id)
 **Back-press policy** (do not modify without being asked):
 1. Active tab can pop within its stack → pop.
 2. Active tab at root and not Home → switch to Home.
-3. Home at root → return `false`, host exits the app.
+3. Home at root → return `false` and **disable** the back handler (`canHandleBack`), so the system performs back-to-home. Never call `finish()`: the Android 13+ back-to-home animation only plays when no back callback is enabled, and `finish()` on the root activity discards the warm start.
 
 Re-tapping the already-active bottom-nav item pops that tab to root.
 
