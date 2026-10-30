@@ -5,7 +5,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.backhandler.BackHandler
 
 // ComposeUIViewController drives this from the native left-edge swipe.
-// TODO(chore/predictive-back-navigation-event-handler): BackHandler is deprecated in favour of
+// TODO(feature/predictive-back-animation): BackHandler is deprecated in favour of
 // NavigationBackHandler (navigationevent-compose), which does not resolve for iOS without a new dependency.
 // Compiles with a deprecation warning until then.
 @OptIn(ExperimentalComposeUiApi::class)
