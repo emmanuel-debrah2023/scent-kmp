@@ -84,6 +84,7 @@ fun AskContent(
             error = model.queryError,
             helperText = ASK_QUERY_HELPER,
             singleLine = false,
+            // TODO(fix/scent-text-field-multiline-text-position): the text sits well above the underline.
             minLines = QUERY_MIN_LINES,
             keyboardOptions =
                 KeyboardOptions(
