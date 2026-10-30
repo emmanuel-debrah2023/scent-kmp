@@ -28,6 +28,8 @@ fun AuthGraph(
 
     val current by backStack.current
 
+    AuthBackHandler(backStack)
+
     when (current) {
         is AuthRoute.Login -> {
             LoginScreen(
@@ -63,4 +65,10 @@ fun AuthGraph(
             if (registerState is UiState.Success) onAuthSuccess()
         }
     }
+}
+
+/** Back on Register returns to Login; at Login the platform owns back. */
+@Composable
+internal fun AuthBackHandler(backStack: NavigationState<AuthRoute>) {
+    SystemBackHandler(enabled = backStack.canGoBack) { backStack.goBack() }
 }
