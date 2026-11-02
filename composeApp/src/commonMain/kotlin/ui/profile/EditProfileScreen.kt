@@ -152,6 +152,7 @@ private fun EditProfileForm(
                     placeholder = "A line about your taste in fragrance",
                     helperText = "Optional",
                     singleLine = false,
+                    // TODO(fix/scent-text-field-multiline-text-position): same top-aligned text as the Ask field.
                     minLines = 3,
                 )
 

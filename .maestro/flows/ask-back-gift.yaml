@@ -1,4 +1,6 @@
 appId: org.scent.project
+tags:
+  - suite
 ---
 # Proves a signed-in user can ask for a gift in free text, answer the questions the assistant composes,
 # see picks, and reopen their answers.
@@ -19,7 +21,10 @@ appId: org.scent.project
 - inputText: "a gift for my dad"
 - assertVisible: "a gift for my dad"
 - hideKeyboard
-- tapOn: "ASK"
+# Selectors are case-insensitive, so a bare "ASK" also matches the "Ask" sub-tab; anchor on the helper text above the button.
+- tapOn:
+    text: "ASK"
+    below: "Up to 500 characters"
 - extendedWaitUntil:
     visible: "Let's find the right gift"
     timeout: 15000
