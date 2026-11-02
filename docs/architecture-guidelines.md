@@ -1574,7 +1574,8 @@ class AppNavigator {
      * Global back-press policy:
      *  1. If the active tab can pop within its own stack, pop it.
      *  2. Else, if we're not on the ROOT (Home) tab, switch to Home.
-     *  3. Else (Home tab, at its root) return false so the host can exit the app.
+     *  3. Else (Home tab, at its root) return false. The host disables its back handler here
+     *     (see [canHandleBack]) so the system performs back-to-home itself.
      */
     fun onBackPressed(): Boolean {
         val active = _activeTab.value
@@ -1590,9 +1591,13 @@ class AppNavigator {
             return true
         }
 
-        // On Home tab, already at root → let the platform close the app.
+        // On Home tab, already at root → nothing to do; the platform owns back.
         return false
     }
+
+    /** Snapshot-state read: false exactly when [onBackPressed] would return false. */
+    val canHandleBack: Boolean
+        get() = stateFor(_activeTab.value).canGoBack || _activeTab.value != Tab.ROOT
 }
 ```
 
@@ -1602,7 +1607,9 @@ class AppNavigator {
 |---|---|
 | Active tab has entries in its back stack | Pop one screen within the tab |
 | Active tab is at its root, and it is **not** Home | Switch to the Home tab |
-| Home tab, at its root | Return `false` → host exits the app |
+| Home tab, at its root | Return `false` → the host's back handler is **disabled** (`canHandleBack == false`) and the system performs back-to-home |
+
+The handler is off at Home root, and the host never calls `finish()`, because the Android 13+ back-to-home animation only plays when no back callback is enabled, and `finish()` on the root activity discards the warm start.
 
 ### 4. Navigation Host
 
@@ -1613,15 +1620,15 @@ The host renders the active tab's current screen, wires the bottom bar to `selec
 @Composable
 fun AppNavigation(
     navigator: AppNavigator = remember { AppNavigator() },
-    onExitApp: () -> Unit,               // Android: call (activity)::finish
 ) {
     val activeTab by navigator.activeTab
 
-    // Route the system back gesture through the global policy.
-    // BackHandler is Android/androidMain; wrap in an expect/actual for iOS.
-    BackHandler(enabled = true) {
-        val handled = navigator.onBackPressed()
-        if (!handled) onExitApp()
+    // Route the system back gesture through the global policy, but only while there is something to
+    // handle. At Home root the handler is disabled so the system runs its own back-to-home animation.
+    // SystemBackHandler is an expect/actual: androidMain wraps the activity BackHandler, iosMain maps
+    // to the native edge swipe.
+    SystemBackHandler(enabled = navigator.canHandleBack) {
+        navigator.onBackPressed()
     }
 
     Scaffold(
