@@ -52,7 +52,7 @@ private fun SurfaceNodeContent(
         is SurfaceNode.ChoicePicker -> SurfaceChoicePicker(surface, node, onEvent, modifier)
         is SurfaceNode.RangeSlider -> SurfaceRangeSlider(surface, node, onEvent, modifier)
         is SurfaceNode.PreferenceSummary -> SurfacePreferenceSummary(surface, node, onEvent, modifier)
-        is SurfaceNode.RecommendationCard -> SurfaceRecommendationCard(surface, node, modifier)
+        is SurfaceNode.RecommendationCard -> SurfaceRecommendationCard(surface, node, onEvent, modifier)
         is SurfaceNode.Unsupported,
         null,
         -> SurfaceFallback(modifier)

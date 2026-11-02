@@ -93,8 +93,14 @@ private fun SearchNavHost(
 ) {
     val current by nav.current
     when (current) {
-        is SearchRoute.Search -> SearchRoot(subTab, onSubTabSelected)
+        is SearchRoute.Search ->
+            SearchRoot(
+                subTab = subTab,
+                onSubTabSelected = onSubTabSelected,
+                onOpenListing = { id -> nav.navigateTo(SearchRoute.ListingDetail(id)) },
+            )
         is SearchRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail", onBack = { nav.goBack() })
+        // TODO(feature/marketplace-filters-and-detail): real listing detail screen
         is SearchRoute.ListingDetail -> PlaceholderScreen("Listing Detail", onBack = { nav.goBack() })
         is SearchRoute.UserProfile -> PlaceholderScreen("User Profile", onBack = { nav.goBack() })
     }
@@ -104,6 +110,7 @@ private fun SearchNavHost(
 private fun SearchRoot(
     subTab: SearchSubTab,
     onSubTabSelected: (SearchSubTab) -> Unit,
+    onOpenListing: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         ScentTabRow(
@@ -114,7 +121,7 @@ private fun SearchRoot(
         )
         when (subTab) {
             SearchSubTab.SEARCH -> PlaceholderRootScreen("Search")
-            SearchSubTab.ASK -> AskScreen(modifier = Modifier.weight(1f))
+            SearchSubTab.ASK -> AskScreen(onOpenListing = onOpenListing, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -201,6 +208,7 @@ private fun MarketplaceNavHost(
                 onListingClick = { id -> nav.navigateTo(MarketplaceRoute.ListingDetail(id)) },
                 snackbarHostState = snackbarHostState,
             )
+        // TODO(feature/marketplace-filters-and-detail): real listing detail screen
         is MarketplaceRoute.ListingDetail -> PlaceholderScreen("Listing Detail", onBack = { nav.goBack() })
         is MarketplaceRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail", onBack = { nav.goBack() })
     }

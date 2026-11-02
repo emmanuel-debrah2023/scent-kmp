@@ -83,17 +83,19 @@ fun Modifier.mergedGroup(): Modifier = semantics(mergeDescendants = true) {}
  * would be discarded. Pass [onClick] only when the touch is handled by a component's
  * internal clickable that sits after this modifier (e.g. `Card(onClick)`), which still
  * owns touch, ripple and press elevation. Never pass it when nothing handles the touch.
+ * [onClickLabel] names what that click does ("Open listing"); it is only used with [onClick].
  */
 fun Modifier.clearedDescription(
     description: String,
     customActions: List<CustomAccessibilityAction> = emptyList(),
     onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null,
 ): Modifier =
     clearAndSetSemantics {
         contentDescription = description
         if (customActions.isNotEmpty()) this.customActions = customActions
         onClick?.let { action ->
-            onClick {
+            onClick(label = onClickLabel) {
                 action()
                 true
             }

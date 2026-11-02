@@ -144,4 +144,21 @@ class MainNavStateTest {
         assertEquals(HomeRoute.VideoDetail("u"), nav.homeNav.current.value)
         assertEquals(ProfileRoute.Settings, nav.profileNav.current.value)
     }
+
+    @Test
+    fun `a listing opened from Ask stays on the Search stack and back returns to Search on the Ask sub tab`() {
+        val nav = MainNavState()
+        nav.open(StartDestination.Search(SearchRoute.Search, SearchSubTab.ASK))
+
+        nav.searchNav.navigateTo(SearchRoute.ListingDetail(7))
+
+        assertEquals(Tab.SEARCH, nav.selectedTab)
+        assertEquals(SearchSubTab.ASK, nav.searchSubTab)
+        assertEquals(SearchRoute.ListingDetail(7), nav.searchNav.current.value)
+        assertEquals(MarketplaceRoute.Listings, nav.marketplaceNav.current.value)
+        assertFalse(nav.marketplaceNav.canGoBack)
+        assertTrue(nav.onBackPressed())
+        assertEquals(SearchRoute.Search, nav.searchNav.current.value)
+        assertEquals(SearchSubTab.ASK, nav.searchSubTab)
+    }
 }

@@ -2,10 +2,13 @@ package ui.ask
 
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.scent.project.domain.error.AppError
@@ -14,6 +17,8 @@ import org.scent.project.domain.surface.SurfaceActionBuilder
 import org.scent.project.domain.surface.SurfaceMessage
 import org.scent.project.domain.surface.SurfaceReducer
 import org.scent.project.domain.surface.SurfaceState
+import org.scent.project.domain.surface.handledOnClient
+import org.scent.project.domain.surface.listingToOpen
 import org.scent.project.domain.surface.reopensAnswers
 import org.scent.project.domain.usecase.SendAskActionUseCase
 import org.scent.project.domain.usecase.StartAskUseCase
@@ -38,6 +43,12 @@ class AskViewModel(
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow(AskUiState())
     val uiState: StateFlow<AskUiState> = _uiState.asStateFlow()
+
+    // One-shot: a listing to open is an event, not state, so it must not replay after a rotation.
+    private val _openListing = Channel<Int>(Channel.BUFFERED)
+
+    /** Ids of listings the shopper asked to open from a result card; the screen navigates. */
+    val openListing: Flow<Int> = _openListing.receiveAsFlow()
 
     // TODO(feature/ask-state-restoration): the surface, answers and last action live only in this
     //  ViewModel, so process death loses them and the shopper lands on an empty Ask tab. Safe to defer
@@ -148,8 +159,31 @@ class AskViewModel(
                 lastAction = null
                 updateShowing { it.copy(actionError = error) }
             },
-            onSuccess = ::sendAction,
+            onSuccess = ::onActionBuilt,
         )
+    }
+
+    // A client-handled action (open_listing) never reaches the server and never changes the phase.
+    private fun onActionBuilt(action: SurfaceAction) {
+        if (!action.handledOnClient) {
+            sendAction(action)
+            return
+        }
+        val listingId = action.listingToOpen
+        if (listingId != null) {
+            _openListing.trySend(listingId)
+        } else {
+            lastAction = null
+            updateShowing {
+                it.copy(
+                    actionError =
+                        AppError.SurfaceError.Invalid(
+                            action.surfaceId,
+                            "/components/${action.sourceComponentId}",
+                        ),
+                )
+            }
+        }
     }
 
     private fun sendAction(action: SurfaceAction) {

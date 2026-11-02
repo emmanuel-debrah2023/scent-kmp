@@ -45,20 +45,26 @@ internal object AskFixtures {
             """"answers":{"intent":"GIFT","family":"WOODY","budget":80.0,"size":"FULL"},""" +
             """"summary":["Woody","up to £80","Full bottle"],""" +
             """"results":[""" +
-            """{"name":"Cedar & Smoke","brand":"Atelier Nord","price":"£76",""" +
+            """{"listingId":7,"name":"Cedar & Smoke","brand":"Atelier Nord","price":"£76",""" +
             """"why":"Dry cedarwood and vetiver: a classic woody gift that stays close to the skin."},""" +
-            """{"name":"Birch Ledger","brand":"Atelier Nord","price":"£64",""" +
+            """{"listingId":8,"name":"Birch Ledger","brand":"Atelier Nord","price":"£64",""" +
             """"why":"Smoky birch with a soft musk finish, easy to wear every day."},""" +
-            """{"name":"Oud Lantern","brand":"Maison Verre","price":"£79",""" +
+            """{"listingId":9,"name":"Oud Lantern","brand":"Maison Verre","price":"£79",""" +
             """"why":"Warmer and richer, with oud and amber for evenings out."}]}}},""" +
             """{"version":"v0.9","updateComponents":{"surfaceId":"$ASK_SURFACE_ID","components":[""" +
             """{"component":"Column","id":"root","children":["summary","card_1","card_2","card_3"]},""" +
             """{"component":"PreferenceSummary","id":"summary","items":{"path":"/summary"},""" +
             """"action":{"event":{"name":"edit_answers","context":$answerContext}}},""" +
             """{"component":"RecommendationCard","id":"card_1","name":{"path":"/results/0/name"},""" +
-            """"price":{"path":"/results/0/price"},"why":{"path":"/results/0/why"}},""" +
+            """"price":{"path":"/results/0/price"},"why":{"path":"/results/0/why"},""" +
+            """"action":{"event":{"name":"open_listing",""" +
+            """"context":{"listingId":{"path":"/results/0/listingId"}}}}},""" +
             """{"component":"RecommendationCard","id":"card_2","name":{"path":"/results/1/name"},""" +
-            """"price":{"path":"/results/1/price"},"why":{"path":"/results/1/why"}},""" +
+            """"price":{"path":"/results/1/price"},"why":{"path":"/results/1/why"},""" +
+            """"action":{"event":{"name":"open_listing",""" +
+            """"context":{"listingId":{"path":"/results/1/listingId"}}}}},""" +
             """{"component":"RecommendationCard","id":"card_3","name":{"path":"/results/2/name"},""" +
-            """"price":{"path":"/results/2/price"},"why":{"path":"/results/2/why"}}]}}]}"""
+            """"price":{"path":"/results/2/price"},"why":{"path":"/results/2/why"},""" +
+            """"action":{"event":{"name":"open_listing",""" +
+            """"context":{"listingId":{"path":"/results/2/listingId"}}}}}]}}]}"""
 }

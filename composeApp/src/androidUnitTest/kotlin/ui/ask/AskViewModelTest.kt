@@ -8,6 +8,8 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
@@ -272,6 +274,89 @@ class AskViewModelTest {
         assertEquals(before, showing().surface)
         coVerify(exactly = 0) { sendAskAction(any()) }
     }
+
+    private fun showResults(resultsBatch: List<SurfaceMessage> = results) {
+        askAndShowQuestions()
+        coEvery { sendAskAction(any()) } returns resultsBatch.asRight()
+        viewModel.onSurfaceEvent(answerEvent())
+        coEvery { sendAskAction(any()) } throws AssertionError("a card tap must not reach the server")
+    }
+
+    private fun cardEvent() = SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "card_1")
+
+    @Test
+    fun `tapping a result card emits its listing id once and does not touch the server or the phase`() =
+        runTest {
+            showResults()
+            val opened = mutableListOf<Int>()
+            backgroundScope.launch(testDispatcher) { viewModel.openListing.toList(opened) }
+            val before = showing()
+
+            viewModel.onSurfaceEvent(cardEvent())
+
+            assertEquals(listOf(7), opened)
+            assertEquals(before, showing())
+            assertNull(showing().pending)
+            assertNull(showing().actionError)
+            coVerify(exactly = 1) { sendAskAction(any()) }
+        }
+
+    @Test
+    fun `a card tap never becomes the action retry resends`() =
+        runTest {
+            showResults()
+            viewModel.onSurfaceEvent(cardEvent())
+
+            viewModel.retry()
+
+            coVerify(exactly = 1) { sendAskAction(any()) }
+        }
+
+    @Test
+    fun `a card tap while an action is pending is ignored`() =
+        runTest {
+            askAndShowQuestions()
+            val gate = CompletableDeferred<Result<List<SurfaceMessage>>>()
+            coEvery { sendAskAction(any()) } coAnswers { gate.await() }
+            viewModel.onSurfaceEvent(answerEvent())
+            val opened = mutableListOf<Int>()
+            backgroundScope.launch(testDispatcher) { viewModel.openListing.toList(opened) }
+
+            viewModel.onSurfaceEvent(cardEvent())
+            gate.complete(results.asRight())
+
+            assertTrue(opened.isEmpty())
+        }
+
+    @Test
+    fun `each tap emits the id of the card tapped`() =
+        runTest {
+            showResults()
+            val opened = mutableListOf<Int>()
+            backgroundScope.launch(testDispatcher) { viewModel.openListing.toList(opened) }
+
+            viewModel.onSurfaceEvent(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "card_2"))
+            viewModel.onSurfaceEvent(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "card_3"))
+
+            assertEquals(listOf(8, 9), opened)
+        }
+
+    @Test
+    fun `a card whose listing id does not resolve sets actionError, keeps the surface and opens nothing`() =
+        runTest {
+            val badId = batch(AskFixtures.RESULTS.replace(""""listingId":7,""", """"listingId":"7","""))
+            showResults(badId)
+            val opened = mutableListOf<Int>()
+            backgroundScope.launch(testDispatcher) { viewModel.openListing.toList(opened) }
+            val before = showing().surface
+
+            viewModel.onSurfaceEvent(cardEvent())
+
+            assertTrue(opened.isEmpty())
+            assertIs<AppError.SurfaceError.Invalid>(showing().actionError)
+            assertEquals(before, showing().surface)
+            coVerify(exactly = 1) { sendAskAction(any()) }
+        }
 
     @Test
     fun `asking shows Asking while the use case runs and Showing once it completes`() =
