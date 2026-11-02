@@ -115,6 +115,13 @@ class CatalogSchemaTest {
     }
 
     @Test
+    fun `the recommendation card action references the shared action definition`() {
+        val action = props("RecommendationCard").getValue("action").jsonObject
+
+        assertEquals("#/\$defs/A2uiAction", action.getValue("\$ref").jsonPrimitive.content)
+    }
+
+    @Test
     fun `generating twice gives identical output`() {
         assertEquals(catalogSchema().toString(), catalogSchema().toString())
     }

@@ -40,6 +40,7 @@ class ScentCatalogTest {
                 DataBinding("/r/0/name"),
                 DataBinding("/r/0/price"),
                 DataBinding("/r/0/why"),
+                A2uiAction(A2uiEvent("open_listing", mapOf("listingId" to DataBinding("/r/0/listingId")))),
             ),
         )
 
@@ -128,6 +129,12 @@ class ScentCatalogTest {
 
         assertEquals(names.size, names.toSet().size)
         assertEquals("answer_questions", ScentAction.ANSWER_QUESTIONS.wireName)
+        assertEquals("open_listing", ScentAction.OPEN_LISTING.wireName)
+    }
+
+    @Test
+    fun `only open_listing is handled on the client`() {
+        assertEquals(listOf(ScentAction.OPEN_LISTING), ScentAction.entries.filter { it.handledOnClient })
     }
 
     @Test

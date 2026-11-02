@@ -3,12 +3,15 @@ package org.scent.project.data.remote.a2ui.catalog
 import kotlinx.serialization.Serializable
 import org.scent.project.data.remote.a2ui.DataBinding
 
-// The allowlist of events a scent/v1 surface may send back. The server rejects any other name.
+// The allowlist of every event a scent/v1 surface may trigger. Most go to the server; one with
+// handledOnClient is acted on by the app alone (it navigates), so the server rejects its name.
 enum class ScentAction(
     val wireName: String,
+    val handledOnClient: Boolean = false,
 ) {
     ANSWER_QUESTIONS("answer_questions"),
     EDIT_ANSWERS("edit_answers"),
+    OPEN_LISTING("open_listing", handledOnClient = true),
     ;
 
     companion object {

@@ -93,6 +93,8 @@ sealed interface ScentComponent {
         val price: DataBinding? = null,
         @SchemaDescription("Data path of the one line reason this result fits")
         val why: DataBinding? = null,
+        @SchemaDescription("Event sent when the card is tapped; open_listing with a listingId binding")
+        val action: A2uiAction? = null,
     ) : ScentComponent
 
     // Decode only: a component name this app does not know. It keeps the surface decodable so the
