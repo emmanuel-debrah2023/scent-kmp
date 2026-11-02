@@ -48,7 +48,6 @@ tags:
 - assertVisible: "Change your answers"
 
 # Back to the picks, then open one. The card is announced as "name, price, reason", so its reason finds it.
-# Last on purpose: system back is not wired yet, so there is no way back from the listing.
 - tapOn: "SHOW GIFTS"
 - extendedWaitUntil:
     visible: ".*Easy to wear and easy to give.*"
@@ -58,3 +57,11 @@ tags:
     visible: "Listing Detail"
     timeout: 15000
 - assertVisible: "Listing Detail"
+
+# System back returns to the same picks: the surface outlives the screen leaving composition.
+- back
+- extendedWaitUntil:
+    notVisible: "Listing Detail"
+    timeout: 15000
+- assertNotVisible: "Listing Detail"
+- assertVisible: ".*Easy to wear and easy to give.*"
