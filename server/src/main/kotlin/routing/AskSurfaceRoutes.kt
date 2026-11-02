@@ -107,7 +107,8 @@ private suspend fun answerAction(
     return when {
         message?.version != A2UI_VERSION -> invalid("version")
         action == null || !AskSurfaceId.isValid(surfaceId) || surfaceId == null -> invalid("surfaceId")
-        name == null -> invalid("action")
+        // A client-handled name (open_listing) is never answered here; the app navigates on its own.
+        name == null || name.handledOnClient -> invalid("action")
         else ->
             activeListingPriceRange().flatMap { range ->
                 AnswerContext.parse(action.context, range).flatMap { preferences ->
@@ -121,6 +122,7 @@ private suspend fun answerAction(
                                 agent,
                                 candidates,
                             )
+                        ScentAction.OPEN_LISTING -> invalid("action")
                     }
                 }
             }

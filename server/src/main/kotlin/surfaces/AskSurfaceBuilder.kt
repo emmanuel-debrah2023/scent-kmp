@@ -93,6 +93,7 @@ object AskSurfaceBuilder {
                     JsonArray(
                         candidates.map {
                             buildJsonObject {
+                                put("listingId", it.listingId)
                                 put("name", it.name)
                                 put("brand", it.brand)
                                 put("price", formatPrice(it.price))
@@ -193,6 +194,12 @@ object AskSurfaceBuilder {
         DataBinding("${AskPaths.RESULTS}/$index/name"),
         DataBinding("${AskPaths.RESULTS}/$index/price"),
         DataBinding("${AskPaths.RESULTS}/$index/why"),
+        A2uiAction(
+            A2uiEvent(
+                ScentAction.OPEN_LISTING.wireName,
+                mapOf("listingId" to DataBinding("${AskPaths.RESULTS}/$index/listingId")),
+            ),
+        ),
     )
 
     private fun submit(action: ScentAction) =
