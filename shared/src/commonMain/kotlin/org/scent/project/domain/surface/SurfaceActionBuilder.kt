@@ -12,7 +12,7 @@ import org.scent.project.domain.util.asRight
 
 object SurfaceActionBuilder {
     /**
-     * Builds the action a button or summary sends. Its context is read from the local data model, one
+     * Builds the action a button, summary or recommendation card sends. Its context is read from the local data model, one
      * entry per bound path; a path with nothing there is sent as null, because the server expects every
      * key present. The name must be in the [ScentAction] allowlist. [timestamp] is ISO 8601, passed in so
      * the caller owns the clock and tests stay deterministic.
@@ -26,6 +26,7 @@ object SurfaceActionBuilder {
             when (val node = surface.nodes[componentId]) {
                 is SurfaceNode.Button -> node.action
                 is SurfaceNode.PreferenceSummary -> node.action
+                is SurfaceNode.RecommendationCard -> node.action
                 else -> null
             } ?: return invalid(surface.id, componentId, "Component has no action")
         if (ScentAction.fromWireName(template.name) ==

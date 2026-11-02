@@ -3,7 +3,7 @@ package org.scent.project.domain.surface
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
-/** What a button or summary sends when pressed: an action name and, per key, the data path to read. */
+/** What a button, summary or card sends when pressed: an action name and, per key, the data path to read. */
 data class ActionTemplate(
     val name: String,
     val context: Map<String, String>,
@@ -61,6 +61,7 @@ sealed interface SurfaceNode {
         val namePath: String,
         val pricePath: String,
         val whyPath: String,
+        val action: ActionTemplate?,
     ) : SurfaceNode
 
     /** A component this client does not know or cannot bind. Shown as a quiet placeholder. */

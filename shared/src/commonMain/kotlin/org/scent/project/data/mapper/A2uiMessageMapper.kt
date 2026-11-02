@@ -169,6 +169,7 @@ object A2uiMessageMapper {
                 paths[0].orEmpty(),
                 paths[1].orEmpty(),
                 paths[2].orEmpty(),
+                action.toTemplate(),
             )
         } else {
             SurfaceNode.Unsupported(id)
