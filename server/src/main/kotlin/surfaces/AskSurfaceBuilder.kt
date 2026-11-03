@@ -34,10 +34,7 @@ import preferences.ScentPreferences
 import preferences.SizePreference
 import preferences.SizeQuestion
 import java.math.BigDecimal
-import kotlin.math.ceil
-import kotlin.math.floor
 
-private const val BUDGET_STEP = 5
 private const val EDIT_HEADING = "Change your answers"
 private const val NO_MATCH = "Nothing matches yet. Try changing your answers."
 
@@ -124,10 +121,15 @@ object AskSurfaceBuilder {
         heading: String,
         buttonLabel: String,
     ): List<A2uiServerMessage> {
-        val bounds = bounds(questions)
+        val bounds =
+            questions
+                .filterIsInstance<BudgetQuestion>()
+                .firstOrNull()
+                ?.range
+                ?.budgetBounds()
         val data =
             buildJsonObject {
-                put("answers", answers(preferences, preferences.maxPrice ?: bounds?.second?.toDouble()))
+                put("answers", answers(preferences, preferences.maxPrice ?: bounds?.max?.toDouble()))
                 put(
                     "options",
                     buildJsonObject {
@@ -139,12 +141,12 @@ object AskSurfaceBuilder {
                         }
                     },
                 )
-                bounds?.let { (min, max) ->
+                bounds?.let {
                     put(
                         "budget",
                         buildJsonObject {
-                            put("min", min)
-                            put("max", max)
+                            put("min", it.min)
+                            put("max", it.max)
                             put("step", BUDGET_STEP)
                         },
                     )
@@ -236,16 +238,6 @@ object AskSurfaceBuilder {
                 }
             },
         )
-
-    // Whole pounds, rounded outward so the real cheapest and dearest listings are inside the slider.
-    // TODO(feature/ask-surface-catalog-gaps): floor() can make the minimum 0, and AnswerContext rejects a budget
-    //  of 0 or less. The client slider starts at one step (SurfaceBindings), so this is harmless until another
-    //  client reads the minimum; clamp it to at least 1 here.
-    private fun bounds(questions: List<QuestionSpec>): Pair<Int, Int>? =
-        questions.filterIsInstance<BudgetQuestion>().firstOrNull()?.let {
-            floor(it.range.min).toInt() to
-                ceil(it.range.max).toInt()
-        }
 
     private fun summary(preferences: ScentPreferences): List<String> =
         listOfNotNull(

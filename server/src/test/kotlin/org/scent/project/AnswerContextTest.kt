@@ -78,6 +78,21 @@ class AnswerContextTest {
     }
 
     @Test
+    fun `the slider's top stop is kept when the dearest listing is off the grid`() {
+        val offGrid = PriceRange(20.0, 147.2)
+
+        assertEquals(150.0, AnswerContext.parse(buildJsonObject { put("budget", 150) }, offGrid).getOrNull()?.maxPrice)
+        assertEquals(150.0, AnswerContext.parse(buildJsonObject { put("budget", 999) }, offGrid).getOrNull()?.maxPrice)
+    }
+
+    @Test
+    fun `the slider's top stop is kept when every listing is under one step`() {
+        val cheap = PriceRange(2.0, 4.0)
+
+        assertEquals(10.0, AnswerContext.parse(buildJsonObject { put("budget", 10) }, cheap).getOrNull()?.maxPrice)
+    }
+
+    @Test
     fun `with no price range a budget is kept as given`() {
         assertEquals(9_999.0, AnswerContext.parse(buildJsonObject { put("budget", 9_999) }, null).getOrNull()?.maxPrice)
     }

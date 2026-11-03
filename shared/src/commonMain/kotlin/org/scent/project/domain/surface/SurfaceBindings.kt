@@ -123,10 +123,8 @@ object SurfaceBindings {
         return surface.read(path).listingId() != null
     }
 
-    // From max(min, step) up to max in whole steps, always ending on max. The floor of one step keeps a
-    // budget of zero out of reach, which the server rejects.
-    // TODO(feature/ask-surface-catalog-gaps): the server should clamp its minimum to at least 1 (AskSurfaceBuilder),
-    //  after which this floor can go.
+    // From max(min, step) up to max in whole steps, always ending on max. The server already sends a minimum
+    // of at least one step; this floor stays as a defence, because a budget of zero is rejected.
     private fun positions(
         min: Double?,
         max: Double?,
