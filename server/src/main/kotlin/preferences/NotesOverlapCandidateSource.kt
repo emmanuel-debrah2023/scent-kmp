@@ -85,4 +85,6 @@ private fun ResultRow.toCandidate(
     kind = ListingKind.fromString(this[ListingsTable.kind]),
     notes = notes,
     familyOverlap = familyOverlap,
+    nominalSizeMl = this[ListingsTable.nominalSizeMl],
+    remainingMl = this[ListingsTable.remainingMl],
 )

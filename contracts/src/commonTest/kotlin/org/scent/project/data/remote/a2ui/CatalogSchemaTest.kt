@@ -71,6 +71,19 @@ class CatalogSchemaTest {
     }
 
     @Test
+    fun `the card meta is a data binding and the column variant is described`() {
+        assertEquals(
+            "#/\$defs/DataBinding",
+            props("RecommendationCard")
+                .getValue("meta")
+                .jsonObject
+                .getValue("\$ref")
+                .jsonPrimitive.content,
+        )
+        assertTrue(props("Column").containsKey("variant"))
+    }
+
+    @Test
     fun `no component prop is a literal number`() {
         val types = mutableListOf<String>()
 

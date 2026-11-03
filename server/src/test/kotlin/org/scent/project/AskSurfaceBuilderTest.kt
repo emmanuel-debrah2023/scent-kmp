@@ -12,6 +12,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.scent.project.data.remote.a2ui.A2uiServerMessage
 import org.scent.project.data.remote.a2ui.DataBinding
+import org.scent.project.data.remote.a2ui.catalog.ColumnVariant
 import org.scent.project.data.remote.a2ui.catalog.SCENT_CATALOG_ID
 import org.scent.project.data.remote.a2ui.catalog.ScentComponent
 import org.scent.project.data.remote.a2ui.catalog.TextVariant
@@ -92,6 +93,7 @@ class AskSurfaceBuilderTest {
                     component.name?.path,
                     component.price?.path,
                     component.why?.path,
+                    component.meta?.path,
                 ) + contextPaths(component.action?.event?.context)
             is ScentComponent.Button -> contextPaths(component.action?.event?.context)
             else -> emptyList()
@@ -235,7 +237,7 @@ class AskSurfaceBuilderTest {
 
         assertNull(messages.firstOrNull { it.createSurface != null }, "edit must never create a surface")
         assertEquals(
-            listOf("heading", "family", "budget", "size", "submit"),
+            listOf("heading", "questions", "family", "budget", "size", "submit"),
             messages.components().drop(1).mapNotNull {
                 it.id
             },
@@ -259,7 +261,168 @@ class AskSurfaceBuilderTest {
         assertEquals(AskSurfaceBuilder.edit(id, prefs, range), AskSurfaceBuilder.edit(id, prefs, range))
     }
 
+    private fun rootChildren(messages: List<A2uiServerMessage>): List<String>? =
+        messages
+            .components()
+            .filterIsInstance<ScentComponent.Column>()
+            .first { it.id == "root" }
+            .children
+
+    private fun caption(messages: List<A2uiServerMessage>): ScentComponent.Text? =
+        messages.components().filterIsInstance<ScentComponent.Text>().firstOrNull { it.id == "caption" }
+
+    @Test
+    fun `the questions sit in one raised column with the heading and button outside it`() {
+        val messages = AskSurfaceBuilder.initial(id, askBack())
+
+        val questions = messages.components().filterIsInstance<ScentComponent.Column>().single { it.id == "questions" }
+
+        assertEquals(listOf("heading", "questions", "submit"), rootChildren(messages))
+        assertEquals(listOf("family", "budget", "size"), questions.children)
+        assertEquals(ColumnVariant.RAISED, questions.variant)
+    }
+
+    @Test
+    fun `a question the model wrote has the AI caption above the heading`() {
+        val messages = AskSurfaceBuilder.initial(id, askBack().copy(modelWritten = true))
+
+        assertEquals(listOf("caption", "heading", "questions", "submit"), rootChildren(messages))
+        assertEquals("Question written by AI", caption(messages)?.text)
+        assertEquals(TextVariant.CAPTION, caption(messages)?.variant)
+    }
+
+    @Test
+    fun `a question from the rules has no AI caption`() {
+        val messages = AskSurfaceBuilder.initial(id, askBack())
+
+        assertNull(caption(messages))
+    }
+
+    @Test
+    fun `the fixed edit heading has no AI caption`() {
+        assertNull(caption(AskSurfaceBuilder.edit(id, ScentPreferences(), range)))
+    }
+
     // results
+
+    private fun metaOf(candidate: ListingCandidate): String =
+        AskSurfaceBuilder
+            .results(id, false, ScentPreferences(), listOf(candidate), emptyList())
+            .dataModel()
+            .getValue("results")
+            .jsonArray
+            .single()
+            .jsonObject
+            .getValue("meta")
+            .jsonPrimitive.content
+
+    @Test
+    fun `a sealed bottle's meta is its kind then size then brand`() {
+        val sealed = candidate(1).copy(brand = "Atelier Nord", nominalSizeMl = 100, remainingMl = 100)
+
+        assertEquals("Sealed · 100 ml · Atelier Nord", metaOf(sealed))
+    }
+
+    @Test
+    fun `a decant's meta shows the vial size and no fill level`() {
+        val decant =
+            candidate(1).copy(kind = ListingKind.DECANT, brand = "Atelier Nord", nominalSizeMl = 10, remainingMl = 10)
+
+        assertEquals("Decant · 10 ml · Atelier Nord", metaOf(decant))
+    }
+
+    @Test
+    fun `an opened bottle's meta shows how full it is`() {
+        val opened =
+            candidate(1).copy(kind = ListingKind.OPENED, brand = "Atelier Nord", nominalSizeMl = 100, remainingMl = 95)
+
+        assertEquals("Opened · 95% full · 100 ml · Atelier Nord", metaOf(opened))
+    }
+
+    @Test
+    fun `a tester's meta shows how full it is`() {
+        val tester =
+            candidate(1).copy(kind = ListingKind.TESTER, brand = "Atelier Nord", nominalSizeMl = 50, remainingMl = 25)
+
+        assertEquals("Tester · 50% full · 50 ml · Atelier Nord", metaOf(tester))
+    }
+
+    @Test
+    fun `a listing with no sizes has only its kind and brand in the meta`() {
+        val opened = candidate(1).copy(kind = ListingKind.OPENED, brand = "Atelier Nord")
+
+        assertEquals("Opened · Atelier Nord", metaOf(opened))
+    }
+
+    @Test
+    fun `an opened bottle with no remaining amount shows its size and no fill level`() {
+        val opened = candidate(1).copy(kind = ListingKind.OPENED, brand = "Atelier Nord", nominalSizeMl = 100)
+
+        assertEquals("Opened · 100 ml · Atelier Nord", metaOf(opened))
+    }
+
+    @Test
+    fun `each card binds the meta of its own result`() {
+        val cards =
+            AskSurfaceBuilder
+                .results(id, false, ScentPreferences(), listOf(candidate(1), candidate(2)), emptyList())
+                .components()
+                .filterIsInstance<ScentComponent.RecommendationCard>()
+
+        assertEquals(listOf("/results/0/meta", "/results/1/meta"), cards.map { it.meta?.path })
+    }
+
+    @Test
+    fun `reasons the model wrote have the AI caption between the summary and the cards`() {
+        val messages =
+            AskSurfaceBuilder.results(
+                id,
+                false,
+                ScentPreferences(),
+                listOf(candidate(1)),
+                listOf(WhyLine(1, "Warm cedar", modelWritten = true)),
+            )
+
+        assertEquals(listOf("summary", "caption", "card_1"), rootChildren(messages))
+        assertEquals("Reasons written by AI · prices from Scent", caption(messages)?.text)
+        assertEquals(TextVariant.CAPTION, caption(messages)?.variant)
+    }
+
+    @Test
+    fun `reasons from the rules have no AI caption`() {
+        val messages =
+            AskSurfaceBuilder.results(
+                id,
+                false,
+                ScentPreferences(),
+                listOf(candidate(1)),
+                listOf(WhyLine(1, "Has cedar")),
+            )
+
+        assertEquals(listOf("summary", "card_1"), rootChildren(messages))
+        assertNull(caption(messages))
+    }
+
+    @Test
+    fun `one model reason among generic ones is enough for the AI caption`() {
+        val messages =
+            AskSurfaceBuilder.results(
+                id,
+                false,
+                ScentPreferences(),
+                listOf(candidate(1), candidate(2)),
+                listOf(WhyLine(1, "Warm cedar", modelWritten = true)),
+            )
+
+        assertNotNull(caption(messages))
+    }
+
+    @Test
+    fun `no results have no AI caption`() {
+        val messages = AskSurfaceBuilder.results(id, false, ScentPreferences(), emptyList(), emptyList())
+
+        assertNull(caption(messages))
+    }
 
     @Test
     fun `results on an existing surface update it and never create one`() {

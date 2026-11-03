@@ -22,7 +22,7 @@ class ScentCatalogTest {
     // Every property populated, so a dropped field shows up in the encoded keys.
     private val full: List<ScentComponent> =
         listOf(
-            ScentComponent.Column("c", listOf("a", "b")),
+            ScentComponent.Column("c", listOf("a", "b"), "raised"),
             ScentComponent.Text("t", "Who is it for?", "h2"),
             ScentComponent.Button("b", "Show picks", action),
             ScentComponent.ChoicePicker("p", "Who for?", DataBinding("/opts"), DataBinding("/answers/intent")),
@@ -41,6 +41,7 @@ class ScentCatalogTest {
                 DataBinding("/r/0/price"),
                 DataBinding("/r/0/why"),
                 A2uiAction(A2uiEvent("open_listing", mapOf("listingId" to DataBinding("/r/0/listingId")))),
+                DataBinding("/r/0/meta"),
             ),
         )
 

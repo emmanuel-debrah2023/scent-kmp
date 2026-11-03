@@ -6,17 +6,24 @@ import preferences.PriceRange
 import preferences.QuestionSpec
 import preferences.ScentPreferences
 
-/** What the ask-back surface needs: what we learned from the query, what to ask, and the wording. */
+/**
+ * What the ask-back surface needs: what we learned from the query, what to ask, and the wording.
+ * [modelWritten] is true only when a model wrote the wording, so the surface never says AI wrote
+ * something that came from the rules or from Kotlin.
+ */
 data class AskBack(
     val preferences: ScentPreferences,
     val questions: List<QuestionSpec>,
     val heading: String,
     val buttonLabel: String,
+    val modelWritten: Boolean = false,
 )
 
+/** One reason a listing fits. [modelWritten] means the same as on [AskBack]. */
 data class WhyLine(
     val listingId: Int,
     val text: String,
+    val modelWritten: Boolean = false,
 )
 
 /**

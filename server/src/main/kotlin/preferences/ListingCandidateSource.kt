@@ -16,6 +16,8 @@ data class ListingCandidate(
     val kind: ListingKind,
     val notes: List<String>,
     val familyOverlap: Int,
+    val nominalSizeMl: Int? = null,
+    val remainingMl: Int? = null,
 )
 
 /**

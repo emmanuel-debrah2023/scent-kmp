@@ -223,6 +223,24 @@ class SurfaceBindingsTest {
     }
 
     @Test
+    fun `recommendation reads the meta line of its own result`() {
+        val data = surface("""{"results":[{"meta":"other"},{"name":"Cedar","meta":"Sealed · 100 ml"}]}""")
+
+        val binding = recommendation(data, card.copy(metaPath = "/results/1/meta"))
+
+        assertEquals("Sealed · 100 ml", binding?.meta)
+    }
+
+    @Test
+    fun `recommendation has an empty meta when the path is absent or holds no text`() {
+        val noPath = surface("""{"results":[{},{"name":"Cedar","meta":"Sealed"}]}""")
+        val notText = surface("""{"results":[{},{"name":"Cedar","meta":100}]}""")
+
+        assertEquals("", recommendation(noPath, card)?.meta)
+        assertEquals("", recommendation(notText, card.copy(metaPath = "/results/1/meta"))?.meta)
+    }
+
+    @Test
     fun `recommendation shows without a price or why but not without a name`() {
         val noExtras = surface("""{"results":[{},{"name":"Cedar"}]}""")
         val noName = surface("""{"results":[{},{"name":"  ","price":"£76"}]}""")

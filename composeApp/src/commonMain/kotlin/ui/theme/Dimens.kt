@@ -18,6 +18,7 @@ data class ScentSpacing(
     val sectionGap: Dp = 64.dp, // Between major sections
     val elementGap: Dp = 32.dp, // Within a section, between related elements
     val cardPadding: Dp = 16.dp,
+    val raisedSectionGap: Dp = 20.dp, // Between the controls inside a RaisedSection
     val screenPadding: Dp = 16.dp, // container-padding
     // Component dimensions
     val buttonHeight: Dp = 52.dp,

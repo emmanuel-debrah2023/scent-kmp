@@ -51,8 +51,16 @@ Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the s
   budget above the slider's live maximum is clamped. `edit_answers` makes no model call and replays identically.
 - **Data model paths:** `/answers/{intent,family,budget,size}`, `/options/{family,size}` (`{value,label}`),
   `/budget/{min,max,step}` (step 5; both ends are multiples of the step, rounded up from the live prices, with a
-  minimum of one step and the ends at least a step apart), `/summary`, `/results/<i>/{listingId,name,brand,price,why}`. Prices are
+  minimum of one step and the ends at least a step apart), `/summary`, `/results/<i>/{listingId,name,brand,price,meta,why}`. Prices are
   formatted strings (`£75`). Every fact lives here; components carry only wording and `DataBinding` paths.
+- **Meta line:** the server formats `meta` as kind, fill, size, brand, leaving out what it does not have
+  (`Sealed · 100 ml · Atelier Nord`, `Opened · 95% full · 100 ml · Atelier Nord`). Fill shows only for an opened
+  bottle or a tester, and comes from the midpoint of the fill band the seller declared.
+- **Layout:** the question inputs sit in a `Column` with `variant` `raised`; the heading and button stay outside
+  it. A client that does not know the prop ignores it and draws a plain column.
+- **AI captions:** a `caption` text says "Question written by AI" above the heading or "Reasons written by AI ·
+  prices from Scent" above the cards. It is sent only when `modelWritten` is true, so the rules fallback and the
+  fixed edit heading never claim AI wrote them. The reasons caption shows if any reason came from the model.
 - **Opening a listing:** each result card carries an `open_listing` action whose `listingId` context entry is
   bound to `/results/<i>/listingId`. The action is client-handled (`ScentAction.handledOnClient`): the app
   navigates to the listing itself, so `POST /ask/actions` answers it with a 400 "Invalid action" and never
