@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -13,6 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import ui.accessibility.clearedDescription
 import ui.theme.ScentTheme
@@ -22,7 +26,8 @@ import ui.theme.ScentThemeExtras
  * A suggested fragrance: [name] and [price] on one line, and [why] it fits underneath. A blank
  * [price] or [why] is left out of both the layout and the announcement.
  *
- * The card is announced as one description ("name, price, reason") and is not a control yet.
+ * The card is announced as one description ("name, price, reason"). With [onClick] it is a button
+ * ("Open listing") at least as tall as a button; without it, it is plain, non-interactive content.
  */
 @Composable
 fun RecommendationCard(
@@ -30,44 +35,77 @@ fun RecommendationCard(
     price: String,
     why: String,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     val description = listOf(name, price, why).filter(String::isNotBlank).joinToString(", ")
-    Card(
-        modifier = modifier.fillMaxWidth().clearedDescription(description),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        elevation = CardDefaults.cardElevation(defaultElevation = ScentThemeExtras.elevation.card),
+    if (onClick == null) {
+        Card(
+            modifier = modifier.fillMaxWidth().clearedDescription(description),
+            shape = MaterialTheme.shapes.large,
+            colors = cardColors(),
+            elevation = cardElevation(),
+            content = { RecommendationCardContent(name, price, why) },
+        )
+    } else {
+        Card(
+            onClick = onClick,
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .heightIn(min = ScentThemeExtras.spacing.buttonHeight)
+                    .semantics { role = Role.Button }
+                    .clearedDescription(description, onClick = onClick, onClickLabel = OPEN_LISTING_LABEL),
+            shape = MaterialTheme.shapes.large,
+            colors = cardColors(),
+            elevation = cardElevation(),
+            content = { RecommendationCardContent(name, price, why) },
+        )
+    }
+}
+
+private const val OPEN_LISTING_LABEL = "Open listing"
+
+@Composable
+private fun cardColors() = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest)
+
+@Composable
+private fun cardElevation() = CardDefaults.cardElevation(defaultElevation = ScentThemeExtras.elevation.card)
+
+@Composable
+private fun RecommendationCardContent(
+    name: String,
+    price: String,
+    why: String,
+) {
+    Column(
+        modifier = Modifier.padding(ScentThemeExtras.spacing.cardPadding),
+        verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
     ) {
-        Column(
-            modifier = Modifier.padding(ScentThemeExtras.spacing.cardPadding),
-            verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
+            verticalAlignment = Alignment.Bottom,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
-                verticalAlignment = Alignment.Bottom,
-            ) {
+            Text(
+                text = name,
+                style = ScentThemeExtras.listingRowFragranceName,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            if (price.isNotBlank()) {
                 Text(
-                    text = name,
-                    style = ScentThemeExtras.listingRowFragranceName,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                )
-                if (price.isNotBlank()) {
-                    Text(
-                        text = price,
-                        style = ScentThemeExtras.listingRowPrice,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            if (why.isNotBlank()) {
-                Text(
-                    text = why,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text = price,
+                    style = ScentThemeExtras.listingRowPrice,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
+        }
+        if (why.isNotBlank()) {
+            Text(
+                text = why,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }
@@ -82,6 +120,22 @@ private fun RecommendationCardPreview() {
                 price = "£76",
                 why = "Dry cedarwood and vetiver: a classic woody gift that stays close to the skin.",
                 modifier = Modifier.padding(ScentThemeExtras.spacing.screenPadding),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun RecommendationCardClickablePreview() {
+    ScentTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            RecommendationCard(
+                name = "Cedar & Smoke",
+                price = "£76",
+                why = "Dry cedarwood and vetiver.",
+                modifier = Modifier.padding(ScentThemeExtras.spacing.screenPadding),
+                onClick = {},
             )
         }
     }

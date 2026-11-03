@@ -3,7 +3,7 @@ tags:
   - suite
 ---
 # Proves a signed-in user can ask for a gift in free text, answer the questions the assistant composes,
-# see picks, and reopen their answers.
+# see picks, reopen their answers, and open a pick.
 # Needs the server started by e2e-up.sh, which sets ASK_BACK_AGENT=fake: a canned gift answer, no model.
 - runFlow:
     file: ../subflows/start-authenticated.yaml
@@ -46,3 +46,22 @@ tags:
     visible: "Change your answers"
     timeout: 15000
 - assertVisible: "Change your answers"
+
+# Back to the picks, then open one. The card is announced as "name, price, reason", so its reason finds it.
+- tapOn: "SHOW GIFTS"
+- extendedWaitUntil:
+    visible: ".*Easy to wear and easy to give.*"
+    timeout: 15000
+- tapOn: ".*Easy to wear and easy to give.*"
+- extendedWaitUntil:
+    visible: "Listing Detail"
+    timeout: 15000
+- assertVisible: "Listing Detail"
+
+# System back returns to the same picks: the surface outlives the screen leaving composition.
+- back
+- extendedWaitUntil:
+    notVisible: "Listing Detail"
+    timeout: 15000
+- assertNotVisible: "Listing Detail"
+- assertVisible: ".*Easy to wear and easy to give.*"

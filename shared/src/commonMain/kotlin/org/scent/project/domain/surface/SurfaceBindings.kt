@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import org.scent.project.data.remote.a2ui.JsonPointer
+import org.scent.project.data.remote.a2ui.catalog.ScentAction
 import kotlin.math.abs
 
 data class ChoiceOption(
@@ -45,6 +46,7 @@ data class RecommendationBinding(
     val name: String,
     val price: String,
     val why: String,
+    val opensListing: Boolean,
 )
 
 // A slider with more stops than this cannot be used by touch; the surface falls back instead.
@@ -106,7 +108,19 @@ object SurfaceBindings {
             name = name,
             price = surface.read(node.pricePath).text().orEmpty(),
             why = surface.read(node.whyPath).text().orEmpty(),
+            opensListing = opensListing(surface, node.action),
         )
+    }
+
+    // Tappable only when the card's action opens a listing and its bound path holds a valid id, so a card
+    // is never drawn as a control with nothing behind it.
+    private fun opensListing(
+        surface: Surface,
+        action: ActionTemplate?,
+    ): Boolean {
+        if (action?.name != ScentAction.OPEN_LISTING.wireName) return false
+        val path = action.context[LISTING_ID_KEY] ?: return false
+        return surface.read(path).listingId() != null
     }
 
     // From max(min, step) up to max in whole steps, always ending on max. The floor of one step keeps a

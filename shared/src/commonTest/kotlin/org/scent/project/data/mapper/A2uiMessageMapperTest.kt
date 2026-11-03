@@ -226,8 +226,20 @@ class A2uiMessageMapperTest {
             """{"id":"r","component":"RecommendationCard","name":{"path":"/n"},""" +
                 """"price":{"path":"/p"},"why":{"path":"/w"}}"""
 
-        assertEquals(SurfaceNode.RecommendationCard("r", "/n", "/p", "/w"), node(all))
+        assertEquals(SurfaceNode.RecommendationCard("r", "/n", "/p", "/w", null), node(all))
         assertEquals(SurfaceNode.Unsupported("r"), node(all.replace(""","why":{"path":"/w"}""", "")))
+    }
+
+    @Test
+    fun `a recommendation card keeps its open_listing action template`() {
+        val json =
+            """{"id":"r","component":"RecommendationCard","name":{"path":"/n"},"price":{"path":"/p"},""" +
+                """"why":{"path":"/w"},"action":{"event":{"name":"open_listing",""" +
+                """"context":{"listingId":{"path":"/id"},"bad":{"path":"nope"}}}}}"""
+
+        val card = node(json) as SurfaceNode.RecommendationCard
+
+        assertEquals(ActionTemplate("open_listing", mapOf("listingId" to "/id")), card.action)
     }
 
     @Test

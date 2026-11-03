@@ -98,6 +98,26 @@ class AskSurfaceRoutesTest {
         ): Result<List<WhyLine>> = candidates.map { WhyLine(it.listingId, "Has cedar") }.asRight()
     }
 
+    private class RecordingAgent : AskBackAgent {
+        var calls = 0
+
+        override suspend fun ask(
+            query: String,
+            priceRange: PriceRange?,
+        ): Result<AskBack> {
+            calls++
+            return AppError.AgentError.Unavailable(503).asLeft()
+        }
+
+        override suspend fun explain(
+            preferences: ScentPreferences,
+            candidates: List<ListingCandidate>,
+        ): Result<List<WhyLine>> {
+            calls++
+            return emptyList<WhyLine>().asRight()
+        }
+    }
+
     private fun askAll() =
         Agent(
             AskBack(
@@ -346,7 +366,6 @@ class AskSurfaceRoutesTest {
             val bad =
                 listOf(
                     action(name = "delete_everything"),
-                    action(name = "open_listing"),
                     action(version = "v0.8"),
                     action(version = null),
                     action(surfaceId = null),
@@ -363,6 +382,27 @@ class AskSurfaceRoutesTest {
                 )
             bad.forEach { assertEquals(HttpStatusCode.BadRequest, client.act(it).status, "accepted: ${it.take(80)}") }
         }
+
+    @Test
+    fun `open_listing is client handled, so it is a 400 and never reaches the agent or the source`() {
+        val source = Source()
+        val agent = RecordingAgent()
+        withApp(agent = agent, source = source) {
+            val bodies =
+                listOf(
+                    action(name = "open_listing", context = """{"listingId":1}"""),
+                    action(name = "open_listing"),
+                    action(name = "open_listing", context = """{"listingId":1,"intent":"GIFT","budget":80}"""),
+                )
+            bodies.forEach {
+                val response = client.act(it)
+                assertEquals(HttpStatusCode.BadRequest, response.status)
+                assertTrue(response.bodyAsText().contains("Invalid action"))
+            }
+        }
+        assertEquals(0, agent.calls)
+        assertTrue(source.asked.isEmpty())
+    }
 
     // failures
 

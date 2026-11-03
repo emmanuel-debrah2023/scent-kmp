@@ -50,8 +50,13 @@ Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the s
   `size`). Each value is re-checked (known enum names, a finite budget above 0), unknown keys are ignored and a
   budget above the live maximum is clamped. `edit_answers` makes no model call and replays identically.
 - **Data model paths:** `/answers/{intent,family,budget,size}`, `/options/{family,size}` (`{value,label}`),
-  `/budget/{min,max,step}` (whole pounds, step 5), `/summary`, `/results/<i>/{name,brand,price,why}`. Prices are
+  `/budget/{min,max,step}` (whole pounds, step 5), `/summary`, `/results/<i>/{listingId,name,brand,price,why}`. Prices are
   formatted strings (`£75`). Every fact lives here; components carry only wording and `DataBinding` paths.
+- **Opening a listing:** each result card carries an `open_listing` action whose `listingId` context entry is
+  bound to `/results/<i>/listingId`. The action is client-handled (`ScentAction.handledOnClient`): the app
+  navigates to the listing itself, so `POST /ask/actions` answers it with a 400 "Invalid action" and never
+  calls the agent. The id comes only from server-built data and the client re-checks it (a whole number above 0)
+  before it draws the card as tappable or navigates.
 - **Time budget:** each model step gets `ASK_BACK_BUDGET_MS` (default 12000, max 25000). Past it the model is
   cancelled, its late answer discarded and the rules answer returned. Straight-to-results makes two model steps,
   so the worst case is about 24 s.

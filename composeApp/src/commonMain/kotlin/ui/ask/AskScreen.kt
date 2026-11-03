@@ -14,9 +14,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -42,10 +44,15 @@ private const val QUERY_MIN_LINES = 3
 
 @Composable
 fun AskScreen(
+    onOpenListing: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AskViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val currentOnOpenListing by rememberUpdatedState(onOpenListing)
+    LaunchedEffect(viewModel) {
+        viewModel.openListing.collect { currentOnOpenListing(it) }
+    }
     val actions =
         remember(viewModel) {
             AskActions(

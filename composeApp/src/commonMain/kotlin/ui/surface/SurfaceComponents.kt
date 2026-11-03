@@ -96,6 +96,7 @@ internal fun SurfacePreferenceSummary(
 internal fun SurfaceRecommendationCard(
     surface: Surface,
     node: SurfaceNode.RecommendationCard,
+    onEvent: (SurfaceEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val binding = SurfaceBindings.recommendation(surface, node)
@@ -105,7 +106,11 @@ internal fun SurfaceRecommendationCard(
     }
     // TODO(feature/ask-surface-catalog-gaps): the board shows a meta line ("Sealed · 100 ml · Atelier Nord")
     //  under the name; RecommendationCard has no binding for it, so the brand in the data model goes unused.
-    // TODO(feature/ask-result-open-listing): the board's card opens the listing. The action allowlist has no
-    //  way to ask for that yet, so the card is not tappable; harmless while nothing else links to a result.
-    RecommendationCard(name = binding.name, price = binding.price, why = binding.why, modifier = modifier)
+    RecommendationCard(
+        name = binding.name,
+        price = binding.price,
+        why = binding.why,
+        modifier = modifier,
+        onClick = if (binding.opensListing) ({ onEvent(SurfaceEvent.ActionTriggered(surface.id, node.id)) }) else null,
+    )
 }

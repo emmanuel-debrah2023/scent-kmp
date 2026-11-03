@@ -2,8 +2,10 @@ package ui.components
 
 import android.app.Application
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
@@ -106,5 +108,45 @@ class SummaryAndCardTest {
         composeRule
             .onNode(hasContentDescription("Cedar & Smoke, £76, Dry wood"))
             .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+    }
+
+    private val clickableCard = hasContentDescription("Cedar & Smoke, £76, Dry wood")
+
+    @Test
+    fun `a clickable card has a button role, an open listing click label and reports one tap once`() {
+        var taps = 0
+        composeRule.setContent {
+            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", "Dry wood", onClick = { taps++ }) }
+        }
+
+        val card = composeRule.onNode(clickableCard)
+        card.assertHasClickAction()
+        card.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        card.assert(
+            SemanticsMatcher("click label is Open listing") {
+                it.config.getOrNull(SemanticsActions.OnClick)?.label == "Open listing"
+            },
+        )
+        card.performClick()
+
+        assertEquals(1, taps)
+    }
+
+    @Test
+    fun `a clickable card keeps the name, price and reason announcement`() {
+        composeRule.setContent {
+            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", "Dry wood", onClick = {}) }
+        }
+
+        composeRule.onNode(clickableCard).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+    }
+
+    @Test
+    fun `a clickable card with only a name is at least as tall as a button`() {
+        composeRule.setContent {
+            MaterialTheme { RecommendationCard("Cedar", price = "", why = "", onClick = {}) }
+        }
+
+        composeRule.onNode(hasContentDescription("Cedar")).assertHeightIsAtLeast(52.dp)
     }
 }

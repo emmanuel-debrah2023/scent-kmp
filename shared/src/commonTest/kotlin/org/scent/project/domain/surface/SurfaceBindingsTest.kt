@@ -203,7 +203,14 @@ class SurfaceBindingsTest {
 
     // RecommendationCard
 
-    private val card = SurfaceNode.RecommendationCard("card", "/results/1/name", "/results/1/price", "/results/1/why")
+    private val card =
+        SurfaceNode.RecommendationCard(
+            "card",
+            "/results/1/name",
+            "/results/1/price",
+            "/results/1/why",
+            null,
+        )
 
     @Test
     fun `recommendation reads the name and price and why of its own result`() {
@@ -212,7 +219,7 @@ class SurfaceBindingsTest {
                 """{"results":[{"name":"A","price":"£1","why":"a"},{"name":"Cedar","price":"£76","why":"Dry wood"}]}""",
             )
 
-        assertEquals(RecommendationBinding("Cedar", "£76", "Dry wood"), recommendation(data, card))
+        assertEquals(RecommendationBinding("Cedar", "£76", "Dry wood", false), recommendation(data, card))
     }
 
     @Test
@@ -220,8 +227,38 @@ class SurfaceBindingsTest {
         val noExtras = surface("""{"results":[{},{"name":"Cedar"}]}""")
         val noName = surface("""{"results":[{},{"name":"  ","price":"£76"}]}""")
 
-        assertEquals(RecommendationBinding("Cedar", "", ""), recommendation(noExtras, card))
+        assertEquals(RecommendationBinding("Cedar", "", "", false), recommendation(noExtras, card))
         assertNull(recommendation(noName, card))
         assertNull(recommendation(surface("""{}"""), card))
+    }
+
+    private val openCard =
+        card.copy(action = ActionTemplate("open_listing", mapOf("listingId" to "/results/1/listingId")))
+
+    private fun opens(listingId: String?): Boolean? {
+        val id = listingId?.let { ""","listingId":$it""" }.orEmpty()
+        return recommendation(surface("""{"results":[{},{"name":"Cedar"$id}]}"""), openCard)?.opensListing
+    }
+
+    @Test
+    fun `a card opens its listing only when its bound path holds a whole positive number`() {
+        assertEquals(true, opens("7"))
+        assertEquals(false, opens(null))
+        assertEquals(false, opens("\"7\""))
+        assertEquals(false, opens("0"))
+        assertEquals(false, opens("-3"))
+        assertEquals(false, opens("1.5"))
+        assertEquals(false, opens("null"))
+    }
+
+    @Test
+    fun `a card whose action is not open_listing or has no id path is not tappable`() {
+        val data = surface("""{"results":[{},{"name":"Cedar","listingId":7}]}""")
+        val other = card.copy(action = ActionTemplate("edit_answers", mapOf("listingId" to "/results/1/listingId")))
+        val noPath = card.copy(action = ActionTemplate("open_listing", emptyMap()))
+
+        assertEquals(false, recommendation(data, other)?.opensListing)
+        assertEquals(false, recommendation(data, noPath)?.opensListing)
+        assertEquals(false, recommendation(data, card)?.opensListing)
     }
 }

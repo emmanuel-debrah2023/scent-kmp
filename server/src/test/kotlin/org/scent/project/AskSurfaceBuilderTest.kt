@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -91,7 +92,7 @@ class AskSurfaceBuilderTest {
                     component.name?.path,
                     component.price?.path,
                     component.why?.path,
-                )
+                ) + contextPaths(component.action?.event?.context)
             is ScentComponent.Button -> contextPaths(component.action?.event?.context)
             else -> emptyList()
         }
@@ -287,6 +288,38 @@ class AskSurfaceBuilderTest {
 
         assertTrue(components.any { it is ScentComponent.Text && it.id == "empty" })
         assertTrue(components.any { it is ScentComponent.PreferenceSummary })
+    }
+
+    @Test
+    fun `each result carries its candidate's listing id as an integer`() {
+        val data =
+            AskSurfaceBuilder
+                .results(id, false, ScentPreferences(), listOf(candidate(7), candidate(42)), emptyList())
+                .dataModel()
+
+        val ids = data.getValue("results").jsonArray.map { it.jsonObject.getValue("listingId").jsonPrimitive }
+        assertEquals(listOf(7, 42), ids.map { it.intOrNull })
+        assertTrue(ids.none { it.isString })
+    }
+
+    @Test
+    fun `each card opens its own listing through a binding to its own index`() {
+        val messages =
+            AskSurfaceBuilder.results(id, false, ScentPreferences(), listOf(candidate(7), candidate(42)), emptyList())
+        val data = messages.dataModel()
+
+        messages.components().filterIsInstance<ScentComponent.RecommendationCard>().forEachIndexed { index, card ->
+            val event = assertNotNull(card.action?.event)
+            assertEquals("open_listing", event.name)
+            val path = assertNotNull(event.context?.get("listingId")?.path)
+            assertEquals("/results/$index/listingId", path)
+            assertEquals(
+                listOf(7, 42)[index],
+                resolve(data, path)
+                    ?.jsonPrimitive
+                    ?.intOrNull,
+            )
+        }
     }
 
     // contract invariants

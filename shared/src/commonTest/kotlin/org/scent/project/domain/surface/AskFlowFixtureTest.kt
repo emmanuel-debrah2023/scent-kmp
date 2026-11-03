@@ -20,7 +20,7 @@ class AskFlowFixtureTest {
         """{"messages":[{"version":"v0.9","createSurface":{"surfaceId":"ask-123e4567-e89b-42d3-a456-426614174000","catalogId":"https://scent.app/a2ui/scent/v1"}},{"version":"v0.9","updateDataModel":{"surfaceId":"ask-123e4567-e89b-42d3-a456-426614174000","path":"/","value":{"answers":{"intent":null,"family":null,"budget":120.0,"size":null},"options":{"family":[{"value":"FRESH","label":"Fresh"},{"value":"WOODY","label":"Woody"},{"value":"SPICY","label":"Spicy"},{"value":"FLORAL","label":"Floral"},{"value":"GOURMAND","label":"Gourmand"}],"size":[{"value":"FULL","label":"Full bottle"},{"value":"DECANT","label":"Decant"}]},"budget":{"min":30,"max":120,"step":5}}}},{"version":"v0.9","updateComponents":{"surfaceId":"ask-123e4567-e89b-42d3-a456-426614174000","components":[{"component":"Column","id":"root","children":["heading","family","budget","size","submit"]},{"component":"Text","id":"heading","text":"A few quick questions","variant":"h2"},{"component":"ChoicePicker","id":"family","label":"Scent family","options":{"path":"/options/family"},"value":{"path":"/answers/family"}},{"component":"RangeSlider","id":"budget","label":"Budget","min":{"path":"/budget/min"},"max":{"path":"/budget/max"},"step":{"path":"/budget/step"},"value":{"path":"/answers/budget"}},{"component":"ChoicePicker","id":"size","label":"Bottle size","options":{"path":"/options/size"},"value":{"path":"/answers/size"}},{"component":"Button","id":"submit","label":"Show picks","action":{"event":{"name":"answer_questions","context":{"intent":{"path":"/answers/intent"},"family":{"path":"/answers/family"},"budget":{"path":"/answers/budget"},"size":{"path":"/answers/size"}}}}}]}}]}"""
 
     private val resultsBatch =
-        """{"messages":[{"version":"v0.9","updateDataModel":{"surfaceId":"ask-123e4567-e89b-42d3-a456-426614174000","path":"/","value":{"answers":{"intent":null,"family":"WOODY","budget":80.0,"size":null},"summary":["Woody","up to £80"],"results":[{"name":"N","brand":"B","price":"£75","why":"Has cedar notes"}]}}},{"version":"v0.9","updateComponents":{"surfaceId":"ask-123e4567-e89b-42d3-a456-426614174000","components":[{"component":"Column","id":"root","children":["summary","card_7"]},{"component":"PreferenceSummary","id":"summary","items":{"path":"/summary"},"action":{"event":{"name":"edit_answers","context":{"intent":{"path":"/answers/intent"},"family":{"path":"/answers/family"},"budget":{"path":"/answers/budget"},"size":{"path":"/answers/size"}}}}},{"component":"RecommendationCard","id":"card_7","name":{"path":"/results/0/name"},"price":{"path":"/results/0/price"},"why":{"path":"/results/0/why"}}]}}]}"""
+        """{"messages":[{"version":"v0.9","updateDataModel":{"surfaceId":"ask-123e4567-e89b-42d3-a456-426614174000","path":"/","value":{"answers":{"intent":null,"family":"WOODY","budget":80.0,"size":null},"summary":["Woody","up to £80"],"results":[{"listingId":7,"name":"N","brand":"B","price":"£75","why":"Has cedar notes"}]}}},{"version":"v0.9","updateComponents":{"surfaceId":"ask-123e4567-e89b-42d3-a456-426614174000","components":[{"component":"Column","id":"root","children":["summary","card_7"]},{"component":"PreferenceSummary","id":"summary","items":{"path":"/summary"},"action":{"event":{"name":"edit_answers","context":{"intent":{"path":"/answers/intent"},"family":{"path":"/answers/family"},"budget":{"path":"/answers/budget"},"size":{"path":"/answers/size"}}}}},{"component":"RecommendationCard","id":"card_7","name":{"path":"/results/0/name"},"price":{"path":"/results/0/price"},"why":{"path":"/results/0/why"},"action":{"event":{"name":"open_listing","context":{"listingId":{"path":"/results/0/listingId"}}}}}]}}]}"""
 
     private fun asked() = reduce(initialBatch).state
 
@@ -78,6 +78,23 @@ class AskFlowFixtureTest {
         assertEquals(listOf("summary", "card_7"), assertIs<SurfaceNode.Column>(surface.nodes["root"]).children)
         assertIs<SurfaceNode.RecommendationCard>(surface.nodes["card_7"])
         assertEquals("edit_answers", SurfaceActionBuilder.build(surface, "summary", now).getOrNull()?.name)
+    }
+
+    @Test
+    fun `a result card opens the listing whose id the server put in the data model`() {
+        val surface = reduce(resultsBatch, asked()).state.surface(surfaceId)
+
+        val action = SurfaceActionBuilder.build(surface, "card_7", now).getOrNull()
+
+        assertEquals(7, action?.listingToOpen)
+        assertEquals(
+            true,
+            SurfaceBindings
+                .recommendation(
+                    surface,
+                    surface.nodes.getValue("card_7") as SurfaceNode.RecommendationCard,
+                )?.opensListing,
+        )
     }
 
     @Test

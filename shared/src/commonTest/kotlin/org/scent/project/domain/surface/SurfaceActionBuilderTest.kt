@@ -22,13 +22,25 @@ class SurfaceActionBuilderTest {
         val rogue =
             """{"id":"rogue","component":"Button","label":"x",""" +
                 """"action":{"event":{"name":"delete_everything","context":{}}}}"""
+        val card =
+            """{"id":"card","component":"RecommendationCard","name":{"path":"/results/0/name"},""" +
+                """"price":{"path":"/results/0/price"},"why":{"path":"/results/0/why"},""" +
+                """"action":{"event":{"name":"open_listing","context":{"listingId":{"path":"/results/0/listingId"}}}}}"""
         val plain = """{"id":"plain","component":"Button","label":"x"}"""
         val state =
             reduce(
                 batch(
                     create(),
-                    data("s1", "/", """{"answers":{"family":"WOODY","budget":80}}"""),
-                    components("s1", button, summary, rogue, plain, """{"id":"txt","component":"Text","text":"x"}"""),
+                    data("s1", "/", """{"answers":{"family":"WOODY","budget":80},"results":[{"listingId":7}]}"""),
+                    components(
+                        "s1",
+                        button,
+                        summary,
+                        card,
+                        rogue,
+                        plain,
+                        """{"id":"txt","component":"Text","text":"x"}""",
+                    ),
                 ),
             ).state
         return state.surface()
@@ -57,6 +69,23 @@ class SurfaceActionBuilderTest {
     @Test
     fun `the preference summary can send an action too`() {
         assertEquals("edit_answers", SurfaceActionBuilder.build(surface(), "summary", now).getOrNull()?.name)
+    }
+
+    @Test
+    fun `a recommendation card can send an open_listing action carrying the bound id`() {
+        val action = SurfaceActionBuilder.build(surface(), "card", now).getOrNull()
+
+        assertEquals("open_listing", action?.name)
+        assertEquals("card", action?.sourceComponentId)
+        assertEquals(JsonPrimitive(7), action?.context?.get("listingId"))
+    }
+
+    @Test
+    fun `an open_listing action whose id path holds nothing still builds with a null id`() {
+        val state = SurfaceReducer.setValue(SurfaceState(mapOf("s1" to surface())), "s1", "/results", JsonNull)
+        val action = SurfaceActionBuilder.build(requireNotNull(state.getOrNull()).surface(), "card", now).getOrNull()
+
+        assertEquals(JsonNull, action?.context?.get("listingId"))
     }
 
     @Test

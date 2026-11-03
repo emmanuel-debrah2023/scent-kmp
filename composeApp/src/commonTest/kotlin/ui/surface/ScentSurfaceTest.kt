@@ -1,11 +1,13 @@
 package ui.surface
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -281,12 +283,63 @@ abstract class ScentSurfaceTest {
                 withData(
                     """{"results":[{"name":"Cedar & Smoke","price":"£76","why":"Dry wood"}]}""",
                     SurfaceNode.Column("root", listOf("card")),
-                    SurfaceNode.RecommendationCard("card", "/results/0/name", "/results/0/price", "/results/0/why"),
+                    SurfaceNode.RecommendationCard(
+                        "card",
+                        "/results/0/name",
+                        "/results/0/price",
+                        "/results/0/why",
+                        null,
+                    ),
                 )
 
             setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
 
             onNodeWithContentDescription("Cedar & Smoke, £76, Dry wood").assertExists()
+        }
+
+    private val openListing = ActionTemplate("open_listing", mapOf("listingId" to "/results/0/listingId"))
+
+    private fun cardWith(listingId: String?): Surface {
+        val id = listingId?.let { ""","listingId":$it""" }.orEmpty()
+        return withData(
+            """{"results":[{"name":"Cedar & Smoke","price":"£76","why":"Dry wood"$id}]}""",
+            SurfaceNode.Column("root", listOf("card")),
+            SurfaceNode.RecommendationCard(
+                "card",
+                "/results/0/name",
+                "/results/0/price",
+                "/results/0/why",
+                openListing,
+            ),
+        )
+    }
+
+    @Test
+    fun `a card with a valid listing id can be tapped and reports the card once`() =
+        runComposeUiTest {
+            val events = mutableListOf<SurfaceEvent>()
+
+            setContent { MaterialTheme { ScentSurface(cardWith("7"), onEvent = events::add) } }
+            onNodeWithContentDescription("Cedar & Smoke, £76, Dry wood").assertHasClickAction().performClick()
+
+            assertEquals(listOf<SurfaceEvent>(SurfaceEvent.ActionTriggered("s1", "card")), events)
+        }
+
+    @Test
+    fun `a card whose listing id is missing or invalid has no click action`() =
+        runComposeUiTest {
+            val events = mutableListOf<SurfaceEvent>()
+            val surface = mutableStateOf(cardWith(null))
+
+            setContent { MaterialTheme { ScentSurface(surface.value, onEvent = events::add) } }
+
+            listOf(null, "\"7\"", "0", "-1", "1.5").forEach { bad ->
+                surface.value = cardWith(bad)
+                waitForIdle()
+                onNodeWithContentDescription("Cedar & Smoke, £76, Dry wood")
+                    .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+            }
+            assertEquals(emptyList(), events)
         }
 
     @Test
@@ -296,7 +349,13 @@ abstract class ScentSurfaceTest {
                 withData(
                     """{"results":[{}]}""",
                     SurfaceNode.Column("root", listOf("card")),
-                    SurfaceNode.RecommendationCard("card", "/results/0/name", "/results/0/price", "/results/0/why"),
+                    SurfaceNode.RecommendationCard(
+                        "card",
+                        "/results/0/name",
+                        "/results/0/price",
+                        "/results/0/why",
+                        null,
+                    ),
                 )
 
             setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
