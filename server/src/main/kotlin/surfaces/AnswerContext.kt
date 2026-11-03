@@ -13,7 +13,6 @@ import preferences.PriceRange
 import preferences.ScentFamily
 import preferences.ScentPreferences
 import preferences.SizePreference
-import kotlin.math.ceil
 
 /** The data paths an ask surface reads and writes. Builder, button context and parser share them. */
 object AskPaths {
@@ -33,8 +32,8 @@ object AskPaths {
 /**
  * Reads the answers a client echoes back in an action's context. The client is untrusted: every value
  * must be a known enum name or a sane number, anything else is rejected, and unknown keys are ignored
- * (never echoed). A budget above the live maximum is clamped, because the price range can move
- * between the two calls; one below the minimum is kept and honestly returns nothing.
+ * (never echoed). A budget above the slider's live maximum ([budgetBounds]) is clamped, because the
+ * price range can move between the two calls; one below the minimum is kept and honestly returns nothing.
  */
 object AnswerContext {
     fun parse(
@@ -75,7 +74,7 @@ object AnswerContext {
         if (raw == null || raw is JsonNull) return null.asRight()
         val number = (raw as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull
         if (number == null || !number.isFinite() || number <= 0.0) return invalid("budget")
-        val ceiling = priceRange?.let { ceil(it.max) }
+        val ceiling = priceRange?.budgetBounds()?.max?.toDouble()
         return (if (ceiling != null) minOf(number, ceiling) else number).asRight()
     }
 

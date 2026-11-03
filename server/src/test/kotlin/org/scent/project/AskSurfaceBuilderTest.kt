@@ -167,18 +167,51 @@ class AskSurfaceBuilderTest {
         )
     }
 
-    @Test
-    fun `the slider range is rounded outward to whole pounds with a fixed step`() {
+    private fun sliderFor(prices: PriceRange): Triple<Double?, Double?, Double?> {
+        val plan = PreferenceQuestionPlanner.plan(ScentPreferences(), prices)
         val budget =
             AskSurfaceBuilder
-                .initial(id, askBack())
+                .initial(id, AskBack(ScentPreferences(), plan, "Let's find it", "Show picks"))
                 .dataModel()
                 .getValue("budget")
                 .jsonObject
+        return Triple(
+            budget.getValue("min").jsonPrimitive.doubleOrNull,
+            budget.getValue("max").jsonPrimitive.doubleOrNull,
+            budget.getValue("step").jsonPrimitive.doubleOrNull,
+        )
+    }
 
-        assertEquals(19.0, budget.getValue("min").jsonPrimitive.doubleOrNull)
-        assertEquals(341.0, budget.getValue("max").jsonPrimitive.doubleOrNull)
-        assertEquals(5.0, budget.getValue("step").jsonPrimitive.doubleOrNull)
+    @Test
+    fun `both ends of an off-grid slider round up to the step grid`() {
+        assertEquals(Triple(20.0, 345.0, 5.0), sliderFor(PriceRange(19.5, 340.2)))
+    }
+
+    @Test
+    fun `a slider already on the grid keeps its ends`() {
+        assertEquals(Triple(20.0, 150.0, 5.0), sliderFor(PriceRange(20.0, 150.0)))
+    }
+
+    @Test
+    fun `a zero minimum becomes one step because a budget of zero is rejected`() {
+        assertEquals(Triple(5.0, 40.0, 5.0), sliderFor(PriceRange(0.0, 40.0)))
+    }
+
+    @Test
+    fun `the first stop can always reach the cheapest listing`() {
+        val (min, _, _) = sliderFor(PriceRange(23.0, 150.0))
+
+        assertEquals(25.0, min)
+    }
+
+    @Test
+    fun `listings all under one step still give a slider with two stops`() {
+        assertEquals(Triple(5.0, 10.0, 5.0), sliderFor(PriceRange(2.0, 4.0)))
+    }
+
+    @Test
+    fun `listings all inside one step still give a slider with two stops`() {
+        assertEquals(Triple(25.0, 30.0, 5.0), sliderFor(PriceRange(21.0, 24.0)))
     }
 
     @Test
@@ -190,7 +223,7 @@ class AskSurfaceBuilderTest {
                 .getValue("answers")
                 .jsonObject
 
-        assertEquals(341.0, answers.getValue("budget").jsonPrimitive.doubleOrNull)
+        assertEquals(345.0, answers.getValue("budget").jsonPrimitive.doubleOrNull)
     }
 
     @Test
