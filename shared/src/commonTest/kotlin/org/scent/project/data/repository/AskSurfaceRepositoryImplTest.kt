@@ -1,5 +1,6 @@
 package org.scent.project.data.repository
 
+import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.url
@@ -146,6 +147,14 @@ class AskSurfaceRepositoryImplTest {
     fun `ask returns Timeout when the request times out`() =
         runTest {
             api.exception = HttpRequestTimeoutException(HttpRequestBuilder().apply { url("https://example.test") })
+
+            assertIs<AppError.NetworkError.Timeout>(repo.ask("a gift").leftOrNull())
+        }
+
+    @Test
+    fun `ask returns Timeout when the server stays silent past the socket timeout`() =
+        runTest {
+            api.exception = SocketTimeoutException("read timed out")
 
             assertIs<AppError.NetworkError.Timeout>(repo.ask("a gift").leftOrNull())
         }

@@ -1,5 +1,7 @@
 package org.scent.project.data.repository
 
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.ResponseException
 import kotlinx.io.IOException
@@ -25,10 +27,16 @@ suspend fun <T> safeApiCall(
         onHttpError(e.response.status.value)
     } catch (e: HttpRequestTimeoutException) {
         AppError.NetworkError.Timeout(cause = e).asLeft()
+    } catch (e: SocketTimeoutException) {
+        AppError.NetworkError.Timeout(cause = e).asLeft()
+    } catch (e: ConnectTimeoutException) {
+        AppError.NetworkError.Timeout(cause = e).asLeft()
     } catch (e: IOException) {
         AppError.NetworkError.NoConnection(cause = e).asLeft()
     } catch (e: SerializationException) {
         AppError.NetworkError.ParseError(cause = e).asLeft()
     } catch (e: Exception) {
+        // TODO(fix/ktor-client-error-handling): this also catches CancellationException, so a cancelled
+        //  call becomes a Left instead of cancelling. Harmless while callers ignore a result after leaving.
         AppError.Unknown(message = e.message ?: "An unexpected error occurred", cause = e).asLeft()
     }

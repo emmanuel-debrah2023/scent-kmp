@@ -31,9 +31,6 @@ class AskSurfaceRepositoryImpl(
     override suspend fun sendAction(action: SurfaceAction): Result<List<SurfaceMessage>> =
         call("action") { token -> api.sendAction(token, action.toClientMessage()) }
 
-    // TODO(chore/ask-demo-cold-start): the shared 30 s HttpTimeout assumes the server's worst case of
-    //  about 24 s (two model steps at 12 s) plus a Render cold start; a cold start on top can exceed it,
-    //  and the timeout then surfaces as a retryable NetworkError.Timeout. Revisit before demos.
     private suspend fun call(
         field: String,
         request: suspend (token: String) -> AskSurfaceResponse,

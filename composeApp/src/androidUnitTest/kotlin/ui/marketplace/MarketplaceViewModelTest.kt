@@ -191,6 +191,20 @@ class MarketplaceViewModelTest {
         }
 
     @Test
+    fun `loadNextPage on a timeout offers the same retry as a lost connection`() =
+        runTest {
+            stubRefresh(listings = listOf(makeListing(1)), total = 5)
+            viewModel.loadListings()
+
+            coEvery { listingRepository.loadMoreListings(any()) } returns AppError.NetworkError.Timeout().asLeft()
+            viewModel.loadNextPage()
+
+            val state = viewModel.uiState.value as UiState.Success
+            assertEquals(1, state.data.listings.size)
+            assertTrue(state.data.isConnectionLost)
+        }
+
+    @Test
     fun `loadNextPage on connectivity failure sets isConnectionLost and keeps existing items`() =
         runTest {
             stubRefresh(listings = listOf(makeListing(1)), total = 5)

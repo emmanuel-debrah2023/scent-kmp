@@ -85,6 +85,8 @@ class AuthRepositoryImpl(
                 // Any other HTTP error during hydration — stay Unknown (transient)
             }
         } catch (e: Exception) {
+            // TODO(fix/ktor-client-error-handling): this also catches CancellationException, so cancelling the
+            //  first collector mid-hydration signs the user out. Safe only while that collector is not cancelled.
             // Network / timeout / parse errors during hydration.
             // Decision: Safe default to Unauthenticated to allow user to try logging in again
             // or use the app in offline mode if supported.

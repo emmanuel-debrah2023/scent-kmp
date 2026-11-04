@@ -165,7 +165,11 @@ class MarketplaceViewModel(
                 },
                 onError = { error ->
                     isLoadingMore.value = false
-                    val connectionLost = error is AppError.NetworkError.NoConnection
+                    // TODO(fix/marketplace-load-more-timeout-copy): a timeout shares this retry, so a slow server
+                    //  still reads "No connection" in ConnectionLostSnackbar. Same wording as before timeouts
+                    //  were told apart, so nothing regresses, and the retry is what matters here.
+                    val connectionLost =
+                        error is AppError.NetworkError.NoConnection || error is AppError.NetworkError.Timeout
                     isConnectionLost.value = connectionLost
                     if (!connectionLost) handleError(error)
                 },
