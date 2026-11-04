@@ -72,6 +72,26 @@ Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the s
 - **Errors:** invalid input is a 400, storage or assistant failures a 503, with a short `ErrorResponse`; an
   expected failure is never a 500.
 
+## Timeout policy
+
+Every client request gets 30 s, and so does a silent socket (`installScentDefaults`). There is no longer limit
+for the ask routes.
+
+- **Why the socket timeout is set:** left unset, each engine keeps its own default. OkHttp's is 10 s, which fired
+  before the request timeout and showed a slow server as "You are offline". A timeout now maps to
+  `NetworkError.Timeout`, which the Ask tab shows as "That took too long" with a retry.
+- **Why 30 s and not more for ask:** the server's worst case is about 24 s, two model steps at 12 s plus two quick
+  database reads. The ask is rarely a session's first request, because the feed loads first and starts waking the
+  server. A longer limit would not save a full cold start and would leave the shopper staring at a spinner. A
+  raised limit for every route would do the same to a hung feed or login.
+- **Keep the budget in step:** `ASK_BACK_BUDGET_MS` can go up to 25 s, which is 50 s over two steps. Above about
+  14 s the client can give up on an answer the server is still producing.
+- **Retry costs quota:** retrying re-sends the whole ask, so it can spend model calls again, and a server may still
+  be working on the request the client gave up on.
+
+Before a demo, wake the instance with `./scripts/demo-warm.sh <base-url>` and ask once to check the model answers.
+If an ask does time out on a cold instance, Retry succeeds once it is awake.
+
 ## A2UI contracts
 
 `:contracts` holds the A2UI v0.9 message types (`A2uiServerMessage`, `A2uiClientMessage`) and the
