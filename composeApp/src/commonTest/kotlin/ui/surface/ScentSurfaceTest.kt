@@ -1,7 +1,10 @@
 package ui.surface
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -15,8 +18,10 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -26,6 +31,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.Surface
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceTextStyle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -67,8 +73,8 @@ abstract class ScentSurfaceTest {
             val surface =
                 surfaceOf(
                     SurfaceNode.Column("root", listOf("heading", "body")),
-                    SurfaceNode.Text("heading", "A few quick questions", isHeading = true),
-                    SurfaceNode.Text("body", "Pick a family", isHeading = false),
+                    SurfaceNode.Text("heading", "A few quick questions", SurfaceTextStyle.HEADING),
+                    SurfaceNode.Text("body", "Pick a family", SurfaceTextStyle.BODY),
                 )
 
             setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
@@ -83,14 +89,92 @@ abstract class ScentSurfaceTest {
             val surface =
                 surfaceOf(
                     SurfaceNode.Column("root", listOf("heading", "body")),
-                    SurfaceNode.Text("heading", "Title", isHeading = true),
-                    SurfaceNode.Text("body", "Body", isHeading = false),
+                    SurfaceNode.Text("heading", "Title", SurfaceTextStyle.HEADING),
+                    SurfaceNode.Text("body", "Body", SurfaceTextStyle.BODY),
                 )
 
             setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
 
             onNodeWithText("Title").assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
             onNodeWithText("Body").assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Heading))
+        }
+
+    @Test
+    fun `a caption shows its wording in the caption treatment and is not a heading`() =
+        runComposeUiTest {
+            val surface =
+                surfaceOf(
+                    SurfaceNode.Column("root", listOf("caption")),
+                    SurfaceNode.Text("caption", "Question written by AI", SurfaceTextStyle.CAPTION),
+                )
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
+
+            onNodeWithTag(SURFACE_CAPTION_TAG).assertExists()
+            onNodeWithText("Question written by AI").assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Heading))
+        }
+
+    @Test
+    fun `body text does not get the caption treatment`() =
+        runComposeUiTest {
+            val surface =
+                surfaceOf(
+                    SurfaceNode.Column("root", listOf("body")),
+                    SurfaceNode.Text("body", "Pick a family", SurfaceTextStyle.BODY),
+                )
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
+
+            onNodeWithTag(SURFACE_CAPTION_TAG).assertDoesNotExist()
+        }
+
+    @Test
+    fun `a raised column draws its children in the raised section`() =
+        runComposeUiTest {
+            val surface =
+                surfaceOf(
+                    SurfaceNode.Column("root", listOf("questions")),
+                    SurfaceNode.Column("questions", listOf("body"), raised = true),
+                    SurfaceNode.Text("body", "Pick a family", SurfaceTextStyle.BODY),
+                )
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
+
+            onNodeWithTag(SURFACE_RAISED_TAG).assertExists()
+            onNodeWithText("Pick a family").assertExists()
+        }
+
+    @Test
+    fun `a plain column has no raised section`() =
+        runComposeUiTest {
+            val surface =
+                surfaceOf(
+                    SurfaceNode.Column("root", listOf("body")),
+                    SurfaceNode.Text("body", "Pick a family", SurfaceTextStyle.BODY),
+                )
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
+
+            onNodeWithTag(SURFACE_RAISED_TAG).assertDoesNotExist()
+        }
+
+    @Test
+    fun `a raised section keeps each child separately reachable and tappable`() =
+        runComposeUiTest {
+            val surface =
+                surfaceOf(
+                    SurfaceNode.Column("root", listOf("questions")),
+                    SurfaceNode.Column("questions", listOf("body", "submit"), raised = true),
+                    SurfaceNode.Text("body", "Pick a family", SurfaceTextStyle.BODY),
+                    submit,
+                )
+            val events = mutableListOf<SurfaceEvent>()
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = { events += it }) } }
+
+            onNodeWithText("Pick a family").assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+            onNodeWithText(submitText).performClick()
+            assertEquals(listOf<SurfaceEvent>(SurfaceEvent.ActionTriggered("s1", "submit")), events)
         }
 
     @Test
@@ -297,6 +381,28 @@ abstract class ScentSurfaceTest {
             onNodeWithContentDescription("Cedar & Smoke, £76, Dry wood").assertExists()
         }
 
+    @Test
+    fun `a card with a meta line is announced as its name then meta then price then reason`() =
+        runComposeUiTest {
+            val surface =
+                withData(
+                    """{"results":[{"name":"Cedar & Smoke","price":"£76","why":"Dry wood","meta":"Sealed · 100 ml"}]}""",
+                    SurfaceNode.Column("root", listOf("card")),
+                    SurfaceNode.RecommendationCard(
+                        "card",
+                        "/results/0/name",
+                        "/results/0/price",
+                        "/results/0/why",
+                        null,
+                        "/results/0/meta",
+                    ),
+                )
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
+
+            onNodeWithContentDescription("Cedar & Smoke, Sealed · 100 ml, £76, Dry wood").assertExists()
+        }
+
     private val openListing = ActionTemplate("open_listing", mapOf("listingId" to "/results/0/listingId"))
 
     private fun cardWith(listingId: String?): Surface {
@@ -390,9 +496,17 @@ abstract class ScentSurfaceTest {
             val actions = mutableListOf<SurfaceEvent.ActionTriggered>()
 
             setContent {
-                MaterialTheme { ScentSurfaceFixtureHost(fixture, ASK_SURFACE_ID, onAction = actions::add) }
+                MaterialTheme {
+                    // The Ask screen scrolls, and the questions are taller than a small test screen.
+                    ScentSurfaceFixtureHost(
+                        fixture,
+                        ASK_SURFACE_ID,
+                        Modifier.verticalScroll(rememberScrollState()),
+                        onAction = actions::add,
+                    )
+                }
             }
-            onNodeWithText("SHOW GIFTS").performClick()
+            onNodeWithText("SHOW GIFTS").performScrollTo().performClick()
 
             assertEquals(listOf(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "submit")), actions)
         }
@@ -407,7 +521,7 @@ abstract class ScentSurfaceTest {
 
             onNodeWithText("Woody · up to £80 · Full bottle").assertExists()
             onNodeWithContentDescription(
-                "Birch Ledger, £64, Smoky birch with a soft musk finish, easy to wear every day.",
+                "Birch Ledger, Sealed · 75 ml · Atelier Nord, £64, Smoky birch with a soft musk finish, easy to wear every day.",
             ).assertExists()
             onNodeWithText("SCENT FAMILY").assertDoesNotExist()
             assertEquals(0, fallbackCount())

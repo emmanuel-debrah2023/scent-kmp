@@ -26,9 +26,11 @@ internal object AskFixtures {
             """"size":[{"value":"FULL","label":"Full bottle"},{"value":"DECANT","label":"Decant set to try"}]},""" +
             """"budget":{"min":20,"max":150,"step":5}}}},""" +
             """{"version":"v0.9","updateComponents":{"surfaceId":"$ASK_SURFACE_ID","components":[""" +
-            """{"component":"Column","id":"root","children":["heading","family","budget","size","submit"]},""" +
+            """{"component":"Column","id":"root","children":["caption","heading","questions","submit"]},""" +
+            """{"component":"Text","id":"caption","text":"Question written by AI","variant":"caption"},""" +
             """{"component":"Text","id":"heading","text":"Three quick picks and we'll find him something",""" +
             """"variant":"h2"},""" +
+            """{"component":"Column","id":"questions","children":["family","budget","size"],"variant":"raised"},""" +
             """{"component":"ChoicePicker","id":"family","label":"Scent family",""" +
             """"options":{"path":"/options/family"},"value":{"path":"/answers/family"}},""" +
             """{"component":"RangeSlider","id":"budget","label":"Budget","min":{"path":"/budget/min"},""" +
@@ -46,25 +48,33 @@ internal object AskFixtures {
             """"summary":["Woody","up to £80","Full bottle"],""" +
             """"results":[""" +
             """{"listingId":7,"name":"Cedar & Smoke","brand":"Atelier Nord","price":"£76",""" +
+            """"meta":"Sealed · 100 ml · Atelier Nord",""" +
             """"why":"Dry cedarwood and vetiver: a classic woody gift that stays close to the skin."},""" +
             """{"listingId":8,"name":"Birch Ledger","brand":"Atelier Nord","price":"£64",""" +
+            """"meta":"Sealed · 75 ml · Atelier Nord",""" +
             """"why":"Smoky birch with a soft musk finish, easy to wear every day."},""" +
             """{"listingId":9,"name":"Oud Lantern","brand":"Maison Verre","price":"£79",""" +
+            """"meta":"Opened · 95% full · 100 ml · Maison Verre",""" +
             """"why":"Warmer and richer, with oud and amber for evenings out."}]}}},""" +
             """{"version":"v0.9","updateComponents":{"surfaceId":"$ASK_SURFACE_ID","components":[""" +
-            """{"component":"Column","id":"root","children":["summary","card_1","card_2","card_3"]},""" +
+            """{"component":"Column","id":"root","children":["summary","caption","card_1","card_2","card_3"]},""" +
+            """{"component":"Text","id":"caption","text":"Reasons written by AI · prices from Scent",""" +
+            """"variant":"caption"},""" +
             """{"component":"PreferenceSummary","id":"summary","items":{"path":"/summary"},""" +
             """"action":{"event":{"name":"edit_answers","context":$answerContext}}},""" +
             """{"component":"RecommendationCard","id":"card_1","name":{"path":"/results/0/name"},""" +
             """"price":{"path":"/results/0/price"},"why":{"path":"/results/0/why"},""" +
+            """"meta":{"path":"/results/0/meta"},""" +
             """"action":{"event":{"name":"open_listing",""" +
             """"context":{"listingId":{"path":"/results/0/listingId"}}}}},""" +
             """{"component":"RecommendationCard","id":"card_2","name":{"path":"/results/1/name"},""" +
             """"price":{"path":"/results/1/price"},"why":{"path":"/results/1/why"},""" +
+            """"meta":{"path":"/results/1/meta"},""" +
             """"action":{"event":{"name":"open_listing",""" +
             """"context":{"listingId":{"path":"/results/1/listingId"}}}}},""" +
             """{"component":"RecommendationCard","id":"card_3","name":{"path":"/results/2/name"},""" +
             """"price":{"path":"/results/2/price"},"why":{"path":"/results/2/why"},""" +
+            """"meta":{"path":"/results/2/meta"},""" +
             """"action":{"event":{"name":"open_listing",""" +
             """"context":{"listingId":{"path":"/results/2/listingId"}}}}}]}}]}"""
 }

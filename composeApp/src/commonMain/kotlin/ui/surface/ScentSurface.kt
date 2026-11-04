@@ -7,13 +7,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import org.scent.project.domain.surface.Surface
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceTextStyle
 import ui.accessibility.accessibleHeading
+import ui.components.AiCaption
+import ui.components.RaisedSection
 import ui.components.buttons.ScentPrimaryButton
 import ui.theme.ScentThemeExtras
 
 private const val ROOT_ID = "root"
+internal const val SURFACE_RAISED_TAG = "surface_raised"
+internal const val SURFACE_CAPTION_TAG = "surface_caption"
 
 /**
  * Renders a server-composed [surface]. Stateless: the ViewModel owns the surface and applies what
@@ -41,12 +47,18 @@ private fun SurfaceNodeContent(
     // A node that is its own ancestor would recurse forever; the reducer does not prevent it.
     val node = surface.nodes[nodeId]?.takeIf { nodeId !in ancestors }
     when (node) {
-        is SurfaceNode.Column ->
-            Column(modifier, verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.md)) {
+        is SurfaceNode.Column -> {
+            val children: @Composable () -> Unit = {
                 node.children.forEach { childId ->
                     key(childId) { SurfaceNodeContent(surface, childId, onEvent, ancestors + nodeId) }
                 }
             }
+            if (node.raised) {
+                RaisedSection(modifier.testTag(SURFACE_RAISED_TAG)) { children() }
+            } else {
+                Column(modifier, verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.md)) { children() }
+            }
+        }
         is SurfaceNode.Text -> SurfaceText(node, modifier)
         is SurfaceNode.Button -> SurfaceButton(surface.id, node, onEvent, modifier)
         is SurfaceNode.ChoicePicker -> SurfaceChoicePicker(surface, node, onEvent, modifier)
@@ -64,20 +76,22 @@ private fun SurfaceText(
     node: SurfaceNode.Text,
     modifier: Modifier = Modifier,
 ) {
-    if (node.isHeading) {
-        Text(
-            text = node.text,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = modifier.accessibleHeading(),
-        )
-    } else {
-        Text(
-            text = node.text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = modifier,
-        )
+    when (node.style) {
+        SurfaceTextStyle.HEADING ->
+            Text(
+                text = node.text,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = modifier.accessibleHeading(),
+            )
+        SurfaceTextStyle.BODY ->
+            Text(
+                text = node.text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = modifier,
+            )
+        SurfaceTextStyle.CAPTION -> AiCaption(node.text, modifier.testTag(SURFACE_CAPTION_TAG))
     }
 }
 

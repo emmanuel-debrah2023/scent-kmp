@@ -23,6 +23,10 @@ sealed interface ScentComponent {
         override val id: String? = null,
         @SchemaDescription("Ids of the child components, in display order")
         val children: List<String>? = null,
+        @SchemaDescription(
+            "Column style: raised draws the children in one raised card; anything else is a plain column",
+        )
+        val variant: String? = null,
     ) : ScentComponent
 
     @Serializable
@@ -95,6 +99,8 @@ sealed interface ScentComponent {
         val why: DataBinding? = null,
         @SchemaDescription("Event sent when the card is tapped; open_listing with a listingId binding")
         val action: A2uiAction? = null,
+        @SchemaDescription("Data path of the formatted facts line, e.g. Sealed · 100 ml · Atelier Nord")
+        val meta: DataBinding? = null,
     ) : ScentComponent
 
     // Decode only: a component name this app does not know. It keeps the surface decodable so the
@@ -110,8 +116,14 @@ sealed interface ScentComponent {
 object TextVariant {
     const val HEADING = "h2"
     const val BODY = "body"
+    const val CAPTION = "caption"
 
     /** h1 to h5 are headings; anything else, or no variant, is plain text. */
     fun isHeading(variant: String?): Boolean =
         variant != null && variant.length == 2 && variant[0] == 'h' && variant[1] in '1'..'5'
+}
+
+/** The styles a Column can ask for. An older client ignores the prop and draws a plain column. */
+object ColumnVariant {
+    const val RAISED = "raised"
 }

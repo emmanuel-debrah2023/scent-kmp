@@ -12,11 +12,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
-// TODO(feature/ask-surface-catalog-gaps): the board also shows a "Question written by AI" caption above the
-//  heading, "Reasons written by AI · prices from Scent" above the results, and the questions inside one
-//  raised card. The server sends none of them and the catalog has no container component, so the surface
-//  draws the questions as a plain column.
-
 @Preview(showBackground = true, heightDp = 900)
 @Composable
 private fun AskQuestionsPreview() {

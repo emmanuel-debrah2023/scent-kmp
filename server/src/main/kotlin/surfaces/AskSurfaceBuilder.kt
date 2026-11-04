@@ -18,10 +18,12 @@ import org.scent.project.data.remote.a2ui.UpdateComponents
 import org.scent.project.data.remote.a2ui.UpdateDataModel
 import org.scent.project.data.remote.a2ui.catalog.A2uiAction
 import org.scent.project.data.remote.a2ui.catalog.A2uiEvent
+import org.scent.project.data.remote.a2ui.catalog.ColumnVariant
 import org.scent.project.data.remote.a2ui.catalog.SCENT_CATALOG_ID
 import org.scent.project.data.remote.a2ui.catalog.ScentAction
 import org.scent.project.data.remote.a2ui.catalog.ScentComponent
 import org.scent.project.data.remote.a2ui.catalog.TextVariant
+import org.scent.project.domain.model.ListingKind
 import preferences.BudgetQuestion
 import preferences.FamilyQuestion
 import preferences.Intent
@@ -34,9 +36,16 @@ import preferences.ScentPreferences
 import preferences.SizePreference
 import preferences.SizeQuestion
 import java.math.BigDecimal
+import kotlin.math.roundToInt
 
 private const val EDIT_HEADING = "Change your answers"
 private const val NO_MATCH = "Nothing matches yet. Try changing your answers."
+private const val QUESTION_CAPTION = "Question written by AI"
+private const val REASONS_CAPTION = "Reasons written by AI · prices from Scent"
+private const val CAPTION_ID = "caption"
+private const val QUESTIONS_ID = "questions"
+private const val META_SEPARATOR = " · "
+private const val WHOLE_PERCENT = 100.0
 
 /**
  * Builds the ask surface messages. Every fact (options, budget bounds, answers, results, prices) goes
@@ -48,15 +57,7 @@ object AskSurfaceBuilder {
     fun initial(
         surfaceId: String,
         askBack: AskBack,
-    ): List<A2uiServerMessage> =
-        listOf(create(surfaceId)) +
-            questions(
-                surfaceId,
-                askBack.preferences,
-                askBack.questions,
-                askBack.heading,
-                askBack.buttonLabel,
-            )
+    ): List<A2uiServerMessage> = listOf(create(surfaceId)) + questions(surfaceId, askBack)
 
     /** The edit_answers response: every question again, answers filled in, on the request's own surface. */
     fun edit(
@@ -66,10 +67,12 @@ object AskSurfaceBuilder {
     ): List<A2uiServerMessage> =
         questions(
             surfaceId,
-            preferences,
-            PreferenceQuestionPlanner.plan(ScentPreferences(), priceRange),
-            EDIT_HEADING,
-            buttonFor(preferences.intent),
+            AskBack(
+                preferences,
+                PreferenceQuestionPlanner.plan(ScentPreferences(), priceRange),
+                EDIT_HEADING,
+                buttonFor(preferences.intent),
+            ),
         )
 
     /** Results for [preferences]; [create] is true only when POST /ask skips the questions entirely. */
@@ -94,6 +97,7 @@ object AskSurfaceBuilder {
                                 put("name", it.name)
                                 put("brand", it.brand)
                                 put("price", formatPrice(it.price))
+                                put("meta", meta(it))
                                 put("why", whyByListing[it.listingId] ?: GENERIC_WHY)
                             }
                         },
@@ -102,13 +106,15 @@ object AskSurfaceBuilder {
             }
         val cards = candidates.mapIndexed { index, candidate -> card(index, candidate) }
         val body = if (cards.isEmpty()) listOf(ScentComponent.Text("empty", NO_MATCH)) else cards
+        val caption = captionIf(cards.isNotEmpty() && whyLines.any { it.modelWritten }, REASONS_CAPTION)
         val components =
-            listOf(ScentComponent.Column("root", listOf("summary") + body.mapNotNull { it.id })) +
+            listOf(ScentComponent.Column("root", listOf("summary") + (caption + body).mapNotNull { it.id })) +
                 ScentComponent.PreferenceSummary(
                     "summary",
                     DataBinding(AskPaths.SUMMARY),
                     submit(ScentAction.EDIT_ANSWERS),
                 ) +
+                caption +
                 body
         val head = if (create) listOf(create(surfaceId)) else emptyList()
         return head + listOf(dataModel(surfaceId, data), components(surfaceId, components))
@@ -116,11 +122,10 @@ object AskSurfaceBuilder {
 
     private fun questions(
         surfaceId: String,
-        preferences: ScentPreferences,
-        questions: List<QuestionSpec>,
-        heading: String,
-        buttonLabel: String,
+        askBack: AskBack,
     ): List<A2uiServerMessage> {
+        val preferences = askBack.preferences
+        val questions = askBack.questions
         val bounds =
             questions
                 .filterIsInstance<BudgetQuestion>()
@@ -153,13 +158,28 @@ object AskSurfaceBuilder {
                 }
             }
         val inputs = questions.map { input(it) }
+        val caption = captionIf(askBack.modelWritten, QUESTION_CAPTION)
         val components =
             listOf(
-                ScentComponent.Column("root", listOf("heading") + inputs.mapNotNull { it.id } + "submit"),
-                ScentComponent.Text("heading", heading, TextVariant.HEADING),
-            ) + inputs + ScentComponent.Button("submit", buttonLabel, submit(ScentAction.ANSWER_QUESTIONS))
+                ScentComponent.Column(
+                    "root",
+                    caption.mapNotNull { it.id } + listOf("heading", QUESTIONS_ID, "submit"),
+                ),
+            ) +
+                caption +
+                ScentComponent.Text("heading", askBack.heading, TextVariant.HEADING) +
+                ScentComponent.Column(QUESTIONS_ID, inputs.mapNotNull { it.id }, ColumnVariant.RAISED) +
+                inputs +
+                ScentComponent.Button("submit", askBack.buttonLabel, submit(ScentAction.ANSWER_QUESTIONS))
         return listOf(dataModel(surfaceId, data), components(surfaceId, components))
     }
+
+    // Only for wording a model really wrote; the rules and fixed headings never say AI wrote them.
+    private fun captionIf(
+        modelWritten: Boolean,
+        text: String,
+    ): List<ScentComponent> =
+        if (modelWritten) listOf(ScentComponent.Text(CAPTION_ID, text, TextVariant.CAPTION)) else emptyList()
 
     private fun input(question: QuestionSpec): ScentComponent =
         when (question) {
@@ -202,7 +222,28 @@ object AskSurfaceBuilder {
                 mapOf("listingId" to DataBinding("${AskPaths.RESULTS}/$index/listingId")),
             ),
         ),
+        DataBinding("${AskPaths.RESULTS}/$index/meta"),
     )
+
+    private fun meta(candidate: ListingCandidate): String =
+        listOfNotNull(
+            candidate.kind.label(),
+            fillLevel(candidate),
+            candidate.nominalSizeMl?.let { "$it ml" },
+            candidate.brand,
+        ).joinToString(META_SEPARATOR)
+
+    // Sealed bottles and decants are full by definition, so only an opened bottle or a tester says how full.
+    private fun fillLevel(candidate: ListingCandidate): String? {
+        val remaining = candidate.remainingMl
+        val nominal = candidate.nominalSizeMl?.takeIf { it > 0 }
+        val varies = candidate.kind == ListingKind.OPENED || candidate.kind == ListingKind.TESTER
+        return if (varies && remaining != null && nominal != null) {
+            "${(remaining * WHOLE_PERCENT / nominal).roundToInt()}% full"
+        } else {
+            null
+        }
+    }
 
     private fun submit(action: ScentAction) =
         A2uiAction(
@@ -275,6 +316,8 @@ object AskSurfaceBuilder {
     }
 
     private fun ScentFamily.label() = name.lowercase().replaceFirstChar { it.uppercase() }
+
+    private fun ListingKind.label() = name.lowercase().replaceFirstChar { it.uppercase() }
 
     private fun SizePreference.label() = if (this == SizePreference.FULL) "Full bottle" else "Decant"
 }

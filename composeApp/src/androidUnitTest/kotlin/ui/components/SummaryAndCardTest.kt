@@ -91,6 +91,17 @@ class SummaryAndCardTest {
     }
 
     @Test
+    fun `a clickable card with a meta line announces it after the name`() {
+        composeRule.setContent {
+            MaterialTheme {
+                RecommendationCard("Cedar & Smoke", "£76", "Dry wood", meta = "Sealed · 100 ml", onClick = {})
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Cedar & Smoke, Sealed · 100 ml, £76, Dry wood").assertHasClickAction()
+    }
+
+    @Test
     fun `card leaves a missing price or reason out of the announcement`() {
         composeRule.setContent {
             MaterialTheme { RecommendationCard("Cedar & Smoke", price = "", why = "") }

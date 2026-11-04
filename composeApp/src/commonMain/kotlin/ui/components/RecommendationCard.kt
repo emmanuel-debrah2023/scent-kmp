@@ -23,10 +23,10 @@ import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
 /**
- * A suggested fragrance: [name] and [price] on one line, and [why] it fits underneath. A blank
- * [price] or [why] is left out of both the layout and the announcement.
+ * A suggested fragrance: [name] and [price] on one line, its [meta] facts under them, and [why] it
+ * fits underneath. A blank [price], [meta] or [why] is left out of both the layout and the announcement.
  *
- * The card is announced as one description ("name, price, reason"). With [onClick] it is a button
+ * The card is announced as one description ("name, meta, price, reason"). With [onClick] it is a button
  * ("Open listing") at least as tall as a button; without it, it is plain, non-interactive content.
  */
 @Composable
@@ -35,16 +35,17 @@ fun RecommendationCard(
     price: String,
     why: String,
     modifier: Modifier = Modifier,
+    meta: String = "",
     onClick: (() -> Unit)? = null,
 ) {
-    val description = listOf(name, price, why).filter(String::isNotBlank).joinToString(", ")
+    val description = listOf(name, meta, price, why).filter(String::isNotBlank).joinToString(", ")
     if (onClick == null) {
         Card(
             modifier = modifier.fillMaxWidth().clearedDescription(description),
             shape = MaterialTheme.shapes.large,
             colors = cardColors(),
             elevation = cardElevation(),
-            content = { RecommendationCardContent(name, price, why) },
+            content = { RecommendationCardContent(name, price, meta, why) },
         )
     } else {
         Card(
@@ -58,7 +59,7 @@ fun RecommendationCard(
             shape = MaterialTheme.shapes.large,
             colors = cardColors(),
             elevation = cardElevation(),
-            content = { RecommendationCardContent(name, price, why) },
+            content = { RecommendationCardContent(name, price, meta, why) },
         )
     }
 }
@@ -75,6 +76,7 @@ private fun cardElevation() = CardDefaults.cardElevation(defaultElevation = Scen
 private fun RecommendationCardContent(
     name: String,
     price: String,
+    meta: String,
     why: String,
 ) {
     Column(
@@ -100,6 +102,13 @@ private fun RecommendationCardContent(
                 )
             }
         }
+        if (meta.isNotBlank()) {
+            Text(
+                text = meta,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (why.isNotBlank()) {
             Text(
                 text = why,
@@ -120,6 +129,7 @@ private fun RecommendationCardPreview() {
                 price = "£76",
                 why = "Dry cedarwood and vetiver: a classic woody gift that stays close to the skin.",
                 modifier = Modifier.padding(ScentThemeExtras.spacing.screenPadding),
+                meta = "Sealed · 100 ml · Atelier Nord",
             )
         }
     }

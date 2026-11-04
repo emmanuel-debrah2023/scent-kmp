@@ -47,6 +47,7 @@ data class RecommendationBinding(
     val price: String,
     val why: String,
     val opensListing: Boolean,
+    val meta: String = "",
 )
 
 // A slider with more stops than this cannot be used by touch; the surface falls back instead.
@@ -109,6 +110,7 @@ object SurfaceBindings {
             price = surface.read(node.pricePath).text().orEmpty(),
             why = surface.read(node.whyPath).text().orEmpty(),
             opensListing = opensListing(surface, node.action),
+            meta = node.metaPath?.let { surface.read(it).text() }.orEmpty(),
         )
     }
 

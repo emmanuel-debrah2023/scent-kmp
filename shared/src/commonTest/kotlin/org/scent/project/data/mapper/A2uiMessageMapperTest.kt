@@ -11,6 +11,7 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.SurfaceMessage
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceTextStyle
 import org.scent.project.domain.util.Either
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -138,14 +139,38 @@ class A2uiMessageMapperTest {
 
     @Test
     fun `text defaults an absent text to empty and reads the heading variant`() {
-        assertEquals(SurfaceNode.Text("t", "", false), node("""{"id":"t","component":"Text"}"""))
+        assertEquals(SurfaceNode.Text("t", "", SurfaceTextStyle.BODY), node("""{"id":"t","component":"Text"}"""))
         assertEquals(
-            SurfaceNode.Text("t", "Hi", true),
+            SurfaceNode.Text("t", "Hi", SurfaceTextStyle.HEADING),
             node("""{"id":"t","component":"Text","text":"Hi","variant":"h2"}"""),
         )
         assertEquals(
-            SurfaceNode.Text("t", "Hi", false),
+            SurfaceNode.Text("t", "Hi", SurfaceTextStyle.BODY),
             node("""{"id":"t","component":"Text","text":"Hi","variant":"body"}"""),
+        )
+    }
+
+    @Test
+    fun `a caption variant maps to the caption style and an unknown variant to body`() {
+        assertEquals(
+            SurfaceNode.Text("t", "Hi", SurfaceTextStyle.CAPTION),
+            node("""{"id":"t","component":"Text","text":"Hi","variant":"caption"}"""),
+        )
+        assertEquals(
+            SurfaceNode.Text("t", "Hi", SurfaceTextStyle.BODY),
+            node("""{"id":"t","component":"Text","text":"Hi","variant":"shouty"}"""),
+        )
+    }
+
+    @Test
+    fun `a raised column keeps its children and any other variant is plain`() {
+        assertEquals(
+            SurfaceNode.Column("c", listOf("a"), raised = true),
+            node("""{"id":"c","component":"Column","children":["a"],"variant":"raised"}"""),
+        )
+        assertEquals(
+            SurfaceNode.Column("c", listOf("a"), raised = false),
+            node("""{"id":"c","component":"Column","children":["a"],"variant":"sparkly"}"""),
         )
     }
 
@@ -228,6 +253,19 @@ class A2uiMessageMapperTest {
 
         assertEquals(SurfaceNode.RecommendationCard("r", "/n", "/p", "/w", null), node(all))
         assertEquals(SurfaceNode.Unsupported("r"), node(all.replace(""","why":{"path":"/w"}""", "")))
+    }
+
+    @Test
+    fun `a recommendation card keeps an optional meta path and is still shown without one`() {
+        val json =
+            """{"id":"r","component":"RecommendationCard","name":{"path":"/n"},"price":{"path":"/p"},""" +
+                """"why":{"path":"/w"},"meta":{"path":"/m"}}"""
+
+        assertEquals("/m", (node(json) as SurfaceNode.RecommendationCard).metaPath)
+        assertEquals(
+            null,
+            (node(json.replace(""","meta":{"path":"/m"}""", "")) as SurfaceNode.RecommendationCard).metaPath,
+        )
     }
 
     @Test

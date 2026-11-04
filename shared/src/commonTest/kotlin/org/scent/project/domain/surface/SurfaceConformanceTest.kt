@@ -73,7 +73,7 @@ class SurfaceConformanceTest {
 
         val nodes = result.state.surface().nodes
         assertEquals(SurfaceNode.Button("btn1", "Click Me", null), nodes["btn1"])
-        assertEquals(SurfaceNode.Text("txt1", "Hello", false), nodes["txt1"])
+        assertEquals(SurfaceNode.Text("txt1", "Hello", SurfaceTextStyle.BODY), nodes["txt1"])
     }
 
     @Test
@@ -101,7 +101,10 @@ class SurfaceConformanceTest {
                 ),
             )
 
-        assertEquals(mapOf("comp1" to SurfaceNode.Text("comp1", "Lbl", false)), result.state.surface().nodes)
+        assertEquals(
+            mapOf("comp1" to SurfaceNode.Text("comp1", "Lbl", SurfaceTextStyle.BODY)),
+            result.state.surface().nodes,
+        )
     }
 
     @Test

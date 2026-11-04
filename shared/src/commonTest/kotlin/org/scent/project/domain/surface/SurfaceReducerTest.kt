@@ -27,8 +27,8 @@ class SurfaceReducerTest {
                 ),
             )
 
-        assertEquals(SurfaceNode.Text("a", "changed", false), result.state.surface().nodes["a"])
-        assertEquals(SurfaceNode.Text("b", "two", false), result.state.surface().nodes["b"])
+        assertEquals(SurfaceNode.Text("a", "changed", SurfaceTextStyle.BODY), result.state.surface().nodes["a"])
+        assertEquals(SurfaceNode.Text("b", "two", SurfaceTextStyle.BODY), result.state.surface().nodes["b"])
     }
 
     @Test

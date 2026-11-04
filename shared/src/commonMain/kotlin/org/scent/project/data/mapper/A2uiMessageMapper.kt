@@ -15,6 +15,7 @@ import org.scent.project.data.remote.a2ui.JsonPointer
 import org.scent.project.data.remote.a2ui.UpdateComponents
 import org.scent.project.data.remote.a2ui.UpdateDataModel
 import org.scent.project.data.remote.a2ui.catalog.A2uiAction
+import org.scent.project.data.remote.a2ui.catalog.ColumnVariant
 import org.scent.project.data.remote.a2ui.catalog.ScentComponent
 import org.scent.project.data.remote.a2ui.catalog.TextVariant
 import org.scent.project.domain.error.AppError
@@ -22,6 +23,7 @@ import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.SurfaceAction
 import org.scent.project.domain.surface.SurfaceMessage
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceTextStyle
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
@@ -117,8 +119,8 @@ object A2uiMessageMapper {
     private fun ScentComponent.toNode(surfaceId: String): Result<SurfaceNode> {
         val id = id?.takeIf { it.isNotBlank() } ?: return invalid(surfaceId, "/components", "Component has no id")
         return when (this) {
-            is ScentComponent.Column -> SurfaceNode.Column(id, children.orEmpty())
-            is ScentComponent.Text -> SurfaceNode.Text(id, text.orEmpty(), TextVariant.isHeading(variant))
+            is ScentComponent.Column -> SurfaceNode.Column(id, children.orEmpty(), variant == ColumnVariant.RAISED)
+            is ScentComponent.Text -> SurfaceNode.Text(id, text.orEmpty(), textStyle())
             is ScentComponent.Button -> SurfaceNode.Button(id, label.orEmpty(), action.toTemplate())
             is ScentComponent.ChoicePicker -> choicePicker(id)
             is ScentComponent.RangeSlider -> rangeSlider(id)
@@ -129,6 +131,13 @@ object A2uiMessageMapper {
             is ScentComponent.Unknown -> SurfaceNode.Unsupported(id)
         }.asRight()
     }
+
+    private fun ScentComponent.Text.textStyle(): SurfaceTextStyle =
+        when {
+            TextVariant.isHeading(variant) -> SurfaceTextStyle.HEADING
+            variant == TextVariant.CAPTION -> SurfaceTextStyle.CAPTION
+            else -> SurfaceTextStyle.BODY
+        }
 
     private fun ScentComponent.ChoicePicker.choicePicker(id: String): SurfaceNode {
         val optionsPath = options.bound()
@@ -170,6 +179,7 @@ object A2uiMessageMapper {
                 paths[1].orEmpty(),
                 paths[2].orEmpty(),
                 action.toTemplate(),
+                meta.bound(),
             )
         } else {
             SurfaceNode.Unsupported(id)

@@ -29,25 +29,36 @@ tags:
     visible: "Let's find the right gift"
     timeout: 15000
 - assertVisible: "Let's find the right gift"
+- assertVisible: "Question written by AI"
 
 - tapOn: "Woody"
 - assertVisible:
     text: "Woody"
     checked: true
 
+# The raised questions card runs past the fold, so the button has to be scrolled to.
+- scrollUntilVisible:
+    element: "SHOW GIFTS"
+    direction: DOWN
 - tapOn: "SHOW GIFTS"
 - extendedWaitUntil:
     visible: ".*Easy to wear and easy to give.*"
     timeout: 15000
 - assertVisible: ".*Easy to wear and easy to give.*"
+- assertVisible: "Reasons written by AI · prices from Scent"
 
 - tapOn: "Change"
 - extendedWaitUntil:
     visible: "Change your answers"
     timeout: 15000
 - assertVisible: "Change your answers"
+# The edit heading is fixed wording, so it must not say AI wrote it.
+- assertNotVisible: "Question written by AI"
 
-# Back to the picks, then open one. The card is announced as "name, price, reason", so its reason finds it.
+# Back to the picks, then open one. The card is announced as "name, meta, price, reason", so its reason finds it.
+- scrollUntilVisible:
+    element: "SHOW GIFTS"
+    direction: DOWN
 - tapOn: "SHOW GIFTS"
 - extendedWaitUntil:
     visible: ".*Easy to wear and easy to give.*"

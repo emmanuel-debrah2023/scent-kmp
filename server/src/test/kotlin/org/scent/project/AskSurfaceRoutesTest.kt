@@ -354,7 +354,7 @@ class AskSurfaceRoutesTest {
             assertEquals(first, second)
             val components = batch(first).components()
             assertEquals(
-                listOf("heading", "family", "budget", "size", "submit"),
+                listOf("heading", "questions", "family", "budget", "size", "submit"),
                 components.drop(1).mapNotNull { it.id },
             )
             assertTrue(batch(first).none { it.createSurface != null })
@@ -444,6 +444,40 @@ class AskSurfaceRoutesTest {
             assertEquals(HttpStatusCode.OK, response.status)
             assertTrue(response.bodyAsText().contains(RULES_HEADING))
             assertTrue(tookMs < 5_000, "took ${tookMs}ms")
+        }
+
+    @Test
+    fun `a model that falls back to the rules is not captioned as AI`() =
+        withApp(
+            agent =
+                FallbackAskBackAgent(
+                    Agent(AppError.AgentError.Unavailable(503).asLeft()),
+                    RulesAskBackAgent(),
+                ),
+        ) {
+            val body = client.ask("""{"query":"a"}""").bodyAsText()
+
+            assertTrue(body.contains(RULES_HEADING))
+            assertFalse(body.contains("written by AI"))
+        }
+
+    @Test
+    fun `a model that answers is captioned as AI`() =
+        withApp(
+            agent =
+                Agent(
+                    AskBack(
+                        ScentPreferences(),
+                        PreferenceQuestionPlanner.plan(ScentPreferences(), PriceRange(30.0, 120.0)),
+                        "Hello",
+                        "Show picks",
+                        modelWritten = true,
+                    ).asRight(),
+                ),
+        ) {
+            val body = client.ask("""{"query":"a"}""").bodyAsText()
+
+            assertTrue(body.contains("Question written by AI"))
         }
 
     @Test

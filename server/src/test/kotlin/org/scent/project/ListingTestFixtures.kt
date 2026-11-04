@@ -127,6 +127,8 @@ internal fun seedListing(
     condition: FragranceCondition = FragranceCondition.NEW,
     price: Double = 99.99,
     kind: String = "SEALED",
+    nominalSizeMl: Int? = null,
+    remainingMl: Int? = null,
 ): Int =
     transaction {
         ListingsTable
@@ -138,6 +140,8 @@ internal fun seedListing(
                 it[isNegotiable] = false
                 it[stockQuantity] = 1
                 it[ListingsTable.kind] = kind
+                it[ListingsTable.nominalSizeMl] = nominalSizeMl
+                it[ListingsTable.remainingMl] = remainingMl
                 it[createdAt] =
                     Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             }.value

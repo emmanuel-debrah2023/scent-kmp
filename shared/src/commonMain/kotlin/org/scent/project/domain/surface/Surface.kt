@@ -9,6 +9,12 @@ data class ActionTemplate(
     val context: Map<String, String>,
 )
 
+enum class SurfaceTextStyle {
+    HEADING,
+    BODY,
+    CAPTION,
+}
+
 /**
  * One component of a surface, with every field non-null (ADS-STE100): a missing label is empty, a
  * missing list is empty. A component whose required data paths are missing cannot be shown, so it is
@@ -20,12 +26,13 @@ sealed interface SurfaceNode {
     data class Column(
         override val id: String,
         val children: List<String>,
+        val raised: Boolean = false,
     ) : SurfaceNode
 
     data class Text(
         override val id: String,
         val text: String,
-        val isHeading: Boolean,
+        val style: SurfaceTextStyle,
     ) : SurfaceNode
 
     data class Button(
@@ -62,6 +69,7 @@ sealed interface SurfaceNode {
         val pricePath: String,
         val whyPath: String,
         val action: ActionTemplate?,
+        val metaPath: String? = null,
     ) : SurfaceNode
 
     /** A component this client does not know or cannot bind. Shown as a quiet placeholder. */

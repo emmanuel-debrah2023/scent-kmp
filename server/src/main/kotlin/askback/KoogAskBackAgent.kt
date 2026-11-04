@@ -52,7 +52,9 @@ class KoogAskBackAgent(
         return converse(
             build = { feedback -> AskBackPrompts.ask(query, askable, feedback) },
             accept = { text ->
-                decode<AskBackOutput>(text).flatMap { AskBackValidator.toAskBack(it, query, priceRange) }
+                decode<AskBackOutput>(text)
+                    .flatMap { AskBackValidator.toAskBack(it, query, priceRange) }
+                    .map { it.copy(modelWritten = true) }
             },
         )
     }
@@ -69,7 +71,11 @@ class KoogAskBackAgent(
             }
         return converse(
             build = { feedback -> AskBackPrompts.explain(candidates, feedback) },
-            accept = { text -> decode<WhyOutput>(text).flatMap { AskBackValidator.toWhyLines(it, candidates, notes) } },
+            accept = { text ->
+                decode<WhyOutput>(text)
+                    .flatMap { AskBackValidator.toWhyLines(it, candidates, notes) }
+                    .map { lines -> lines.map { it.copy(modelWritten = true) } }
+            },
         )
     }
 

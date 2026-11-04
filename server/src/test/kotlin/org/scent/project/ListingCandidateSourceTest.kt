@@ -66,6 +66,23 @@ class ListingCandidateSourceTest {
     private fun List<ListingCandidate>.ids() = map { it.listingId }
 
     @Test
+    fun `a candidate carries its listing's bottle size and remaining amount`() {
+        seedListing(
+            sellerId,
+            seedFragrance(sellerId),
+            price = 50.0,
+            kind = "OPENED",
+            nominalSizeMl = 100,
+            remainingMl = 95,
+        )
+
+        val found = find(ScentPreferences()).single()
+
+        assertEquals(100, found.nominalSizeMl)
+        assertEquals(95, found.remainingMl)
+    }
+
+    @Test
     fun `a budget cap excludes listings over maxPrice and keeps one at exactly the cap`() {
         val cheap = listing(price = 60.0)
         val atCap = listing(price = 80.0)

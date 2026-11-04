@@ -23,6 +23,12 @@ class TextVariantTest {
     }
 
     @Test
+    fun `the caption constant is the A2UI caption variant and not a heading`() {
+        assertEquals("caption", TextVariant.CAPTION)
+        assertFalse(TextVariant.isHeading(TextVariant.CAPTION))
+    }
+
+    @Test
     fun `a variant survives a round trip and is left off the wire when absent`() {
         val heading =
             A2uiJson.encodeToString(

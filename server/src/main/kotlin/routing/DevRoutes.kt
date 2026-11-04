@@ -234,6 +234,8 @@ private suspend fun insertSeedVideoPost(
     }
 }
 
+// TODO(chore/seed-listing-sizes): seeded listings are all sealed with no nominal_size_ml, so the Ask card's meta
+//  line shows only kind and brand in local runs and demos. Harmless to behaviour: the size is left out when null.
 private suspend fun insertSeedListings(
     sellerId: Int,
     count: Int,

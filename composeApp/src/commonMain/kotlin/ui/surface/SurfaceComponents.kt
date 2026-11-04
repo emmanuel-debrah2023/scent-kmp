@@ -24,7 +24,7 @@ internal fun SurfaceChoicePicker(
         SurfaceFallback(modifier)
         return
     }
-    // TODO(feature/ask-surface-catalog-gaps): every picker is a run of chips. The size question is drawn as
+    // TODO(feature/ask-surface-choice-tiles): every picker is a run of chips. The size question is drawn as
     //  tiles on the board, which needs a variant prop on ChoicePicker in :contracts and the server.
     ChoiceChips(
         label = binding.label,
@@ -104,13 +104,12 @@ internal fun SurfaceRecommendationCard(
         SurfaceFallback(modifier)
         return
     }
-    // TODO(feature/ask-surface-catalog-gaps): the board shows a meta line ("Sealed · 100 ml · Atelier Nord")
-    //  under the name; RecommendationCard has no binding for it, so the brand in the data model goes unused.
     RecommendationCard(
         name = binding.name,
         price = binding.price,
         why = binding.why,
         modifier = modifier,
+        meta = binding.meta,
         onClick = if (binding.opensListing) ({ onEvent(SurfaceEvent.ActionTriggered(surface.id, node.id)) }) else null,
     )
 }

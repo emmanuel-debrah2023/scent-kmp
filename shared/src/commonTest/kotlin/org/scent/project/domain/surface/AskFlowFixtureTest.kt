@@ -35,7 +35,10 @@ class AskFlowFixtureTest {
             listOf("heading", "family", "budget", "size", "submit"),
             assertIs<SurfaceNode.Column>(surface.nodes["root"]).children,
         )
-        assertEquals(SurfaceNode.Text("heading", "A few quick questions", true), surface.nodes["heading"])
+        assertEquals(
+            SurfaceNode.Text("heading", "A few quick questions", SurfaceTextStyle.HEADING),
+            surface.nodes["heading"],
+        )
         assertIs<SurfaceNode.ChoicePicker>(surface.nodes["family"])
         assertIs<SurfaceNode.RangeSlider>(surface.nodes["budget"])
         assertEquals(

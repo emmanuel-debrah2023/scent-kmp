@@ -72,6 +72,13 @@ class KoogAskBackAgentTest {
     }
 
     @Test
+    fun `an accepted question is marked as written by the model`() {
+        val result = runBlocking { agent(reply(giftReply)).ask("gift for my dad, around £80", range) }.getOrNull()
+
+        assertEquals(true, result?.modelWritten)
+    }
+
+    @Test
     fun `a non gift query extracts for me and a family and asks only budget and size`() {
         val text =
             """{"intent":"FOR_ME","family":"FRESH","maxPrice":null,"size":null,"questions":["BUDGET","SIZE"],""" +
@@ -233,6 +240,15 @@ class KoogAskBackAgentTest {
         val lines = runBlocking { agent(reply(whyReply)).explain(ScentPreferences(), candidates) }.getOrNull()
 
         assertEquals(listOf("Warm cedar and soft vanilla"), lines?.map { it.text })
+    }
+
+    @Test
+    fun `accepted why lines are marked as written by the model`() {
+        val candidates = listOf(candidate(1, listOf("cedar", "vanilla")))
+
+        val lines = runBlocking { agent(reply(whyReply)).explain(ScentPreferences(), candidates) }.getOrNull()
+
+        assertEquals(listOf(true), lines?.map { it.modelWritten })
     }
 
     @Test
