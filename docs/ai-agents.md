@@ -146,7 +146,14 @@ every option and price; the model only chooses and words. The route that serves 
 - Provider failures (429, 403, timeout, not configured) come back as `AppError.AgentError`, never
   thrown, are never retried, and fall back to the rules answer. Only the error type and status are
   logged, never the query or the provider's body.
-- Koog logs full prompts at DEBUG, so `logback.xml` pins `ai.koog` to INFO.
+- What Koog 1.3.0 can throw from `execute`, read from its source, all mapped to `AgentError.Unavailable`
+  (or `RateLimited` for a 429): `LLMClientException` and `KoogHttpClientException` are its own.
+  `IllegalArgumentException` comes from its `require` on an empty reply, `IllegalStateException` from its `check`
+  on a reply's shape, and `SerializationException` from the Ollama client decoding outside its try. An
+  `IOException` is caught too. Only `CancellationException` passes through, and it is caught first because on the
+  JVM it is an `IllegalStateException`.
+- Koog logs full prompts at DEBUG, so `logback.xml` pins `ai.koog` to INFO. `OllamaClient` logs each failure's
+  message at ERROR, and that message holds the provider's error, so its logger is switched off.
 - Eval: `./gradlew :server:test -PliveSmoke --tests '*AskBackEvalLiveTest'` (key in the environment)
   runs 22 prompts, paced at 3.5 s, and writes `server/build/eval/ask-back.csv`. A free account allows
   about 50 requests a day. A recorded run is in `docs/evals/ask-back.csv`: on
