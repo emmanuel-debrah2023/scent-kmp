@@ -9,6 +9,8 @@
     </root>
     <!-- Koog logs the full prompt at DEBUG; keep shopper text out of the logs. -->
     <logger name="ai.koog" level="INFO"/>
+    <!-- OllamaClient logs each failure's message at ERROR, and that message holds the provider's error. -->
+    <logger name="ai.koog.prompt.executor.ollama" level="OFF"/>
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
 </configuration>
