@@ -14,13 +14,13 @@ class AgentModelIdTest {
 
     @Test
     fun `each provider has its own default model`() {
-        assertEquals("nvidia/nemotron-3-super-120b-a12b:free", agentModelId(openRouter, null))
+        assertEquals("nvidia/nemotron-3-ultra-550b-a55b:free", agentModelId(openRouter, null))
         assertEquals("llama3.2", agentModelId(ollama, null))
     }
 
     @Test
     fun `an override wins and a blank override is ignored`() {
         assertEquals("poolside/laguna-xs-2.1:free", agentModelId(openRouter, " poolside/laguna-xs-2.1:free "))
-        assertEquals("nvidia/nemotron-3-super-120b-a12b:free", agentModelId(openRouter, "  "))
+        assertEquals("nvidia/nemotron-3-ultra-550b-a55b:free", agentModelId(openRouter, "  "))
     }
 }

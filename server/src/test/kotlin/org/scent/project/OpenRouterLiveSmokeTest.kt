@@ -83,7 +83,7 @@ class OpenRouterLiveSmokeTest {
     }
 
     private companion object {
-        const val DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+        const val DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
         const val HARNESS_GATE = "agentic harness"
         const val HTTP_TOO_MANY_REQUESTS = 429
         const val HTTP_FORBIDDEN = 403

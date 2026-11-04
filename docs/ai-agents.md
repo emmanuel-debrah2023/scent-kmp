@@ -98,7 +98,7 @@ Run it from a terminal where `OPENROUTER_API_KEY` is exported (never put the key
 ```
 
 It boots the real `module()` and asks one free model to reply `pong`. The default is
-`nvidia/nemotron-3-super-120b-a12b:free`; set `OPENROUTER_MODEL` to try another, since free models come
+`nvidia/nemotron-3-ultra-550b-a55b:free`; set `OPENROUTER_MODEL` to try another, since free models come
 and go. For a model you chose, a 429 or a "only available on agentic harnesses" 403 is reported as
 skipped with the reason, not as a pass. Anything else fails: a bad key, network errors, an empty reply,
 or any error on the default model.
@@ -118,7 +118,7 @@ every option and price; the model only chooses and words. The route that serves 
 | `-DASK_BACK_AGENT=fake` | Canned gift answer, no model. For E2E. |
 | `-DASK_BACK_AGENT=rules` | No model: asks every missing question, why lines from the fragrance's own notes. |
 | unset (default) | The model, with the rules agent behind it (`FallbackAskBackAgent`). |
-| `AGENT_MODEL` | Model id. Default `nvidia/nemotron-3-super-120b-a12b:free` (OpenRouter) or `llama3.2` (Ollama). |
+| `AGENT_MODEL` | Model id. Default `nvidia/nemotron-3-ultra-550b-a55b:free` (OpenRouter) or `llama3.2` (Ollama). |
 
 - The reply is untrusted. `AskBackValidator` is the safety boundary: enums, a budget that appears as a
   number in the query, question ids from the planner, no digits, £ or links in any model-written text,
@@ -129,10 +129,16 @@ every option and price; the model only chooses and words. The route that serves 
 - Koog logs full prompts at DEBUG, so `logback.xml` pins `ai.koog` to INFO.
 - Eval: `./gradlew :server:test -PliveSmoke --tests '*AskBackEvalLiveTest'` (key in the environment)
   runs 22 prompts, paced at 3.5 s, and writes `server/build/eval/ask-back.csv`. A free account allows
-  about 50 requests a day. A recorded run is in `docs/evals/ask-back.csv`: 22 of 22 answered and valid
-  first try, 19 of 22 matching the expected preferences, median latency about 10 s (max 16 s) on
-  `nvidia/nemotron-3-super-120b-a12b:free`. A free model will not meet a 3 s route budget, so the
-  route's timeout and rules fallback matter more than the model's accuracy.
+  about 50 requests a day. A recorded run is in `docs/evals/ask-back.csv`: on
+  `nvidia/nemotron-3-ultra-550b-a55b:free` 20 of 22 answered, all valid first try, 19 of 22 matched the
+  expected preferences, and the median latency was about 10 s. The eval allows 20 s, but the route's budget
+  is 12 s, and only 13 of 22 finished inside it, so expect roughly 60% model answers and the rest from rules.
+  A free model will not meet a 3 s route budget, so the route's timeout and rules fallback matter more than
+  the model's accuracy.
+- Free models get retired without notice, and a retired id returns a 404 that falls back to rules, so
+  nothing looks broken. `/api/v1/agent/health` never calls the model and still says `configured`. Check
+  the server log for `Ask-back falling back to rules: Unavailable status=404`, and set `AGENT_MODEL` to move
+  to another model without a code change. `OPENROUTER_MODEL` picks the model for the live tests only.
 
 ## Privacy and limits
 
