@@ -2,21 +2,12 @@ package org.scent.project.data.remote
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.client.engine.okhttp.OkHttpConfig
 
-actual fun createHttpClient(): HttpClient =
+actual fun createHttpClient(): HttpClient = createOkHttpClient()
+
+internal fun createOkHttpClient(engineConfig: OkHttpConfig.() -> Unit = {}): HttpClient =
     HttpClient(OkHttp) {
-        install(ContentNegotiation) {
-            json(JsonConfig.json)
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 30_000
-        }
-        install(Logging) {
-            level = LogLevel.INFO
-        }
+        engine(engineConfig)
+        installScentDefaults()
     }

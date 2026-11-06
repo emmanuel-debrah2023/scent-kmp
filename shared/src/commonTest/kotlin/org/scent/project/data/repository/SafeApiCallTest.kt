@@ -1,5 +1,7 @@
 package org.scent.project.data.repository
 
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
@@ -53,6 +55,32 @@ class SafeApiCallTest {
                 }
 
             assertTrue(result.isLeft)
+            assertIs<AppError.NetworkError.Timeout>(result.leftOrNull())
+        }
+
+    @Test
+    fun `catches a socket timeout and returns Timeout not NoConnection`() =
+        runTest {
+            val result =
+                safeApiCall<String>(
+                    onHttpError = { AppError.Unknown().asLeft() },
+                ) {
+                    throw SocketTimeoutException("read timed out")
+                }
+
+            assertIs<AppError.NetworkError.Timeout>(result.leftOrNull())
+        }
+
+    @Test
+    fun `catches a connect timeout and returns Timeout not NoConnection`() =
+        runTest {
+            val result =
+                safeApiCall<String>(
+                    onHttpError = { AppError.Unknown().asLeft() },
+                ) {
+                    throw ConnectTimeoutException("connect timed out")
+                }
+
             assertIs<AppError.NetworkError.Timeout>(result.leftOrNull())
         }
 
