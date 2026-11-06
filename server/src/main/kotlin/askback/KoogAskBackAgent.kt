@@ -7,6 +7,7 @@ import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -112,11 +113,21 @@ class KoogAskBackAgent(
             withTimeoutOrNull(timeout) { client.execute(prompt, model).textContent() }
                 ?.asRight()
                 ?: AppError.AgentError.TimedOut().asLeft()
+        } catch (e: CancellationException) {
+            // First, because on the JVM this is an IllegalStateException, and it must keep cancelling.
+            throw e
         } catch (e: LLMClientException) {
             unavailable(e)
         } catch (e: KoogHttpClientException) {
             unavailable(e)
         } catch (e: IOException) {
+            unavailable(e)
+        } catch (e: IllegalArgumentException) {
+            // An empty reply trips Koog's require, and a reply it cannot decode throws a
+            // SerializationException, which is one of these. Both sit outside its clients' own try.
+            unavailable(e)
+        } catch (e: IllegalStateException) {
+            // Koog's check on the shape of a reply, also outside its clients' own try.
             unavailable(e)
         }
     }
