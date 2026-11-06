@@ -33,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,9 @@ import ui.accessibility.accessibleLabel
 import ui.accessibility.decorative
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
+
+internal const val TEXT_FIELD_TEXT_TAG = "scentTextField_text"
+internal const val TEXT_FIELD_UNDERLINE_TAG = "scentTextField_underline"
 
 /**
  * A bottom-border-only text input field.
@@ -52,10 +57,10 @@ import ui.theme.ScentThemeExtras
  * When [enabled] is false the border and text are muted to outline-variant.
  * [helperText] renders below the field in the same slot [error] uses — [error] always
  * wins when both are set, so a field never shows stale help text next to a live error.
- * [singleLine]/[minLines] mirror [androidx.compose.foundation.text.BasicTextField]'s own
- * params for a multi-line field (e.g. a bio); the fixed [ui.theme.ScentSpacing.buttonHeight]
- * only applies when [singleLine] is true. [keyboardActions] handles the IME action chosen in
- * [keyboardOptions] (e.g. Send).
+ * With [singleLine] false the field keeps [minLines] of room and the text sits on the underline,
+ * so a short entry never floats above its line (e.g. a bio); past [minLines] the field grows
+ * downwards. The fixed [ui.theme.ScentSpacing.buttonHeight] only applies when [singleLine] is
+ * true. [keyboardActions] handles the IME action chosen in [keyboardOptions] (e.g. Send).
  */
 @Composable
 fun ScentTextField(
@@ -98,6 +103,10 @@ fun ScentTextField(
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         }
+    val textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor)
+    // A multi-line field keeps minLines of room with the text at the bottom of it, on the underline,
+    // so short text never floats lines above its line.
+    val reservedTextHeight = with(LocalDensity.current) { (textStyle.lineHeight * minLines).toDp() }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // The input below carries the label for accessibility, so this visible copy is hidden
@@ -126,15 +135,25 @@ fun ScentTextField(
                     }.accessibleLabel(accessibilityLabel)
                     .onFocusChanged { isFocused = it.isFocused },
             enabled = enabled,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
+            textStyle = textStyle,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             singleLine = singleLine,
-            minLines = minLines,
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
             decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.CenterStart) {
+                Box(
+                    modifier =
+                        if (singleLine) {
+                            Modifier
+                        } else {
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = reservedTextHeight)
+                                .padding(bottom = ScentThemeExtras.spacing.xs)
+                        },
+                    contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.BottomStart,
+                ) {
                     if (value.isEmpty() && placeholder.isNotEmpty()) {
                         Text(
                             text = placeholder,
@@ -142,13 +161,13 @@ fun ScentTextField(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
-                    innerTextField()
+                    Box(modifier = Modifier.testTag(TEXT_FIELD_TEXT_TAG)) { innerTextField() }
                 }
             },
         )
 
         HorizontalDivider(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag(TEXT_FIELD_UNDERLINE_TAG),
             thickness = 1.dp,
             color = borderColor,
         )
