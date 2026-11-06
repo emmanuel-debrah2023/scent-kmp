@@ -97,7 +97,7 @@ class AskBackEvalLiveTest {
         val key = System.getenv("OPENROUTER_API_KEY")
         assumeTrue("OPENROUTER_API_KEY not set", !key.isNullOrBlank())
         val model =
-            System.getenv("OPENROUTER_MODEL")?.takeIf { it.isNotBlank() } ?: "nvidia/nemotron-3-super-120b-a12b:free"
+            System.getenv("OPENROUTER_MODEL")?.takeIf { it.isNotBlank() } ?: "nvidia/nemotron-3-ultra-550b-a55b:free"
         val counting = CountingClient(OpenRouterLLMClient(key))
         val agent =
             KoogAskBackAgent(

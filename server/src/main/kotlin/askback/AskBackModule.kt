@@ -9,7 +9,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-private const val DEFAULT_OPENROUTER_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+private const val DEFAULT_OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 private val MAX_BUDGET = 25.seconds
 private const val DEFAULT_OLLAMA_MODEL = "llama3.2"
 
