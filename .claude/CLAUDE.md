@@ -23,6 +23,9 @@ doc is wrong, say so explicitly rather than silently deviating.
   every call site (slug = proposed follow-up branch) and a Tasks Tracker ticket
   in the same PR, not a bigger PR. A bare `// TODO:` is only for something fixed
   in the same PR.
+- When a commit-worthy or mergeable chunk of work completes, offer the `handover`
+  skill in one line. Token use isn't visible from here, so offer at the boundary
+  rather than waiting for the session to feel long. Don't write it unasked.
 
 ## HotSwan MCP — hot reload
 
