@@ -45,9 +45,13 @@ import org.mindrot.jbcrypt.BCrypt
 import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.RegisterRequest
 import org.scent.project.domain.error.AppError
+import org.scent.project.domain.model.FillSource
+import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Serializable
 data class SeedResponse(
@@ -234,8 +238,6 @@ private suspend fun insertSeedVideoPost(
     }
 }
 
-// TODO(chore/seed-listing-sizes): seeded listings are all sealed with no nominal_size_ml, so the Ask card's meta
-//  line shows only kind and brand in local runs and demos. Harmless to behaviour: the size is left out when null.
 private suspend fun insertSeedListings(
     sellerId: Int,
     count: Int,
@@ -246,6 +248,21 @@ private suspend fun insertSeedListings(
         dbQuery {
             val seed = seedFragrances[index % seedFragrances.size]
             val condition = conditions[index % conditions.size]
+            val seedFill = seedFills[index % seedFills.size]
+            // The same rule a real listing goes through, so seeded fill never disagrees with it.
+            val fill =
+                checkNotNull(normalizeFill(seedFill.kind, seedFill.nominalMl, seedFill.remainingMl)) {
+                    "seed fill $seedFill contradicts itself"
+                }
+            val bottlePrice = seed.price.toBigDecimal()
+            val listingPrice =
+                if (seedFill.kind == ListingKind.DECANT) {
+                    bottlePrice
+                        .multiply(BigDecimal(seedFill.nominalMl))
+                        .divide(BigDecimal(SEED_PRICED_BOTTLE_ML), 2, RoundingMode.HALF_UP)
+                } else {
+                    bottlePrice
+                }
 
             val fragranceId =
                 FragrancesTable
@@ -267,10 +284,13 @@ private suspend fun insertSeedListings(
             ListingsTable.insertAndGetId {
                 it[ListingsTable.sellerId] = sellerId
                 it[ListingsTable.fragranceId] = fragranceId
-                it[price] = seed.price.toBigDecimal()
+                it[price] = listingPrice
                 it[ListingsTable.condition] = condition
                 it[isNegotiable] = index % 2 == 0
-                it[ListingsTable.kind] = "SEALED"
+                it[ListingsTable.kind] = seedFill.kind.name
+                it[nominalSizeMl] = fill.nominal
+                it[remainingMl] = fill.remaining
+                it[fillSource] = FillSource.DECLARED.name
                 it[createdAt] = now
             }
         }

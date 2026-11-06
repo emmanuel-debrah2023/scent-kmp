@@ -607,7 +607,7 @@ private fun replaceListingMedia(
     }
 }
 
-private data class NormalizedFill(
+internal data class NormalizedFill(
     val nominal: Int?,
     val remaining: Int?,
 )
@@ -624,7 +624,7 @@ private data class NormalizedFill(
  * Returns null ONLY for a genuine contradiction: an OPENED/TESTER remaining that exceeds
  * the supplied nominal.
  */
-private fun normalizeFill(
+internal fun normalizeFill(
     kind: ListingKind,
     nominalSizeMl: Int?,
     remainingMl: Int?,
