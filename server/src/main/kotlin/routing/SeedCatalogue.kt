@@ -1,6 +1,28 @@
 package routing
 
 import data.schema.NoteType
+import org.scent.project.domain.model.ListingKind
+
+/** The size a seed fragrance's price is for; a decant is priced for its own, smaller size. */
+internal const val SEED_PRICED_BOTTLE_ML = 100
+
+/** How a dev-seed listing is sold. [remainingMl] only matters for OPENED and TESTER. */
+internal data class SeedFill(
+    val kind: ListingKind,
+    val nominalMl: Int,
+    val remainingMl: Int? = null,
+)
+
+// Cycled through in order, so a seed of three or more shows every kind and the meta line has a
+// size, a fill and a vial to show on a device.
+internal val seedFills =
+    listOf(
+        SeedFill(ListingKind.SEALED, nominalMl = 100),
+        SeedFill(ListingKind.OPENED, nominalMl = 100, remainingMl = 95),
+        SeedFill(ListingKind.DECANT, nominalMl = 10),
+        SeedFill(ListingKind.SEALED, nominalMl = 50),
+        SeedFill(ListingKind.OPENED, nominalMl = 75, remainingMl = 40),
+    )
 
 /** A dev-seed fragrance. [notes] feed `fragrance_notes` so preference matching has data to rank on. */
 internal data class SeedFragrance(

@@ -39,11 +39,16 @@ import org.scent.project.data.remote.dto.AuthResponse
 import org.scent.project.data.remote.dto.MeResponse
 import plugins.configureSecurity
 import routing.ResetListingsResponse
+import routing.SEED_PRICED_BOTTLE_ML
 import routing.SeedResponse
 import routing.SeedUserResponse
 import routing.authRoutes
 import routing.devRoutes
+import routing.normalizeFill
+import routing.seedFills
 import routing.seedFragrances
+import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -292,6 +297,102 @@ class DevRoutesTest {
                 }
             assertEquals(seedFragrances.sumOf { it.notes.all.size }.toLong(), storedNotes)
         }
+
+    private data class SeededFill(
+        val kind: String,
+        val nominalMl: Int?,
+        val remainingMl: Int?,
+        val fillSource: String?,
+    )
+
+    private fun seededFills(): List<SeededFill> =
+        transaction {
+            ListingsTable.selectAll().map {
+                SeededFill(
+                    kind = it[ListingsTable.kind],
+                    nominalMl = it[ListingsTable.nominalSizeMl],
+                    remainingMl = it[ListingsTable.remainingMl],
+                    fillSource = it[ListingsTable.fillSource],
+                )
+            }
+        }
+
+    @Test
+    fun `seed-listings mixes sealed opened and decant listings`() =
+        withApp {
+            client.post("/api/v1/dev/seed-listings?count=6")
+
+            assertEquals(setOf("SEALED", "OPENED", "DECANT"), seededFills().map { it.kind }.toSet())
+        }
+
+    @Test
+    fun `seed-listings gives every listing a declared size and remaining amount`() =
+        withApp {
+            client.post("/api/v1/dev/seed-listings?count=6")
+
+            val fills = seededFills()
+            assertTrue(fills.all { it.nominalMl != null && it.remainingMl != null }, "$fills")
+            assertTrue(fills.all { it.fillSource == "DECLARED" }, "$fills")
+        }
+
+    @Test
+    fun `seed-listings fills match each kind the way a real listing would`() =
+        withApp {
+            client.post("/api/v1/dev/seed-listings?count=6")
+
+            val fills = seededFills()
+            val opened = fills.filter { it.kind == "OPENED" }
+            val full = fills.filter { it.kind == "SEALED" || it.kind == "DECANT" }
+            val smallestBottle = full.filter { it.kind == "SEALED" }.mapNotNull { it.nominalMl }.minOrNull() ?: 0
+            assertTrue(
+                opened.all { it.remainingMl != null && it.nominalMl != null && it.remainingMl < it.nominalMl },
+                "$opened",
+            )
+            assertTrue(full.all { it.remainingMl == it.nominalMl }, "$full")
+            assertTrue(
+                fills.filter { it.kind == "DECANT" }.all { it.nominalMl != null && it.nominalMl < smallestBottle },
+                "a decant vial is smaller than a bottle: $fills",
+            )
+        }
+
+    @Test
+    fun `every seed fill passes the rule a real listing goes through`() {
+        assertTrue(seedFills.all { normalizeFill(it.kind, it.nominalMl, it.remainingMl) != null })
+    }
+
+    @Test
+    fun `a seeded decant costs its vial's share of the bottle price to the penny`() =
+        withApp {
+            client.post("/api/v1/dev/seed-listings?count=${seedFills.size}")
+
+            val decants =
+                transaction {
+                    (ListingsTable innerJoin FragrancesTable)
+                        .selectAll()
+                        .where { ListingsTable.kind eq "DECANT" }
+                        .map {
+                            SeededDecant(
+                                listingPrice = it[ListingsTable.price],
+                                bottlePrice = it[FragrancesTable.price],
+                                vialMl = it[ListingsTable.nominalSizeMl] ?: 0,
+                            )
+                        }
+                }
+            assertTrue(decants.isNotEmpty())
+            decants.forEach { decant ->
+                val expected =
+                    decant.bottlePrice
+                        .multiply(BigDecimal(decant.vialMl))
+                        .divide(BigDecimal(SEED_PRICED_BOTTLE_ML), 2, RoundingMode.HALF_UP)
+                assertEquals(0, expected.compareTo(decant.listingPrice), "$decant, expected $expected")
+            }
+        }
+
+    private data class SeededDecant(
+        val listingPrice: BigDecimal,
+        val bottlePrice: BigDecimal,
+        val vialMl: Int,
+    )
 
     @Test
     fun `seed-listings count=60 is capped to 50`() =
