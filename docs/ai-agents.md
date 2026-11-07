@@ -4,7 +4,7 @@ Which AI dependency belongs to which path, so later tickets do not re-open the c
 
 | Path | What | Status |
 |---|---|---|
-| Cloud, server | Koog 1.3.0 in `server/`, calling a hosted free model | Built (this foundation) |
+| Cloud, server | Koog 1.3.0 in `server/`, calling a hosted model through OpenRouter (Claude Haiku 5.5 by default) | Built (this foundation) |
 | Local, development | Koog's Ollama client against a local Ollama | Built (selected by env var) |
 | On device, Android and iOS | ML Kit GenAI, Apple Foundation Models, shared `InferenceEngine` | Not started, see `chore/on-device-ai-foundation` |
 | On device through Koog | Koog's own LiteRT client | Not scoped; evaluate against the on-device ticket, do not bolt it onto this one |
@@ -15,14 +15,14 @@ Koog is on the stable 1.3.0 line only. `koog-ktor` and the Google, Mistral and D
 beta-only at 1.3.0, so they are not used. The server depends on three Koog artifacts:
 
 - `agents-core`: the agent runtime (it also brings the Ollama client and Koog's Jackson serialization).
-- `prompt-executor-openrouter-client`: the hosted free-model client.
+- `prompt-executor-openrouter-client`: the hosted model client.
 - `http-client-ktor`: registers the HTTP client factory. Building any Koog LLM client throws without it.
 
 The model is chosen once at boot by `agentModule` and bound as `AgentLlm`:
 
 | Environment variable | Effect |
 |---|---|
-| `OPENROUTER_API_KEY` | Use OpenRouter. Pick a `:free` model in the agent that calls it. |
+| `OPENROUTER_API_KEY` | Use OpenRouter. The ask-back default is a paid model, so the account needs credit (see "Choosing the model"). |
 | `OLLAMA_BASE_URL` (e.g. `http://localhost:11434`) | Use Ollama. Local only: Render's free tier cannot run it. |
 | neither (or blank) | `AgentLlm.NotConfigured`; the server still boots. |
 
@@ -117,9 +117,9 @@ Run it from a terminal where `OPENROUTER_API_KEY` is exported (never put the key
 ./gradlew :server:test -PliveSmoke --tests '*OpenRouterLiveSmokeTest'
 ```
 
-It boots the real `module()` and asks one free model to reply `pong`. The default is
-`nvidia/nemotron-3-ultra-550b-a55b:free`; set `OPENROUTER_MODEL` to try another, since free models come
-and go. For a model you chose, a 429 or a "only available on agentic harnesses" 403 is reported as
+It boots the real `module()` and asks one model to reply `pong`. The default is
+`anthropic/claude-haiku-5.5`; set `OPENROUTER_MODEL` to try another, for example a `:free` model, since free
+models come and go. For a model you chose, a 429 or a "only available on agentic harnesses" 403 is reported as
 skipped with the reason, not as a pass. Anything else fails: a bad key, network errors, an empty reply,
 or any error on the default model.
 
@@ -138,7 +138,7 @@ every option and price; the model only chooses and words. The route that serves 
 | `-DASK_BACK_AGENT=fake` | Canned gift answer, no model. For E2E. |
 | `-DASK_BACK_AGENT=rules` | No model: asks every missing question, why lines from the fragrance's own notes. |
 | unset (default) | The model, with the rules agent behind it (`FallbackAskBackAgent`). |
-| `AGENT_MODEL` | Model id. Default `nvidia/nemotron-3-ultra-550b-a55b:free` (OpenRouter) or `llama3.2` (Ollama). |
+| `AGENT_MODEL` | Model id. Default `anthropic/claude-haiku-5.5` (OpenRouter) or `llama3.2` (Ollama). Set it in `.env` or the environment: `./gradlew :server:run` does not forward `-DAGENT_MODEL`. |
 
 - The reply is untrusted. `AskBackValidator` is the safety boundary: enums, a budget that appears as a
   number in the query, question ids from the planner, no digits, £ or links in any model-written text,
@@ -154,20 +154,45 @@ every option and price; the model only chooses and words. The route that serves 
   JVM it is an `IllegalStateException`.
 - Koog logs full prompts at DEBUG, so `logback.xml` pins `ai.koog` to INFO. `OllamaClient` logs each failure's
   message at ERROR, and that message holds the provider's error, so its logger is switched off.
-- Eval: `./gradlew :server:test -PliveSmoke --tests '*AskBackEvalLiveTest'` (key in the environment)
-  runs 22 prompts, paced at 3.5 s, and writes `server/build/eval/ask-back.csv`. A free account allows
-  about 50 requests a day. A recorded run is in `docs/evals/ask-back.csv`: on
-  `nvidia/nemotron-3-ultra-550b-a55b:free` 20 of 22 answered, all valid first try, 19 of 22 matched the
-  expected preferences, and the median latency was about 10 s. The eval allows 20 s, but the route's budget
-  is 12 s, and only 13 of 22 finished inside it, so expect roughly 60% model answers and the rest from rules.
-  A free model will not meet a 3 s route budget, so the route's timeout and rules fallback matter more than
-  the model's accuracy.
-- Free models get retired without notice, and a retired id returns a 404 that falls back to rules, so
-  nothing looks broken. `/api/v1/agent/health` never calls the model and still says `configured`. Check
+- Eval: `./gradlew :server:test -PliveSmoke --tests '*AskBackEvalLiveTest'` (key in the environment) runs
+  22 ask prompts, paced at 3.5 s, and times the results step at 3, 10 and 20 cards. It writes
+  `server/build/eval/ask-back.csv` and `ask-back-explain.csv`; `OPENROUTER_MODEL` picks the model. Recorded
+  runs are in `docs/evals/`, one pair of files per model, and are compared under "Choosing the model".
+- A model that gets retired returns a 404 that falls back to rules, so nothing looks broken. Free models
+  are retired without notice. `/api/v1/agent/health` never calls the model and still says `configured`. Check
   the server log for `Ask-back falling back to rules: Unavailable status=404`, and set `AGENT_MODEL` to move
   to another model without a code change. `OPENROUTER_MODEL` picks the model for the live tests only.
 
+## Choosing the model
+
+Each model step has a 12 s budget before the rules answer is used, so speed decides more than accuracy.
+Measured on 2026-11-07 with the eval above:
+
+| | Claude Haiku 5.5 (paid, default) | Nemotron 3 Ultra (free) |
+|---|---|---|
+| Ask step: answered, valid first try | 22 of 22 | 20 of 22 |
+| Ask step: preferences correct | 19 of 22 | 16 of 22 |
+| Ask step: median and max latency | 1.7 s, 2.2 s | 5.3 s, 20 s (two timeouts) |
+| Results step, 3 cards | 3 of 3 inside 12 s (3.1 to 4.6 s) | 2 of 3 (9.2 s, 10.2 s, one provider error) |
+| Results step, 10 cards | 3 of 3 (5.0 to 5.5 s) | 1 of 3 |
+| Results step, 20 cards | 3 of 3 (7.9 to 9.4 s) | 0 of 3 |
+| Cost | about $0.17 per 1000 calls (two calls per full ask) | free, about 50 requests a day |
+
+On the app's demo path, Haiku 5.5 answered both steps with the model in 10 of 10 runs, against the free
+model's 3 of 5 on the results step. An earlier free model, `nvidia/nemotron-3.5-lightning:free`, timed out on
+16 of 22 ask prompts and was not recorded.
+
+**Decision:** the default is `anthropic/claude-haiku-5.5`, a paid model. With a free default the rules
+answer shows up in roughly a third to half of asks, and the "written by AI" captions disappear with it.
+At about $0.0003 per full ask, £10 of credit covers tens of thousands of asks. The rules fallback stays in
+place for provider errors. The server sends at most `MAX_CANDIDATES` (20) cards, the eval's worst case, which
+leaves about 2.5 s of the budget, so raising that cap needs a fresh measurement.
+
+To run without credit, set `AGENT_MODEL` to a `:free` model; expect the fallback rates above. An OpenRouter
+key can carry its own spending limit on top of the account's credit, so check both if paid calls start
+failing.
+
 ## Privacy and limits
 
-Free models can log or train on prompts, and free tiers are rate limited. Do not send personal data
-(addresses, payment details, private messages) to them.
+Hosted models, and free ones in particular, can log or train on prompts, and free tiers are rate limited.
+Do not send personal data (addresses, payment details, private messages) to them.

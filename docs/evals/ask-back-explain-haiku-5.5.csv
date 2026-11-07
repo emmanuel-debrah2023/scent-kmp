@@ -1,0 +1,10 @@
+cards,attempt,answered,error,calls,latency_ms,model
+3,1,true,,1,3238,anthropic/claude-haiku-5.5
+3,2,true,,1,4569,anthropic/claude-haiku-5.5
+3,3,true,,1,3120,anthropic/claude-haiku-5.5
+10,1,true,,1,5497,anthropic/claude-haiku-5.5
+10,2,true,,1,5507,anthropic/claude-haiku-5.5
+10,3,true,,1,5027,anthropic/claude-haiku-5.5
+20,1,true,,1,9417,anthropic/claude-haiku-5.5
+20,2,true,,1,9109,anthropic/claude-haiku-5.5
+20,3,true,,1,7937,anthropic/claude-haiku-5.5
