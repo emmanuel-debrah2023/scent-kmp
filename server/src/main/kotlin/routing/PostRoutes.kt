@@ -183,6 +183,8 @@ fun Route.postRoutes() {
                                 .selectAll()
                                 .where { PostFragrancesTable.postId eq id }
                                 .map { it[PostFragrancesTable.fragranceId].value.toString() }
+                        // TODO(fix/post-hashtag-order): no ORDER BY, so the order follows Postgres's plan and can
+                        //  change between environments. Harmless while clients only display the tags.
                         val hashtags =
                             PostHashtagsTable
                                 .selectAll()
