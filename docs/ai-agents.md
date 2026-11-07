@@ -138,7 +138,7 @@ every option and price; the model only chooses and words. The route that serves 
 | `-DASK_BACK_AGENT=fake` | Canned gift answer, no model. For E2E. |
 | `-DASK_BACK_AGENT=rules` | No model: asks every missing question, why lines from the fragrance's own notes. |
 | unset (default) | The model, with the rules agent behind it (`FallbackAskBackAgent`). |
-| `AGENT_MODEL` | Model id. Default `anthropic/claude-haiku-5.5` (OpenRouter) or `llama3.2` (Ollama). Set it in `.env` or the environment: `./gradlew :server:run` does not forward `-DAGENT_MODEL`. |
+| `AGENT_MODEL` | Model id. Default `anthropic/claude-haiku-5.5` (OpenRouter) or `llama3.2` (Ollama). Set it with `-D`, in `.env` or in the environment. |
 
 - The reply is untrusted. `AskBackValidator` is the safety boundary: enums, a budget that appears as a
   number in the query, question ids from the planner, no digits, £ or links in any model-written text,

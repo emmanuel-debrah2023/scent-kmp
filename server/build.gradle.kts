@@ -20,16 +20,14 @@ application {
 }
 
 // The application plugin's `run` task forks a new JVM — it does not inherit `-D`
-// system properties passed to the Gradle invocation itself. Forward STREAM_PROVIDER,
-// IMAGE_PROVIDER and ASK_BACK_AGENT explicitly so
+// system properties passed to the Gradle invocation itself. Forward the settings meant to be
+// passed with -D (secrets and database config come from .env instead), so for example
 // `./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake`
-// reaches Application.kt.
-// TODO(chore/forward-agent-run-properties): AGENT_MODEL and ASK_BACK_BUDGET_MS are not forwarded, so
-//  -DAGENT_MODEL is silently ignored here. Harmless while .env and environment variables still reach the server.
+// or `-DAGENT_MODEL=<id>` reaches it. A property left off this list is silently ignored.
 tasks.named<JavaExec>("run") {
-    System.getProperty("STREAM_PROVIDER")?.let { systemProperty("STREAM_PROVIDER", it) }
-    System.getProperty("IMAGE_PROVIDER")?.let { systemProperty("IMAGE_PROVIDER", it) }
-    System.getProperty("ASK_BACK_AGENT")?.let { systemProperty("ASK_BACK_AGENT", it) }
+    listOf("STREAM_PROVIDER", "IMAGE_PROVIDER", "ASK_BACK_AGENT", "AGENT_MODEL", "ASK_BACK_BUDGET_MS").forEach { name ->
+        System.getProperty(name)?.let { systemProperty(name, it) }
+    }
 }
 
 dependencies {
