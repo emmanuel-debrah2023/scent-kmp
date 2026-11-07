@@ -28,4 +28,6 @@ interface ListingCandidateSource {
     suspend fun find(preferences: ScentPreferences): Result<List<ListingCandidate>>
 }
 
+// The results step writes a reason per card inside its time budget; 20 is the largest count the eval
+// times (docs/ai-agents.md, "Choosing the model"), so re-run it before raising this.
 const val MAX_CANDIDATES = 20

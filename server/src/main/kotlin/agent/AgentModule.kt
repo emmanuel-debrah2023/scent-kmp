@@ -5,7 +5,7 @@ import ai.koog.prompt.executor.ollama.client.OllamaClient
 import org.koin.dsl.module
 
 /**
- * OpenRouter (hosted, free models) wins when its key is set, otherwise Ollama (local) when its
+ * OpenRouter (hosted models) wins when its key is set, otherwise Ollama (local) when its
  * URL is set, otherwise [AgentLlm.NotConfigured]. Blank values count as unset. Building a client
  * makes no network call, so a configured but unreachable model still lets the server boot.
  */

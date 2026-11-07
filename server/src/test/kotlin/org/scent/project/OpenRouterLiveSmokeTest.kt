@@ -16,11 +16,11 @@ import kotlin.test.assertTrue
 // Opt-in live check, never part of CI or allTests. It needs both `-PliveSmoke` and
 // OPENROUTER_API_KEY in the environment, then boots the real module() and makes one call:
 //   ./gradlew :server:test -PliveSmoke --tests '*OpenRouterLiveSmokeTest'
-// Set OPENROUTER_MODEL to try another free model. Free models rate limit and come and go, so for a
+// Set OPENROUTER_MODEL to try another model. Free models rate limit and come and go, so for a
 // model you chose, a 429 or a harness-gating 403 is reported as skipped, never as a pass.
 class OpenRouterLiveSmokeTest {
     @Test
-    fun `the wired openrouter client gets a real reply from a free model`() {
+    fun `the wired openrouter client gets a real reply from the model`() {
         assumeTrue("run with -PliveSmoke to enable", System.getProperty("scent.liveSmoke") == "true")
         val key = System.getenv("OPENROUTER_API_KEY")
         assumeTrue("OPENROUTER_API_KEY not set", !key.isNullOrBlank())
@@ -83,7 +83,7 @@ class OpenRouterLiveSmokeTest {
     }
 
     private companion object {
-        const val DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
+        const val DEFAULT_MODEL = "anthropic/claude-haiku-5.5"
         const val HARNESS_GATE = "agentic harness"
         const val HTTP_TOO_MANY_REQUESTS = 429
         const val HTTP_FORBIDDEN = 403

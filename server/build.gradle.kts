@@ -24,6 +24,8 @@ application {
 // IMAGE_PROVIDER and ASK_BACK_AGENT explicitly so
 // `./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake`
 // reaches Application.kt.
+// TODO(chore/forward-agent-run-properties): AGENT_MODEL and ASK_BACK_BUDGET_MS are not forwarded, so
+//  -DAGENT_MODEL is silently ignored here. Harmless while .env and environment variables still reach the server.
 tasks.named<JavaExec>("run") {
     System.getProperty("STREAM_PROVIDER")?.let { systemProperty("STREAM_PROVIDER", it) }
     System.getProperty("IMAGE_PROVIDER")?.let { systemProperty("IMAGE_PROVIDER", it) }
