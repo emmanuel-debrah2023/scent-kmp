@@ -34,7 +34,7 @@ private val replyJson =
     }
 
 /**
- * Asks a model (OpenRouter free model or local Ollama) and returns only what [AskBackValidator]
+ * Asks a model (through OpenRouter, or a local Ollama) and returns only what [AskBackValidator]
  * accepts. A provider failure is returned as an [AppError.AgentError], never thrown. One retry on
  * a bad answer, passing back the rule it broke; never a retry on a provider failure, because a
  * rate limit gets worse when hammered.

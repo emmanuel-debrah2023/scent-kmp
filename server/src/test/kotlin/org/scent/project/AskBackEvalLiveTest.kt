@@ -15,17 +15,23 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import org.scent.project.domain.error.AppError
+import org.scent.project.domain.model.ListingKind
+import org.scent.project.domain.util.asRight
 import preferences.Intent
+import preferences.ListingCandidate
 import preferences.NoteVocabulary
 import preferences.PriceRange
 import preferences.ScentFamily
+import preferences.ScentPreferences
+import routing.seedFragrances
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 // Opt-in eval, never in CI: ./gradlew :server:test -PliveSmoke --tests '*AskBackEvalLiveTest'
-// Needs OPENROUTER_API_KEY in the environment. Writes server/build/eval/ask-back.csv. Free models
+// Needs OPENROUTER_API_KEY in the environment. Writes server/build/eval/ask-back.csv and
+// ask-back-explain.csv (the results step at 3, 10 and 20 cards). Free models
 // rate limit, so calls are paced and a 429 waits once before the row is recorded as rate limited.
 class AskBackEvalLiveTest {
     private data class Case(
@@ -91,13 +97,19 @@ class AskBackEvalLiveTest {
         override fun close() = inner.close()
     }
 
-    @Test
-    fun `eval prompts against the configured free model and write the csv`() {
+    private fun liveKey(): String {
         assumeTrue("run with -PliveSmoke to enable", System.getProperty("scent.liveSmoke") == "true")
         val key = System.getenv("OPENROUTER_API_KEY")
         assumeTrue("OPENROUTER_API_KEY not set", !key.isNullOrBlank())
-        val model =
-            System.getenv("OPENROUTER_MODEL")?.takeIf { it.isNotBlank() } ?: "nvidia/nemotron-3-ultra-550b-a55b:free"
+        return key
+    }
+
+    private fun evalModel(): String = System.getenv("OPENROUTER_MODEL")?.takeIf { it.isNotBlank() } ?: DEFAULT_MODEL
+
+    @Test
+    fun `eval prompts against the configured model and write the csv`() {
+        val key = liveKey()
+        val model = evalModel()
         val counting = CountingClient(OpenRouterLLMClient(key))
         val agent =
             KoogAskBackAgent(
@@ -120,6 +132,58 @@ class AskBackEvalLiveTest {
         assumeTrue("INCONCLUSIVE: every row was rate limited or unavailable", rows.any { it.answered })
         assertTrue(rows.none { it.invalidOptions > 0 }, "an invalid option reached the result")
     }
+
+    // The results step writes one reason per card, so it slows as the card count grows. The route
+    // gives it the same budget as the ask step, which this records against.
+    @Test
+    fun `time the explain step at growing card counts and write the csv`() {
+        val key = liveKey()
+        val model = evalModel()
+        val counting = CountingClient(OpenRouterLLMClient(key))
+        val vocabulary = seedFragrances.flatMap { it.notes.all }.map { it.lowercase() }.toSet()
+        val agent =
+            KoogAskBackAgent(
+                AgentLlm.Configured(agent.AgentProvider.OPENROUTER, counting),
+                model,
+                NoteVocabulary { vocabulary.asRight() },
+            )
+        val preferences = ScentPreferences(Intent.GIFT, ScentFamily.WOODY, null, null)
+
+        val rows =
+            EXPLAIN_CARD_COUNTS.flatMap { cards ->
+                (1..EXPLAIN_REPEATS).map { attempt ->
+                    runBlocking { delay(PACING) }
+                    val before = counting.calls
+                    val start = System.nanoTime()
+                    val result = runBlocking { agent.explain(preferences, candidates(cards)) }
+                    val latencyMs = (System.nanoTime() - start) / NANOS_PER_MS
+                    val error = result.leftOrNull()?.let { it::class.simpleName } ?: ""
+                    listOf(cards, attempt, error.isEmpty(), error, counting.calls - before, latencyMs, model)
+                        .joinToString(",")
+                }
+            }
+
+        val out = File("build/eval/ask-back-explain.csv")
+        out.parentFile.mkdirs()
+        out.writeText((listOf(EXPLAIN_HEADER) + rows).joinToString("\n") + "\n")
+        println("EVAL_CSV ${out.absolutePath}")
+        assumeTrue("INCONCLUSIVE: every explain call failed", rows.any { it.split(",")[2] == "true" })
+    }
+
+    private fun candidates(count: Int): List<ListingCandidate> =
+        (0 until count).map { index ->
+            val seed = seedFragrances[index % seedFragrances.size]
+            ListingCandidate(
+                index + 1,
+                index + 1,
+                seed.name,
+                seed.brand,
+                seed.price,
+                ListingKind.SEALED,
+                seed.notes.all,
+                0,
+            )
+        }
 
     private data class Row(
         val csv: String,
@@ -203,6 +267,10 @@ class AskBackEvalLiveTest {
     }
 
     private companion object {
+        const val DEFAULT_MODEL = "anthropic/claude-haiku-5.5"
+        val EXPLAIN_CARD_COUNTS = listOf(3, 10, 20)
+        const val EXPLAIN_REPEATS = 3
+        const val EXPLAIN_HEADER = "cards,attempt,answered,error,calls,latency_ms,model"
         val PACING = 3.5.seconds
         val RATE_LIMIT_WAIT = 60.seconds
         const val NANOS_PER_MS = 1_000_000
