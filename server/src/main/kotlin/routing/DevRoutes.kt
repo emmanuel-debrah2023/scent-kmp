@@ -1,6 +1,7 @@
 package routing
 
 import data.dbQuery
+import data.schema.DecantsTable
 import data.schema.FragranceCondition
 import data.schema.FragranceMediaTable
 import data.schema.FragranceNotesTable
@@ -9,10 +10,15 @@ import data.schema.ListingMediaTable
 import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
+import data.schema.OrdersTable
+import data.schema.PostFragrancesTable
 import data.schema.PostHashtagsTable
+import data.schema.PostLikesTable
+import data.schema.PostListingsTable
 import data.schema.PostMediaTable
 import data.schema.PostsTable
 import data.schema.ReviewsTable
+import data.schema.UserFragranceCollectionTable
 import data.schema.UsersTable
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -78,6 +84,19 @@ data class ResetListingsResponse(
     val mediaRemoved: Int,
 )
 
+/** Seed bot posts removed, with their hashtags, media, likes and links. */
+@Serializable
+data class ResetSeedFeedResponse(
+    val removed: Int,
+)
+
+/** Seed seller listings removed, and the seed fragrances nothing else referenced any more. */
+@Serializable
+data class ResetSeedListingsResponse(
+    val listingsRemoved: Int,
+    val fragrancesRemoved: Int,
+)
+
 private val seedSentences =
     listOf(
         "Just tested a gorgeous oud and rose blend — absolute heaven.",
@@ -97,10 +116,13 @@ private const val MAX_SEED_COUNT = 50
 private const val E2E_USERNAME = "scent_e2e"
 private const val E2E_REGISTRATION_PREFIX = "e2e_"
 
-private suspend fun resolveSeedUserId(): Int = resolveSeedUser("scent_seed_bot", "seed@scent.dev", "Scent Seed Bot")
+private const val SEED_BOT_USERNAME = "scent_seed_bot"
+private const val SEED_SELLER_USERNAME = "scent_seed_seller"
+
+private suspend fun resolveSeedUserId(): Int = resolveSeedUser(SEED_BOT_USERNAME, "seed@scent.dev", "Scent Seed Bot")
 
 private suspend fun resolveSeedSellerId(): Int =
-    resolveSeedUser("scent_seed_seller", "seed-seller@scent.dev", "Scent Seed Seller")
+    resolveSeedUser(SEED_SELLER_USERNAME, "seed-seller@scent.dev", "Scent Seed Seller")
 
 private suspend fun resolveSeedUser(
     username: String,
@@ -380,6 +402,90 @@ private fun referencedIn(
             .toSet()
     }
 
+// Seeding is additive, so e2e-up.sh calls these before reseeding to start each stack from one seed
+// set. Both touch only the fixed seed accounts and take no input; a missing account clears nothing.
+private fun seedAccountId(username: String): Int? =
+    UsersTable
+        .select(UsersTable.id)
+        .where { UsersTable.username eq username }
+        .singleOrNull()
+        ?.get(UsersTable.id)
+        ?.value
+
+private suspend fun resetSeedFeed(): ResetSeedFeedResponse =
+    dbQuery {
+        val postIds =
+            seedAccountId(SEED_BOT_USERNAME)
+                ?.let { botId ->
+                    PostsTable
+                        .select(
+                            PostsTable.id,
+                        ).where { PostsTable.userId eq botId }
+                        .map { it[PostsTable.id].value }
+                }.orEmpty()
+        if (postIds.isEmpty()) return@dbQuery ResetSeedFeedResponse(removed = 0)
+        // Every table with a foreign key to posts, then the posts.
+        PostHashtagsTable.deleteWhere { PostHashtagsTable.postId inList postIds }
+        PostMediaTable.deleteWhere { PostMediaTable.postId inList postIds }
+        PostLikesTable.deleteWhere { PostLikesTable.postId inList postIds }
+        PostFragrancesTable.deleteWhere { PostFragrancesTable.postId inList postIds }
+        PostListingsTable.deleteWhere { PostListingsTable.postId inList postIds }
+        ResetSeedFeedResponse(removed = PostsTable.deleteWhere { PostsTable.id inList postIds })
+    }
+
+private suspend fun resetSeedListings(): ResetSeedListingsResponse =
+    dbQuery {
+        val sellerId =
+            seedAccountId(SEED_SELLER_USERNAME)
+                ?: return@dbQuery ResetSeedListingsResponse(listingsRemoved = 0, fragrancesRemoved = 0)
+        val listingIds =
+            ListingsTable
+                .select(ListingsTable.id)
+                .where { ListingsTable.sellerId eq sellerId }
+                .map { it[ListingsTable.id].value }
+        var listingsRemoved = 0
+        if (listingIds.isNotEmpty()) {
+            ListingMediaTable.deleteWhere { ListingMediaTable.listingId inList listingIds }
+            listingsRemoved = ListingsTable.deleteWhere { ListingsTable.id inList listingIds }
+        }
+        ResetSeedListingsResponse(listingsRemoved, deleteUnreferencedSeedFragrances(sellerId))
+    }
+
+// Each seed listing creates its own fragrance row. Remove the ones nothing references any more;
+// one a user collected, reviewed, ordered or posted about stays. Every table with a foreign key to
+// fragrances is checked, except fragrance_notes, which belongs to the fragrance and goes with it.
+private fun deleteUnreferencedSeedFragrances(sellerId: Int): Int {
+    val candidates =
+        FragrancesTable
+            .select(FragrancesTable.id)
+            .where { FragrancesTable.sellerId eq sellerId }
+            .map { it[FragrancesTable.id].value }
+    val kept =
+        referencedIn(ListingsTable.fragranceId, candidates) +
+            referencedIn(DecantsTable.fragranceId, candidates) +
+            referencedIn(OrdersTable.fragranceId, candidates) +
+            referencedIn(ReviewsTable.fragranceId, candidates) +
+            referencedIn(UserFragranceCollectionTable.fragranceId, candidates) +
+            referencedIn(PostFragrancesTable.fragranceId, candidates) +
+            referencedIn(PostListingsTable.fragranceId, candidates) +
+            referencedIn(FragranceMediaTable.fragranceId, candidates)
+    val deletable = candidates - kept
+    if (deletable.isEmpty()) return 0
+    FragranceNotesTable.deleteWhere { FragranceNotesTable.fragranceId inList deletable }
+    return FragrancesTable.deleteWhere { FragrancesTable.id inList deletable }
+}
+
+// Mounted inside devRoutes' /api/v1/dev block, so the same guard keeps them out of production.
+private fun Route.seedResetRoutes() {
+    post("/reset-seed-feed") {
+        call.respond(HttpStatusCode.OK, resetSeedFeed())
+    }
+
+    post("/reset-seed-listings") {
+        call.respond(HttpStatusCode.OK, resetSeedListings())
+    }
+}
+
 private fun AppError.toHttpStatus(): HttpStatusCode =
     when (this) {
         is AppError.NetworkError.NotFound -> HttpStatusCode.NotFound
@@ -450,6 +556,8 @@ fun Route.devRoutes() {
 
             call.respond(HttpStatusCode.Created, SeedResponse(seeded = count, userId = seedSellerId))
         }
+
+        seedResetRoutes()
 
         post("/reset-listings") {
             call

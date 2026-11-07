@@ -92,6 +92,17 @@ check_seeded() { # check_seeded <what> <status> <accepted statuses...>
 
 USER_JSON=$(printf '{"email":"%s","username":"scent_e2e","password":"%s","displayName":"Scent E2E"}' "$EMAIL" "$PASSWORD")
 check_seeded "E2E account $EMAIL" "$(post /api/v1/dev/seed-user "$USER_JSON")" 200 201
+
+# Seeding adds rows, so clear the last run's seed posts and listings first: every start ends with one seed set.
+reset_seed() { # reset_seed <what> <path>
+    local status
+    status=$(post "$2")
+    [ "$status" = "200" ] && { echo "e2e-up: cleared previous seed $1"; return; }
+    [ "$status" = "404" ] && fail "the seed reset routes aren't mounted: restart the server from a checkout that has them"
+    fail "clearing seed $1 failed with HTTP $status"
+}
+reset_seed "feed posts" /api/v1/dev/reset-seed-feed
+reset_seed "listings" /api/v1/dev/reset-seed-listings
 # The stored video URL takes the request's Host, so send the emulator's address or the app can't reach it.
 check_seeded "$SEED_COUNT feed posts and a video post" \
     "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/api/v1/dev/seed-feed?count=$SEED_COUNT" -H "Host: $EMULATOR_HOST")" 201
@@ -99,5 +110,5 @@ check_seeded "$SEED_COUNT listings" "$(post "/api/v1/dev/seed-listings?count=$SE
 
 echo
 echo "E2E stack ready at $API_URL. Sign in as $EMAIL."
-echo "Feed posts and listings are additive: each run adds $SEED_COUNT more, plus one video post."
+echo "Each run replaces the seed data: $SEED_COUNT feed posts plus one video post, and $SEED_COUNT listings."
 [ -f "$PID_FILE" ] && echo "Stop the server with: ./scripts/e2e-up.sh --down"
