@@ -135,14 +135,7 @@ internal fun SurfaceProvenanceNote(
     val binding = SurfaceBindings.provenanceNote(surface, node)
     val copy = ProvenanceLabels.copy(binding.source, binding.subject)
     val sendAction = { onEvent(SurfaceEvent.ActionTriggered(surface.id, node.id)) }
-    // The rating is stored first, so the action that follows reads it from the data model.
-    val rate: (SurfaceRating) -> Unit = { rating ->
-        val path = node.ratingPath
-        if (path != null) {
-            onEvent(SurfaceEvent.ValueChanged(surface.id, path, SurfaceBindings.ratingValue(rating)))
-            sendAction()
-        }
-    }
+    val rate: (SurfaceRating) -> Unit = { onEvent(SurfaceEvent.RatingChosen(surface.id, node.id, it)) }
     val action: (@Composable () -> Unit)? =
         when {
             binding.canRetry -> {

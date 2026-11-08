@@ -1,6 +1,7 @@
 package ui.surface
 
 import kotlinx.serialization.json.JsonElement
+import org.scent.project.domain.surface.SurfaceRating
 
 /**
  * What a rendered surface reports upward. Events carry ids only: the ViewModel owns the surface state,
@@ -18,5 +19,15 @@ sealed interface SurfaceEvent {
     data class ActionTriggered(
         val surfaceId: String,
         val componentId: String,
+    ) : SurfaceEvent
+
+    /**
+     * A thumb on a provenance note was tapped. One event for the whole tap: the ViewModel stores [rating]
+     * at the note's rating path and then sends the note's action, so the composable sequences nothing.
+     */
+    data class RatingChosen(
+        val surfaceId: String,
+        val componentId: String,
+        val rating: SurfaceRating,
     ) : SurfaceEvent
 }

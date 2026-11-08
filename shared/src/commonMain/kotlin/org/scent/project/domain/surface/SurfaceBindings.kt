@@ -149,8 +149,8 @@ object SurfaceBindings {
         )
     }
 
-    /** What a rating is stored as in the data model, so the UI can write one without the wire enum. */
-    fun ratingValue(rating: SurfaceRating): JsonElement =
+    /** What a rating is stored as in the data model; [SurfaceReducer.setRating] writes it. */
+    internal fun ratingValue(rating: SurfaceRating): JsonElement =
         JsonPrimitive(
             when (rating) {
                 SurfaceRating.UP -> ReasonsRating.UP

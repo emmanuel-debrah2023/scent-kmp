@@ -23,6 +23,7 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.repository.AskSurfaceRepository
 import org.scent.project.domain.surface.SurfaceAction
 import org.scent.project.domain.surface.SurfaceMessage
+import org.scent.project.domain.surface.SurfaceRating
 import org.scent.project.domain.usecase.SendAskActionUseCase
 import org.scent.project.domain.usecase.StartAskUseCase
 import org.scent.project.domain.util.Result
@@ -287,9 +288,20 @@ class AskViewModelTest {
     private fun cardEvent() = SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "card_1")
 
     private fun rate(value: String) {
-        viewModel.onSurfaceEvent(SurfaceEvent.ValueChanged(ASK_SURFACE_ID, "/feedback/rating", JsonPrimitive(value)))
-        viewModel.onSurfaceEvent(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "provenance"))
+        val rating = if (value == "up") SurfaceRating.UP else SurfaceRating.DOWN
+        viewModel.onSurfaceEvent(SurfaceEvent.RatingChosen(ASK_SURFACE_ID, "provenance", rating))
     }
+
+    @Test
+    fun `a rating chosen on a component that cannot be rated sets actionError and sends nothing`() =
+        runTest {
+            showResults(batch(AskFixtures.RESULTS_AI_UNAVAILABLE))
+
+            viewModel.onSurfaceEvent(SurfaceEvent.RatingChosen(ASK_SURFACE_ID, "provenance", SurfaceRating.UP))
+
+            assertIs<AppError.SurfaceError.Invalid>(showing().actionError)
+            coVerify(exactly = 1) { sendAskAction(any()) }
+        }
 
     private fun storedRating() =
         showing()

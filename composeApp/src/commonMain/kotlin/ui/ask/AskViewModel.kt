@@ -80,6 +80,7 @@ class AskViewModel(
         when (event) {
             is SurfaceEvent.ValueChanged -> editValue(event)
             is SurfaceEvent.ActionTriggered -> triggerAction(event)
+            is SurfaceEvent.RatingChosen -> chooseRating(event)
         }
     }
 
@@ -162,6 +163,20 @@ class AskViewModel(
                 updateShowing { it.copy(actionError = error) }
             },
             onSuccess = ::onActionBuilt,
+        )
+    }
+
+    // The rating is stored before the action is built, so the action reads it from the data model.
+    private fun chooseRating(event: SurfaceEvent.RatingChosen) {
+        val showing = _uiState.value.phase as? AskPhase.Showing ?: return
+        if (showing.pending != null) return
+        SurfaceReducer.setRating(surfaces, event.surfaceId, event.componentId, event.rating).handleResult(
+            onError = { error -> updateShowing { it.copy(actionError = error) } },
+            onSuccess = { rated ->
+                surfaces = rated
+                updateShowing { it.copy(surface = rated.surfaces[it.surface.id] ?: it.surface) }
+                triggerAction(SurfaceEvent.ActionTriggered(event.surfaceId, event.componentId))
+            },
         )
     }
 

@@ -38,6 +38,7 @@ import org.scent.project.domain.surface.Surface
 import org.scent.project.domain.surface.SurfaceNode
 import org.scent.project.domain.surface.SurfaceProvenance
 import org.scent.project.domain.surface.SurfaceProvenanceSubject
+import org.scent.project.domain.surface.SurfaceRating
 import org.scent.project.domain.surface.SurfaceTextStyle
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -545,7 +546,7 @@ abstract class ScentSurfaceTest {
         }
 
     @Test
-    fun `tapping a thumb stores the rating then sends the note's action`() =
+    fun `tapping a thumb reports one rating event for the note`() =
         runComposeUiTest {
             val events = mutableListOf<SurfaceEvent>()
 
@@ -556,13 +557,7 @@ abstract class ScentSurfaceTest {
             }
             onNodeWithContentDescription("These reasons did not help").performClick()
 
-            assertEquals(
-                listOf(
-                    SurfaceEvent.ValueChanged("s1", "/feedback/rating", JsonPrimitive("down")),
-                    SurfaceEvent.ActionTriggered("s1", "note"),
-                ),
-                events,
-            )
+            assertEquals(listOf<SurfaceEvent>(SurfaceEvent.RatingChosen("s1", "note", SurfaceRating.DOWN)), events)
         }
 
     @Test
@@ -705,6 +700,21 @@ abstract class ScentSurfaceTest {
             onNodeWithText("SHOW GIFTS").performScrollTo().performClick()
 
             assertEquals(listOf(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "submit")), actions)
+        }
+
+    @Test
+    fun `on the results a thumb fills and asks for the note's action once`() =
+        runComposeUiTest {
+            val fixture = SurfaceFixture(AskFixtures.QUESTIONS, AskFixtures.RESULTS)
+            val actions = mutableListOf<SurfaceEvent.ActionTriggered>()
+
+            setContent {
+                MaterialTheme { ScentSurfaceFixtureHost(fixture, ASK_SURFACE_ID, onAction = actions::add) }
+            }
+            onNodeWithContentDescription("These reasons helped").performClick()
+
+            onNodeWithContentDescription("These reasons helped").assertIsOn()
+            assertEquals(listOf(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "provenance")), actions)
         }
 
     @Test

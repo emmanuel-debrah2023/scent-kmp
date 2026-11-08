@@ -58,6 +58,30 @@ object SurfaceReducer {
             is Step.Applied -> step.state.asRight()
         }
 
+    /**
+     * The reader's verdict on a provenance note, stored at the note's own rating path. Only a note that
+     * offers rating can be rated, so a stray event cannot write anywhere else in the data model.
+     */
+    fun setRating(
+        state: SurfaceState,
+        surfaceId: String,
+        noteId: String,
+        rating: SurfaceRating,
+    ): Result<SurfaceState> {
+        val surface = state.surfaces[surfaceId]
+        val note = surface?.nodes?.get(noteId) as? SurfaceNode.ProvenanceNote
+        val path = note?.ratingPath
+        return if (surface != null &&
+            note != null &&
+            path != null &&
+            SurfaceBindings.provenanceNote(surface, note).canRate
+        ) {
+            setValue(state, surfaceId, path, SurfaceBindings.ratingValue(rating))
+        } else {
+            AppError.SurfaceError.Invalid(surfaceId, "/components/$noteId", "Component cannot be rated").asLeft()
+        }
+    }
+
     private sealed interface Step {
         data class Applied(
             val state: SurfaceState,
