@@ -2875,6 +2875,8 @@ app/src/
 
 Full pattern-by-pattern rationale and a screen-by-screen mapping (auth, feed, marketplace, search, profile) lives in `talkback-accessibility-guidelines.md`.
 
+How these semantics are verified (dev loop, pre-merge device check, nightly and release) lives in `testing-a11y.md`.
+
 ## Deferred Work Annotations (`TODO` convention)
 
 Not every gap found while building a feature belongs in that feature's PR. A
