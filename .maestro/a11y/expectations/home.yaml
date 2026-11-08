@@ -1,0 +1,11 @@
+# Labels a screen reader must find on Home (A11Y-004). Plain entries match a whole label; "re:"
+# entries are full-match regexes. Optional keys: toggles (A11Y-003) and tap_target_allowlist (A11Y-002).
+required:
+  - VIEW FRAGRANCE
+  - Notifications
+  - Fragrances
+  - Community
+  - Home
+  - Search
+  - Profile
+  - Market

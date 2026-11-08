@@ -1,0 +1,32 @@
+# Screen <-> source map for `scripts/pre-merge-check.sh --flows changed`.
+# Each screen has a flow at .maestro/a11y/<screen>.yaml and expectations at expectations/<screen>.yaml.
+# A changed file matching `shared` runs every screen. Changed app code that no screen claims also
+# runs every screen (the checker treats it as ambiguous), so a missing glob costs time, never coverage.
+# Search, FragranceDetail and ListingDetail are placeholders today: add them here once they're built.
+shared:
+  - composeApp/src/commonMain/kotlin/ui/accessibility/**
+  - composeApp/src/commonMain/kotlin/ui/components/**
+  - composeApp/src/commonMain/kotlin/ui/theme/**
+  - composeApp/src/commonMain/kotlin/ui/navigation/**
+  - composeApp/src/commonMain/kotlin/App.kt
+  - composeApp/src/iosMain/**
+  - composeApp/src/androidMain/**
+  - iosApp/**
+screens:
+  home:
+    sources:
+      - composeApp/src/commonMain/kotlin/ui/home/**
+      - composeApp/src/commonMain/kotlin/ui/feed/**
+  marketplace:
+    sources:
+      - composeApp/src/commonMain/kotlin/ui/marketplace/**
+  marketplace-filters:
+    sources:
+      - composeApp/src/commonMain/kotlin/ui/marketplace/**
+  ask:
+    sources:
+      - composeApp/src/commonMain/kotlin/ui/ask/**
+      - composeApp/src/commonMain/kotlin/ui/surface/**
+  profile:
+    sources:
+      - composeApp/src/commonMain/kotlin/ui/profile/**

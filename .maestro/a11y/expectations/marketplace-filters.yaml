@@ -1,0 +1,13 @@
+required:
+  - Filters
+  - CONDITION
+  - New
+  - Used
+  - Decant
+  - Sample
+# Condition chips are toggles: each must expose a checked/selected state (A11Y-003).
+toggles:
+  - New
+  - Used
+  - Decant
+  - Sample

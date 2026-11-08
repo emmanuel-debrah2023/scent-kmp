@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+tags:
+  - a11y
+---
+# Pre-merge a11y: ends settled on the Ask sub-tab of Search so the checker can read its accessibility tree.
+- runFlow: subflows/start-signed-in.yaml
+- tapOn: "Search"
+- extendedWaitUntil:
+    visible: "Ask"
+    timeout: 15000
+- assertVisible: "Ask"
+- tapOn: "Ask"
+- extendedWaitUntil:
+    visible: "Up to 500 characters"
+    timeout: 15000
+- assertVisible: "Up to 500 characters"

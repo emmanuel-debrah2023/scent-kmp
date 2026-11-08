@@ -1,0 +1,6 @@
+required:
+  - Ask
+  - ASK
+  - Up to 500 characters
+  # iOS appends the placeholder to the field's label; Android exposes the label alone.
+  - "re:What are you looking for\\?.*"
