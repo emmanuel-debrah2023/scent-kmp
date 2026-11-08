@@ -376,7 +376,7 @@ ios_job() {
     if ! xcodebuild -project "$PRE_MERGE_IOS_PROJECT" -scheme "$PRE_MERGE_IOS_SCHEME" -configuration Debug \
         -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$OUT/DerivedData" build \
         >"$OUT/ios-build.log" 2>&1; then
-        grep -E 'error:|e: ' "$OUT/ios-build.log" | head -20 | sed 's/^/[ios] /'
+        grep -E ': error:|^error:|^e: ' "$OUT/ios-build.log" | sort -u | head -20 | sed 's/^/[ios] /'
         fail_platform ios "build failed; see $OUT/ios-build.log"
         return
     fi

@@ -103,9 +103,11 @@ Xcode must be running with Settings > Intelligence > Model Context Protocol swit
 the session exposes before relying on any of these:
 
 - **iOS build failure.** If available, read Xcode's structured build log and issues through the
-  plugin. Otherwise: `grep -nE 'error:|e: ' build/pre-merge/ios-build.log`. Kotlin/Native errors
-  surface inside the "Compile Kotlin Framework" build phase as `e: file:///…/X.kt:LINE:COL …`;
-  trace them to that Kotlin source, not to Swift.
+  plugin. Otherwise the script already prints the errors on `[ios]` lines; the full log is
+  `build/pre-merge/ios-build.log` (`grep -nE ': error:|^error:|^e: '`). Kotlin/Native errors
+  surface inside the "Compile Kotlin Framework" build phase as
+  `<path>/X.kt:LINE:COL: error: …` followed by `error: Compilation finished with errors`; fix
+  that Kotlin source, not Swift. Confirm with `./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64`.
 - **XCUITest accessibility audit.** If an XCUITest target with `performAccessibilityAudit()`
   exists (`chore/ios-xcuitest-a11y-audit`) and the plugin can run tests, offer to run it for the
   changed screens, excluding `.dynamicType` and `.textClipped` as the nightly suite does. If
