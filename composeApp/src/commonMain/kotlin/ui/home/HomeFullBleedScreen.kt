@@ -358,6 +358,8 @@ private fun HeroItem(onOpenVideo: () -> Unit) {
             }
 
             // Action row
+            // TODO(fix/a11y-contrast-and-tab-semantics): at 2x font the button squeezes Favourite and Play video
+            // to 10dp/44dp wide and their labels drop out of the Android tree; iOS Favourite is 40pt wide.
             Row(
                 horizontalArrangement = Arrangement.spacedBy(spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,

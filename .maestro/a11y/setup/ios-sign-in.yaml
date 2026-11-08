@@ -5,7 +5,8 @@ onFlowStart:
 # iOS only: signs in once through the real login screen, before scripts/pre-merge-check.sh turns on
 # large Dynamic Type. The per-screen a11y flows then relaunch into this stored session.
 # Not run at large text because at accessibility-large the keyboard covers SIGN IN and nothing
-# dismisses it (no tap-outside, no scroll, return key does not close it): a real app gap.
+# dismisses it (no tap-outside, no scroll, return key does not close it): a real app gap,
+# TODO(fix/auth-forms-and-viewmodel). Once fixed, sign in at large text and drop the size switch.
 # Not log-in-through-ui.yaml: on iOS the label sits on the field itself rather than on a child
 # node, so its containsChild/focused checks can't match. The typed text is asserted instead.
 - launchApp:
