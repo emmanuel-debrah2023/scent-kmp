@@ -11,7 +11,7 @@ This is the rulebook for **how a Scent screen should behave on Android and iOS, 
 | **`platform-guidelines.md` (this doc)** | Which *component* to use, which Material 3 and Apple HIG rules apply, what's shared vs adapted per platform, and where the brand deliberately departs from both |
 | `architecture-guidelines.md` (ADS-STE100) | How the *code* is structured, including the `ui/accessibility` extensions |
 
-**Every skill reads this doc instead of copying its rules.** `scent-platform-ux` designs and reviews against it. `scent-ticket`, `scent-dev-loop`, `kiro-android-review` and `mobile-ecosystem-watch` point to it. If a rule needs to change, change it here (and record why in section 11). Don't patch it inside a skill.
+**Every skill reads this doc instead of copying its rules.** `scent-platform-ux` designs and reviews against it, and `scent-ticket` and `scent-dev-loop` point to it. `kiro-android-review` and `mobile-ecosystem-watch` should too, but aren't hooked up yet. If a rule needs to change, change it here (and record why in section 11). Don't patch it inside a skill.
 
 ---
 
@@ -255,7 +255,7 @@ Every new UI ticket gets one. It goes in the Notion ticket body and is what a Cl
 - **Tokens:** attach `design.md`. Ask for M3 token names only, Playfair Display lowercase for brand moments, DM Sans for everything else, Material Symbols Outlined at light weight.
 - **Components:** name each element by its component from section 6 ("a `FilterChip` row", "a `ModalBottomSheet` with `ListItem` rows"), not a visual description. This stops the design inventing components that don't exist in Compose.
 - **States:** every state in the spec as its own frame, plus a 2× font-scale frame of the content state.
-- **Constraints to state explicitly:** 48dp targets, one primary action, no FAB, no hover states, flat buttons, gold `accent` never used for text on cream, underlined inline links.
+- **Constraints to state explicitly:** 48dp targets, one primary action, no FAB, no hover states, flat buttons, gold `accent` never used for text on cream. Add "underlined inline links in body text" only once section 5's proposal is accepted.
 - **Treat the output as reference.** The built screen uses the components in this doc. If the design needs something that isn't here, add it to section 6 first.
 
 ---
