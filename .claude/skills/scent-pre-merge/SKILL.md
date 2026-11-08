@@ -100,22 +100,30 @@ skips the boot.
 stay that way so it runs the same with no agent attached. The Xcode MCP tools (plugin
 `xcode@claude-plugins-official`, bridged by `xcrun mcpbridge`) are an extra for the agent only.
 Xcode must be running with Settings > Intelligence > Model Context Protocol switched on. Check what
-the session exposes before relying on any of these:
+the session exposes before relying on any of these. Open the project first with
+`XcodeOpenWorkspace` (path `iosApp/iosApp.xcodeproj`, absolute) and pass the returned
+`workspaceIdentifier` to later calls; close it with `XcodeCloseWorkspace` when done.
 
-- **iOS build failure.** If available, read Xcode's structured build log and issues through the
-  plugin. Otherwise the script already prints the errors on `[ios]` lines; the full log is
+- **iOS build failure.** If available, call `BuildProject`, then `GetBuildLog` (severity `error`).
+  Both return each error with `filePath` and line, and `GetBuildLog` names the build task, so a
+  Kotlin/Native error shows up under "Compile Kotlin Framework" pointing at the `.kt` file
+  (verified with a planted `iosMain` type error). Otherwise the script already prints the errors
+  on `[ios]` lines; the full log is
   `build/pre-merge/ios-build.log` (`grep -nE ': error:|^error:|^e: '`). Kotlin/Native errors
   surface inside the "Compile Kotlin Framework" build phase as
   `<path>/X.kt:LINE:COL: error: …` followed by `error: Compilation finished with errors`; fix
   that Kotlin source, not Swift. Confirm with `./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64`.
 - **XCUITest accessibility audit.** If an XCUITest target with `performAccessibilityAudit()`
-  exists (`chore/ios-xcuitest-a11y-audit`) and the plugin can run tests, offer to run it for the
-  changed screens, excluding `.dynamicType` and `.textClipped` as the nightly suite does. If
-  there's no target yet, say so and skip; don't build it here.
-- **Real iPhone.** If one is connected and the plugin can drive it, offer to reinstall and repeat
-  the iOS capture there. Opt-in, never required to pass.
-- **Apple docs.** If available, look up how a UIKit accessibility trait or value behaves when an
-  iOS finding depends on how the bridge maps Compose semantics onto UIKit.
+  exists (`chore/ios-xcuitest-a11y-audit`), `GetTestList` lists it and `RunSomeTests` runs it:
+  offer to run it for the changed screens, excluding `.dynamicType` and `.textClipped` as the
+  nightly suite does. Today `GetTestList` returns 0 tests: say so and skip; don't build it here.
+- **Real iPhone.** `XcodeListRunDestinations` shows a connected iPhone under "Devices". If one is
+  there, offer to reinstall on it and repeat the iOS capture. Opt-in, never required to pass.
+  Driving it (`DeviceInteractionStartWorkspaceSession`, `DeviceInteractionSynthesize`, which
+  captures a screenshot and UI hierarchy) needs iOS 27+ on the device or simulator; on older
+  runtimes the session refuses, so fall back to AXe on the simulator.
+- **Apple docs.** If available, `DocumentationSearch` for how a UIKit accessibility trait or value
+  behaves when an iOS finding depends on how the bridge maps Compose semantics onto UIKit.
 
 Ignore the plugin's SwiftUI previews: Scent's screens are Compose, so a preview won't render
 `XContent`.
