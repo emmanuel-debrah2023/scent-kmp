@@ -10,7 +10,9 @@ paths:
 # Scent Minimalist Luxury — design system
 
 This rule covers what components *look like*. `compose-component-api.md` covers
-what their *signatures* look like — both load together on UI edits.
+what their *signatures* look like — both load together on UI edits. Which
+component to use, and what behaves differently on Android vs iOS, is
+`docs/platform-guidelines.md`.
 
 The single source of truth is the M3 token set in `ui/theme/`. There is no
 parallel custom token layer; every colour reference uses an M3 role name.

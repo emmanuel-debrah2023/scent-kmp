@@ -39,6 +39,8 @@ Before touching any code:
 
 2. **Locate design system tokens** — Find `ui/theme/`, `Theme.kt`, `Color.kt`, `Typography.kt`. New UI must reuse these, not hardcode colors/spacing/typography.
 
+   For UI work, also read `docs/platform-guidelines.md` and the ticket's `## Screen spec` (if it has one): they say which component to use and what differs on iOS. If the ticket builds a new screen and has no spec, run `scent-platform-ux` in design mode before writing the UI.
+
 3. **Understand module shape** — Scent is KMP with `shared` / `composeApp` / `server` modules. Know which Gradle tasks apply to your files.
 
 4. **Check DI wiring** — Scent uses Koin. Verify `networkModule`, `databaseModule`, `repositoryModule`, `useCaseModule`, `viewModelModule` exist and that new classes are constructor-injected into the right module.
@@ -117,6 +119,13 @@ Run Gradle compile for every target you touched:
 - ✅ No hardcoded color hex values or dimension literals.
 - ✅ Use `MaterialTheme.colorScheme`, `MaterialTheme.typography`, etc.
 - ✅ Reuse shared components from `ui/components/`.
+
+### Platform Conventions (`docs/platform-guidelines.md`)
+- ✅ Components come from `ui/components/`, the component map (section 6) or the ticket's screen spec. Anything off-map is flagged and added via `scent-platform-ux`, not improvised.
+- ✅ Back goes through `SystemBackHandler` and the existing policy; the policy itself is untouched.
+- ✅ Insets instead of hardcoded top/bottom padding; `imePadding()` on forms; pressed states only, no hover logic.
+- ✅ Any brand deviation used is listed in section 5 and meets its guard.
+- ✅ 🧪 components ship as Material until an accepted ADR says otherwise.
 
 ### Independent second opinion
 
@@ -216,6 +225,7 @@ When the loop finishes, tell the user:
 
 - **What was implemented** — the feature, fix, or refactor
 - **ADS-STE100 compliance** — did the change pass Gate 2? Call out any architecture issues caught and fixes applied (e.g., "Converted from exception-based error handling to `Either<AppError, T>`", "Added mappers for nullable DTOs", "Wired new repository through Koin").
+- **Platform conventions** — off-map components or section 2 behaviours caught and fixed, and any guideline gap flagged for `scent-platform-ux`
 - **Static analysis** — what lint/detekt violations were fixed
 - **Tests** — what tests were written first and what each protects; any bugs they caught
 - **Gate 5 result** — confirmed all three checks pass locally before push

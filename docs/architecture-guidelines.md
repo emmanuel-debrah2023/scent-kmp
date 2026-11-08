@@ -1,5 +1,7 @@
 # Agent Instructions for Fragrance Social Commerce Android App
 
+> **UI platform rules:** which component to use, Material 3 / Apple HIG rules, and Android-vs-iOS behaviour live in [`platform-guidelines.md`](platform-guidelines.md).
+
 ## Project Context
 You are working on a Kotlin-based Android application for a fragrance social commerce platform. The app uses Jetpack Compose, MVVM architecture, and Kotlin Multiplatform for shared business logic.
 

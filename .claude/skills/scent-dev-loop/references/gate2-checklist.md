@@ -70,6 +70,17 @@ compression of it, and where they disagree, the guideline wins.
 - [ ] 52px touch targets; 12px radius on containers and buttons
 - [ ] Existing components in `ui/components/` reused rather than re-rolled
 
+## Platform conventions (`docs/platform-guidelines.md`)
+
+- [ ] Component is in `ui/components/`, the guidelines' component map, or the
+      ticket's screen spec; anything else is flagged, not improvised
+- [ ] No hardcoded top/bottom padding (insets); `imePadding()` on forms
+- [ ] Pressed states only; no hover logic
+- [ ] Back uses `SystemBackHandler`; policy untouched
+- [ ] Brand deviations used are listed in guidelines section 5 and meet their guard
+- [ ] 🧪 components (switch, date picker, alert dialog, snackbar, tab bar) are
+      still Material unless an accepted ADR says otherwise
+
 ## Component API (AndroidX guidelines, app tier)
 
 - [ ] Parameter order: required → `modifier: Modifier = Modifier` → optional →

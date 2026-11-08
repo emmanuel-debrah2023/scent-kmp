@@ -13,6 +13,9 @@ doc is wrong, say so explicitly rather than silently deviating.
   the section that looks relevant; the patterns interact.
 - `docs/design.md` — design system and token names.
 - `docs/auth.md` — auth roadmap: JWT (current) → Google OAuth → Apple Sign-In.
+- `docs/platform-guidelines.md` — which component to use, Material 3 / Apple HIG
+  rules, and what differs on Android vs iOS. Design or review UI with
+  `scent-platform-ux`.
 - `docs/adr/` — accepted ADRs bind like ADS-STE100.
 
 ## Working rules the docs don't capture
