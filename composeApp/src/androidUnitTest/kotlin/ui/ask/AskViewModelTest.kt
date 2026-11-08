@@ -15,7 +15,9 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import org.scent.project.data.mapper.A2uiMessageMapper
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.repository.AskSurfaceRepository
@@ -283,6 +285,95 @@ class AskViewModelTest {
     }
 
     private fun cardEvent() = SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "card_1")
+
+    private fun rate(value: String) {
+        viewModel.onSurfaceEvent(SurfaceEvent.ValueChanged(ASK_SURFACE_ID, "/feedback/rating", JsonPrimitive(value)))
+        viewModel.onSurfaceEvent(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "provenance"))
+    }
+
+    private fun storedRating() =
+        showing()
+            .surface.data.jsonObject["feedback"]
+            ?.jsonObject
+            ?.get("rating")
+
+    @Test
+    fun `rating the reasons sends rate_reasons with the rating and keeps the results on screen`() =
+        runTest {
+            showResults()
+            val gate = CompletableDeferred<Result<List<SurfaceMessage>>>()
+            val sent = slot<SurfaceAction>()
+            coEvery { sendAskAction(capture(sent)) } coAnswers { gate.await() }
+            val before = showing().surface
+
+            rate("up")
+
+            assertEquals("rate_reasons", sent.captured.name)
+            assertEquals(JsonPrimitive("up"), sent.captured.context["rating"])
+            assertNull(showing().pending)
+            assertEquals(before.nodes, showing().surface.nodes)
+            gate.complete(emptyList<SurfaceMessage>().asRight())
+            assertEquals(JsonPrimitive("up"), storedRating())
+        }
+
+    @Test
+    fun `a failed rating clears the chosen thumb and shows no error`() =
+        runTest {
+            showResults()
+            coEvery { sendAskAction(any()) } returns AppError.NetworkError.Timeout().asLeft()
+
+            rate("down")
+
+            assertEquals(JsonNull, storedRating() ?: JsonNull)
+            assertNull(showing().actionError)
+            assertNull(showing().pending)
+        }
+
+    @Test
+    fun `a rating never becomes the action retry resends`() =
+        runTest {
+            showResults()
+            val sent = mutableListOf<SurfaceAction>()
+            coEvery { sendAskAction(capture(sent)) } returns AppError.NetworkError.Timeout().asLeft()
+            viewModel.onSurfaceEvent(editEvent())
+            coEvery { sendAskAction(capture(sent)) } returns emptyList<SurfaceMessage>().asRight()
+            rate("up")
+
+            viewModel.retry()
+
+            assertEquals(listOf("edit_answers", "rate_reasons", "edit_answers"), sent.map { it.name })
+        }
+
+    @Test
+    fun `a rating while another action is with the server is ignored`() =
+        runTest {
+            showResults()
+            val gate = CompletableDeferred<Result<List<SurfaceMessage>>>()
+            coEvery { sendAskAction(any()) } coAnswers { gate.await() }
+            viewModel.onSurfaceEvent(editEvent())
+
+            rate("up")
+
+            assertEquals(Pending.EDITING, showing().pending)
+            assertEquals(JsonNull, storedRating())
+            coVerify(exactly = 2) { sendAskAction(any()) }
+        }
+
+    @Test
+    fun `Try again on an unavailable note resends through the answering state`() =
+        runTest {
+            showResults(batch(AskFixtures.RESULTS_AI_UNAVAILABLE))
+            val gate = CompletableDeferred<Result<List<SurfaceMessage>>>()
+            val sent = slot<SurfaceAction>()
+            coEvery { sendAskAction(capture(sent)) } coAnswers { gate.await() }
+
+            viewModel.onSurfaceEvent(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "provenance"))
+
+            assertEquals("retry_ask", sent.captured.name)
+            assertEquals(Pending.ANSWERING, showing().pending)
+            gate.complete(results.asRight())
+            assertNull(showing().pending)
+        }
 
     @Test
     fun `tapping a result card emits its listing id once and does not touch the server or the phase`() =

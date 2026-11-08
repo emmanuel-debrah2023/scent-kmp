@@ -100,6 +100,10 @@ val ScentScrim = Color(0xFF000000)
 val ScentAccent = Color(0xFFD4AF37)
 val ScentOnAccent = Color(0xFF201B11) // Text on gold fills
 
+// Card shadow – the one sanctioned shadow is warm-tinted, never neutral grey (design.md, Elevation).
+// Compose applies its own low alpha to shadow colours, so this is the hue at full strength.
+val ScentCardShadow = Color(0xFF503714)
+
 // Interactive – Gold-Brown. Inline links and text-level affordances.
 // Reads at sufficient contrast for text on cream without competing with green primary.
 val ScentInteractive = Color(0xFF7E5700)

@@ -65,6 +65,9 @@ private fun SurfaceNodeContent(
         is SurfaceNode.RangeSlider -> SurfaceRangeSlider(surface, node, onEvent, modifier)
         is SurfaceNode.PreferenceSummary -> SurfacePreferenceSummary(surface, node, onEvent, modifier)
         is SurfaceNode.RecommendationCard -> SurfaceRecommendationCard(surface, node, onEvent, modifier)
+        is SurfaceNode.ProvenanceNote -> SurfaceProvenanceNote(surface, node, onEvent, modifier)
+        // Deliberately nothing, not the fallback: an unreadable provenance note must not be guessed at.
+        is SurfaceNode.Omitted -> Unit
         is SurfaceNode.Unsupported,
         null,
         -> SurfaceFallback(modifier)

@@ -25,6 +25,8 @@ import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.SurfaceAction
 import org.scent.project.domain.surface.SurfaceMessage
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceProvenance
+import org.scent.project.domain.surface.SurfaceProvenanceSubject
 import org.scent.project.domain.surface.SurfaceTextStyle
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
@@ -193,14 +195,27 @@ object A2uiMessageMapper {
     // Both enums must be read exactly. Anything else is omitted, not shown as a placeholder or guessed: a
     // guess could say AI wrote words that came from the rules.
     private fun ScentComponent.ProvenanceNote.provenanceNote(id: String): SurfaceNode {
-        val source = Provenance.fromWireName(source)
-        val subject = ProvenanceSubject.fromWireName(subject)
+        val source = Provenance.fromWireName(source)?.toDomain()
+        val subject = ProvenanceSubject.fromWireName(subject)?.toDomain()
         return if (source != null && subject != null) {
             SurfaceNode.ProvenanceNote(id, source, subject, action.toTemplate(), rating.bound())
         } else {
             SurfaceNode.Omitted(id)
         }
     }
+
+    private fun Provenance.toDomain(): SurfaceProvenance =
+        when (this) {
+            Provenance.AI_WRITTEN -> SurfaceProvenance.AI_WRITTEN
+            Provenance.AI_PAUSED -> SurfaceProvenance.AI_PAUSED
+            Provenance.AI_UNAVAILABLE -> SurfaceProvenance.AI_UNAVAILABLE
+        }
+
+    private fun ProvenanceSubject.toDomain(): SurfaceProvenanceSubject =
+        when (this) {
+            ProvenanceSubject.QUESTIONS -> SurfaceProvenanceSubject.QUESTIONS
+            ProvenanceSubject.REASONS -> SurfaceProvenanceSubject.REASONS
+        }
 
     // A bound prop needs a real, valid pointer; anything else cannot be read, so the component cannot show.
     private fun DataBinding?.bound(): String? = this?.path?.takeIf { it.startsWith('/') && JsonPointer.isValid(it) }

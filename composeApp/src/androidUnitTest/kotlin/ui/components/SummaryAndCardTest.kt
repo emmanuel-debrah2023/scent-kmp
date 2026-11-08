@@ -80,31 +80,31 @@ class SummaryAndCardTest {
     // RecommendationCard
 
     @Test
-    fun `card is announced as one description of name, price and reason`() {
+    fun `card is announced as one description of name, price and reasons`() {
         composeRule.setContent {
-            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", "Dry wood") }
+            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", listOf("Dry wood")) }
         }
 
         composeRule
-            .onNode(hasContentDescription("Cedar & Smoke, £76, Dry wood"))
+            .onNode(hasContentDescription("Cedar & Smoke, £76. Dry wood"))
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
     }
 
     @Test
-    fun `a clickable card with a meta line announces it after the name`() {
+    fun `a clickable card with a meta line announces it after the price`() {
         composeRule.setContent {
             MaterialTheme {
-                RecommendationCard("Cedar & Smoke", "£76", "Dry wood", meta = "Sealed · 100 ml", onClick = {})
+                RecommendationCard("Cedar & Smoke", "£76", listOf("Dry wood"), meta = "Sealed · 100 ml", onClick = {})
             }
         }
 
-        composeRule.onNodeWithContentDescription("Cedar & Smoke, Sealed · 100 ml, £76, Dry wood").assertHasClickAction()
+        composeRule.onNodeWithContentDescription("Cedar & Smoke, £76, Sealed, 100 ml. Dry wood").assertHasClickAction()
     }
 
     @Test
     fun `card leaves a missing price or reason out of the announcement`() {
         composeRule.setContent {
-            MaterialTheme { RecommendationCard("Cedar & Smoke", price = "", why = "") }
+            MaterialTheme { RecommendationCard("Cedar & Smoke", price = "", reasons = emptyList()) }
         }
 
         composeRule.onNode(hasContentDescription("Cedar & Smoke")).assertExists()
@@ -113,21 +113,21 @@ class SummaryAndCardTest {
     @Test
     fun `card is not a control while it has nowhere to go`() {
         composeRule.setContent {
-            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", "Dry wood") }
+            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", listOf("Dry wood")) }
         }
 
         composeRule
-            .onNode(hasContentDescription("Cedar & Smoke, £76, Dry wood"))
+            .onNode(hasContentDescription("Cedar & Smoke, £76. Dry wood"))
             .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
     }
 
-    private val clickableCard = hasContentDescription("Cedar & Smoke, £76, Dry wood")
+    private val clickableCard = hasContentDescription("Cedar & Smoke, £76. Dry wood")
 
     @Test
     fun `a clickable card has a button role, an open listing click label and reports one tap once`() {
         var taps = 0
         composeRule.setContent {
-            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", "Dry wood", onClick = { taps++ }) }
+            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", listOf("Dry wood"), onClick = { taps++ }) }
         }
 
         val card = composeRule.onNode(clickableCard)
@@ -146,7 +146,7 @@ class SummaryAndCardTest {
     @Test
     fun `a clickable card keeps the name, price and reason announcement`() {
         composeRule.setContent {
-            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", "Dry wood", onClick = {}) }
+            MaterialTheme { RecommendationCard("Cedar & Smoke", "£76", listOf("Dry wood"), onClick = {}) }
         }
 
         composeRule.onNode(clickableCard).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
@@ -155,9 +155,22 @@ class SummaryAndCardTest {
     @Test
     fun `a clickable card with only a name is at least as tall as a button`() {
         composeRule.setContent {
-            MaterialTheme { RecommendationCard("Cedar", price = "", why = "", onClick = {}) }
+            MaterialTheme { RecommendationCard("Cedar", price = "", reasons = emptyList(), onClick = {}) }
         }
 
         composeRule.onNode(hasContentDescription("Cedar")).assertHeightIsAtLeast(52.dp)
+    }
+
+    @Test
+    fun `card shows each reason as its own line and announces them in order`() {
+        composeRule.setContent {
+            MaterialTheme {
+                RecommendationCard("Light Blue", "£7", listOf("Bright citrus", "Easy to wear", "Decant, try it first"))
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Light Blue, £7. Bright citrus. Easy to wear. Decant, try it first")
+            .assertExists()
     }
 }

@@ -6,8 +6,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import org.scent.project.data.remote.a2ui.JsonPointer
-import org.scent.project.data.remote.a2ui.catalog.Provenance
-import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
 import org.scent.project.data.remote.a2ui.catalog.ReasonsRating
 import org.scent.project.data.remote.a2ui.catalog.ScentAction
 import kotlin.math.abs
@@ -55,14 +53,14 @@ data class RecommendationBinding(
 
 /**
  * What a ProvenanceNote can do. [canRetry] and [canRate] are true only when the server's action matches the
- * source (Try again on ai_unavailable, thumbs on ai_written), so a mismatched note offers nothing.
+ * source (Try again on ai_unavailable, thumbs on AI-written reasons), so a mismatched note offers nothing.
  */
 data class ProvenanceNoteBinding(
-    val source: Provenance,
-    val subject: ProvenanceSubject,
+    val source: SurfaceProvenance,
+    val subject: SurfaceProvenanceSubject,
     val canRetry: Boolean,
     val canRate: Boolean,
-    val rating: ReasonsRating?,
+    val rating: SurfaceRating?,
 )
 
 // A slider with more stops than this cannot be used by touch; the surface falls back instead.
@@ -141,14 +139,31 @@ object SurfaceBindings {
         return ProvenanceNoteBinding(
             source = node.source,
             subject = node.subject,
-            canRetry = node.source == Provenance.AI_UNAVAILABLE && action == ScentAction.RETRY_ASK.wireName,
+            canRetry = node.source == SurfaceProvenance.AI_UNAVAILABLE && action == ScentAction.RETRY_ASK.wireName,
             canRate =
-                node.source == Provenance.AI_WRITTEN &&
+                node.source == SurfaceProvenance.AI_WRITTEN &&
+                    node.subject == SurfaceProvenanceSubject.REASONS &&
                     action == ScentAction.RATE_REASONS.wireName &&
                     ratingPath != null,
-            rating = ratingPath?.let { ReasonsRating.fromWireName(surface.read(it).text()) },
+            rating = ratingPath?.let { rating(surface.read(it).text()) },
         )
     }
+
+    /** What a rating is stored as in the data model, so the UI can write one without the wire enum. */
+    fun ratingValue(rating: SurfaceRating): JsonElement =
+        JsonPrimitive(
+            when (rating) {
+                SurfaceRating.UP -> ReasonsRating.UP
+                SurfaceRating.DOWN -> ReasonsRating.DOWN
+            }.wireName,
+        )
+
+    private fun rating(stored: String?): SurfaceRating? =
+        when (ReasonsRating.fromWireName(stored)) {
+            ReasonsRating.UP -> SurfaceRating.UP
+            ReasonsRating.DOWN -> SurfaceRating.DOWN
+            null -> null
+        }
 
     // A list of reasons, or the single why line an older server sends. Blank and non-text entries are dropped,
     // and never more than the catalog allows.

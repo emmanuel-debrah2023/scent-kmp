@@ -2,8 +2,6 @@ package org.scent.project.domain.surface
 
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import org.scent.project.data.remote.a2ui.catalog.Provenance
-import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
 
 /** What a button, summary or card sends when pressed: an action name and, per key, the data path to read. */
 data class ActionTemplate(
@@ -15,6 +13,25 @@ enum class SurfaceTextStyle {
     HEADING,
     BODY,
     CAPTION,
+}
+
+/** Who wrote the wording a provenance note sits beside, as Kotlin recorded it; never the model's own claim. */
+enum class SurfaceProvenance {
+    AI_WRITTEN,
+    AI_PAUSED,
+    AI_UNAVAILABLE,
+}
+
+/** What a provenance note is about, which picks the app's wording for it. */
+enum class SurfaceProvenanceSubject {
+    QUESTIONS,
+    REASONS,
+}
+
+/** The reader's verdict on AI-written reasons. */
+enum class SurfaceRating {
+    UP,
+    DOWN,
 }
 
 /**
@@ -81,8 +98,8 @@ sealed interface SurfaceNode {
     /** Who wrote the wording beside it. The app owns every word; the server sends only [source] and [subject]. */
     data class ProvenanceNote(
         override val id: String,
-        val source: Provenance,
-        val subject: ProvenanceSubject,
+        val source: SurfaceProvenance,
+        val subject: SurfaceProvenanceSubject,
         val action: ActionTemplate? = null,
         val ratingPath: String? = null,
     ) : SurfaceNode

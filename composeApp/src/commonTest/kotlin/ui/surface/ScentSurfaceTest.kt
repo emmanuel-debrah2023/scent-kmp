@@ -3,8 +3,11 @@ package ui.surface
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -16,6 +19,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -24,6 +28,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -31,9 +36,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.Surface
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceProvenance
+import org.scent.project.domain.surface.SurfaceProvenanceSubject
 import org.scent.project.domain.surface.SurfaceTextStyle
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * The cases, shared by both platforms. Android needs Robolectric to host `runComposeUiTest` and
@@ -361,7 +369,7 @@ abstract class ScentSurfaceTest {
     // recommendation card
 
     @Test
-    fun `a card is announced as its name then price then reason`() =
+    fun `a card is announced as its name then price, then its reason`() =
         runComposeUiTest {
             val surface =
                 withData(
@@ -378,11 +386,11 @@ abstract class ScentSurfaceTest {
 
             setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
 
-            onNodeWithContentDescription("Cedar & Smoke, £76, Dry wood").assertExists()
+            onNodeWithContentDescription("Cedar & Smoke, £76. Dry wood").assertExists()
         }
 
     @Test
-    fun `a card with a meta line is announced as its name then meta then price then reason`() =
+    fun `a card with a meta line is announced as its name then price then meta, then its reason`() =
         runComposeUiTest {
             val surface =
                 withData(
@@ -400,7 +408,7 @@ abstract class ScentSurfaceTest {
 
             setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
 
-            onNodeWithContentDescription("Cedar & Smoke, Sealed · 100 ml, £76, Dry wood").assertExists()
+            onNodeWithContentDescription("Cedar & Smoke, £76, Sealed, 100 ml. Dry wood").assertExists()
         }
 
     private val openListing = ActionTemplate("open_listing", mapOf("listingId" to "/results/0/listingId"))
@@ -426,7 +434,7 @@ abstract class ScentSurfaceTest {
             val events = mutableListOf<SurfaceEvent>()
 
             setContent { MaterialTheme { ScentSurface(cardWith("7"), onEvent = events::add) } }
-            onNodeWithContentDescription("Cedar & Smoke, £76, Dry wood").assertHasClickAction().performClick()
+            onNodeWithContentDescription("Cedar & Smoke, £76. Dry wood").assertHasClickAction().performClick()
 
             assertEquals(listOf<SurfaceEvent>(SurfaceEvent.ActionTriggered("s1", "card")), events)
         }
@@ -442,7 +450,7 @@ abstract class ScentSurfaceTest {
             listOf(null, "\"7\"", "0", "-1", "1.5").forEach { bad ->
                 surface.value = cardWith(bad)
                 waitForIdle()
-                onNodeWithContentDescription("Cedar & Smoke, £76, Dry wood")
+                onNodeWithContentDescription("Cedar & Smoke, £76. Dry wood")
                     .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
             }
             assertEquals(emptyList(), events)
@@ -469,6 +477,186 @@ abstract class ScentSurfaceTest {
             assertEquals(1, fallbackCount())
         }
 
+    @Test
+    fun `a card with several reasons announces each after the facts`() =
+        runComposeUiTest {
+            val surface =
+                withData(
+                    """{"results":[{"name":"Light Blue","price":"£7","reasons":["Bright citrus","Easy to wear"]}]}""",
+                    SurfaceNode.Column("root", listOf("card")),
+                    SurfaceNode.RecommendationCard(
+                        "card",
+                        "/results/0/name",
+                        "/results/0/price",
+                        "/results/0/reasons",
+                        null,
+                    ),
+                )
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
+
+            onNodeWithContentDescription("Light Blue, £7. Bright citrus. Easy to wear").assertExists()
+        }
+
+    // provenance note
+
+    private val rateAction = ActionTemplate("rate_reasons", mapOf("rating" to "/feedback/rating"))
+
+    private fun noteSurface(
+        source: SurfaceProvenance,
+        action: ActionTemplate? = null,
+        data: String = "{}",
+        subject: SurfaceProvenanceSubject = SurfaceProvenanceSubject.REASONS,
+    ) = withData(
+        data,
+        SurfaceNode.Column("root", listOf("note")),
+        SurfaceNode.ProvenanceNote("note", source, subject, action, "/feedback/rating"),
+    )
+
+    @Test
+    fun `an omitted node draws nothing, not even the fallback`() =
+        runComposeUiTest {
+            val surface =
+                surfaceOf(
+                    SurfaceNode.Column("root", listOf("note", "body")),
+                    SurfaceNode.Omitted("note"),
+                    SurfaceNode.Text("body", "Pick a family", SurfaceTextStyle.BODY),
+                )
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = {}) } }
+
+            onNodeWithText("Pick a family").assertExists()
+            assertEquals(0, fallbackCount())
+        }
+
+    @Test
+    fun `an AI-written reasons note says who wrote them and offers both thumbs`() =
+        runComposeUiTest {
+            setContent {
+                MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_WRITTEN, rateAction), onEvent = {}) }
+            }
+
+            onNodeWithText("Reasons written by AI").assertExists()
+            onNodeWithText("Prices and stock come from Scent").assertExists()
+            onNodeWithContentDescription("These reasons helped")
+                .assertIsOff()
+                .assertHeightIsAtLeast(44.dp)
+            onNodeWithContentDescription("These reasons did not help").assertIsOff()
+        }
+
+    @Test
+    fun `tapping a thumb stores the rating, then sends the note's action`() =
+        runComposeUiTest {
+            val events = mutableListOf<SurfaceEvent>()
+
+            setContent {
+                MaterialTheme {
+                    ScentSurface(noteSurface(SurfaceProvenance.AI_WRITTEN, rateAction), onEvent = events::add)
+                }
+            }
+            onNodeWithContentDescription("These reasons did not help").performClick()
+
+            assertEquals(
+                listOf(
+                    SurfaceEvent.ValueChanged("s1", "/feedback/rating", JsonPrimitive("down")),
+                    SurfaceEvent.ActionTriggered("s1", "note"),
+                ),
+                events,
+            )
+        }
+
+    @Test
+    fun `a stored rating shows its thumb as chosen and tapping it again sends nothing`() =
+        runComposeUiTest {
+            val events = mutableListOf<SurfaceEvent>()
+            val surface = noteSurface(SurfaceProvenance.AI_WRITTEN, rateAction, """{"feedback":{"rating":"up"}}""")
+
+            setContent { MaterialTheme { ScentSurface(surface, onEvent = events::add) } }
+            onNodeWithContentDescription("These reasons helped").assertIsOn().performClick()
+
+            onNodeWithContentDescription("These reasons did not help").assertIsOff()
+            assertEquals(emptyList(), events)
+        }
+
+    @Test
+    fun `an AI-written note without a rating action offers no thumbs`() =
+        runComposeUiTest {
+            setContent { MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_WRITTEN), onEvent = {}) } }
+
+            onNodeWithText("Reasons written by AI").assertExists()
+            onNodeWithContentDescription("These reasons helped").assertDoesNotExist()
+        }
+
+    @Test
+    fun `a paused note is announced politely and has nothing to tap`() =
+        runComposeUiTest {
+            setContent { MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_PAUSED), onEvent = {}) } }
+
+            onNode(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+                .assertExists()
+            onNodeWithText("AI help paused until tomorrow").assertExists()
+            onNodeWithContentDescription("Try again").assertDoesNotExist()
+            onNodeWithContentDescription("These reasons helped").assertDoesNotExist()
+        }
+
+    @Test
+    fun `an unavailable note's Try again reports the note once`() =
+        runComposeUiTest {
+            val events = mutableListOf<SurfaceEvent>()
+            val retry = ActionTemplate("retry_ask", mapOf("family" to "/answers/family"))
+
+            setContent {
+                MaterialTheme {
+                    ScentSurface(noteSurface(SurfaceProvenance.AI_UNAVAILABLE, retry), onEvent = events::add)
+                }
+            }
+            onNode(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+                .assertExists()
+            onNodeWithText("Matched on fragrance notes").assertExists()
+            onNodeWithContentDescription("Try again").assertHeightIsAtLeast(44.dp).performClick()
+
+            assertEquals(listOf<SurfaceEvent>(SurfaceEvent.ActionTriggered("s1", "note")), events)
+        }
+
+    private fun androidx.compose.ui.test.ComposeUiTest.retryAtFontScale(fontScale: Float): Pair<Float, Float> {
+        val retry = ActionTemplate("retry_ask", mapOf("family" to "/answers/family"))
+        setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_UNAVAILABLE, retry), onEvent = {}) }
+            }
+        }
+        val detailBottom = onNodeWithText("AI couldn’t answer this time").getUnclippedBoundsInRoot().bottom
+        val actionTop = onNodeWithContentDescription("Try again").getUnclippedBoundsInRoot().top
+        return detailBottom.value to actionTop.value
+    }
+
+    @Test
+    fun `at normal text size Try again sits on the detail line`() =
+        runComposeUiTest {
+            val (detailBottom, actionTop) = retryAtFontScale(1f)
+
+            assertTrue(actionTop < detailBottom, "action top $actionTop, detail bottom $detailBottom")
+        }
+
+    @Test
+    fun `at large text size Try again moves below the detail line`() =
+        runComposeUiTest {
+            val (detailBottom, actionTop) = retryAtFontScale(1.8f)
+
+            assertTrue(actionTop >= detailBottom, "action top $actionTop, detail bottom $detailBottom")
+        }
+
+    @Test
+    fun `an AI-written note is not a live region`() =
+        runComposeUiTest {
+            setContent {
+                MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_WRITTEN, rateAction), onEvent = {}) }
+            }
+
+            onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)).assertDoesNotExist()
+        }
+
     // the whole ask flow, on a surface that answers its own edits
 
     @Test
@@ -478,10 +666,18 @@ abstract class ScentSurfaceTest {
             val actions = mutableListOf<SurfaceEvent.ActionTriggered>()
 
             setContent {
-                MaterialTheme { ScentSurfaceFixtureHost(fixture, ASK_SURFACE_ID, onAction = actions::add) }
+                MaterialTheme {
+                    // The Ask screen scrolls, and the questions are taller than a small test screen.
+                    ScentSurfaceFixtureHost(
+                        fixture,
+                        ASK_SURFACE_ID,
+                        Modifier.verticalScroll(rememberScrollState()),
+                        onAction = actions::add,
+                    )
+                }
             }
-            onNodeWithContentDescription("Spicy").performClick()
-            onNodeWithContentDescription("Decant set to try").performClick()
+            onNodeWithContentDescription("Spicy").performScrollTo().performClick()
+            onNodeWithContentDescription("Decant set to try").performScrollTo().performClick()
 
             onNodeWithContentDescription("Spicy").assertIsOn()
             onNodeWithContentDescription("Woody").assertIsOff()
@@ -521,8 +717,10 @@ abstract class ScentSurfaceTest {
 
             onNodeWithText("Woody · up to £80 · Full bottle").assertExists()
             onNodeWithContentDescription(
-                "Birch Ledger, Sealed · 75 ml · Atelier Nord, £64, Smoky birch with a soft musk finish, easy to wear every day.",
+                "Birch Ledger, £64, Sealed, 75 ml, Atelier Nord. Smoky birch with a soft musk finish. Easy to wear every day",
             ).assertExists()
+            onNodeWithText("Reasons written by AI").assertExists()
+            onNodeWithText("Questions written by AI").assertDoesNotExist()
             onNodeWithText("SCENT FAMILY").assertDoesNotExist()
             assertEquals(0, fallbackCount())
         }

@@ -7,12 +7,12 @@ import org.scent.project.data.mapper.A2uiMessageMapper.toSurfaceMessages
 import org.scent.project.data.remote.a2ui.A2uiJson
 import org.scent.project.data.remote.a2ui.A2uiMessageBatch
 import org.scent.project.data.remote.a2ui.A2uiServerMessage
-import org.scent.project.data.remote.a2ui.catalog.Provenance
-import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.SurfaceMessage
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceProvenance
+import org.scent.project.domain.surface.SurfaceProvenanceSubject
 import org.scent.project.domain.surface.SurfaceTextStyle
 import org.scent.project.domain.util.Either
 import kotlin.test.Test
@@ -365,20 +365,24 @@ class A2uiMessageMapperTest {
 
     @Test
     fun `a provenance note maps every source wire name to that source`() {
-        Provenance.entries.forEach { source ->
-            assertEquals(
-                SurfaceNode.ProvenanceNote("n", source, ProvenanceSubject.REASONS),
-                note(source.wireName),
-            )
+        mapOf(
+            "ai_written" to SurfaceProvenance.AI_WRITTEN,
+            "ai_paused" to SurfaceProvenance.AI_PAUSED,
+            "ai_unavailable" to SurfaceProvenance.AI_UNAVAILABLE,
+        ).forEach { (wire, source) ->
+            assertEquals(SurfaceNode.ProvenanceNote("n", source, SurfaceProvenanceSubject.REASONS), note(wire))
         }
     }
 
     @Test
     fun `a provenance note maps every subject wire name to that subject`() {
-        ProvenanceSubject.entries.forEach { subject ->
+        mapOf(
+            "questions" to SurfaceProvenanceSubject.QUESTIONS,
+            "reasons" to SurfaceProvenanceSubject.REASONS,
+        ).forEach { (wire, subject) ->
             assertEquals(
-                SurfaceNode.ProvenanceNote("n", Provenance.AI_PAUSED, subject),
-                note("ai_paused", subject.wireName),
+                SurfaceNode.ProvenanceNote("n", SurfaceProvenance.AI_PAUSED, subject),
+                note("ai_paused", wire),
             )
         }
     }
@@ -409,8 +413,8 @@ class A2uiMessageMapperTest {
         assertEquals(
             SurfaceNode.ProvenanceNote(
                 "n",
-                Provenance.AI_WRITTEN,
-                ProvenanceSubject.REASONS,
+                SurfaceProvenance.AI_WRITTEN,
+                SurfaceProvenanceSubject.REASONS,
                 ActionTemplate("rate_reasons", mapOf("rating" to "/feedback/rating")),
                 "/feedback/rating",
             ),

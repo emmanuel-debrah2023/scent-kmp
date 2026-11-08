@@ -1,13 +1,12 @@
 package org.scent.project.domain.surface
 
 import kotlinx.serialization.json.Json
-import org.scent.project.data.remote.a2ui.catalog.Provenance
-import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
-import org.scent.project.data.remote.a2ui.catalog.ReasonsRating
+import kotlinx.serialization.json.JsonPrimitive
 import org.scent.project.domain.surface.SurfaceBindings.choicePicker
 import org.scent.project.domain.surface.SurfaceBindings.preferenceSummary
 import org.scent.project.domain.surface.SurfaceBindings.provenanceNote
 import org.scent.project.domain.surface.SurfaceBindings.rangeSlider
+import org.scent.project.domain.surface.SurfaceBindings.ratingValue
 import org.scent.project.domain.surface.SurfaceBindings.recommendation
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -301,9 +300,15 @@ class SurfaceBindingsTest {
     private val rate = ActionTemplate("rate_reasons", mapOf("rating" to "/feedback/rating"))
     private val retry = ActionTemplate("retry_ask", mapOf("budget" to "/answers/budget"))
     private val written =
-        SurfaceNode.ProvenanceNote("n", Provenance.AI_WRITTEN, ProvenanceSubject.REASONS, rate, "/feedback/rating")
+        SurfaceNode.ProvenanceNote(
+            "n",
+            SurfaceProvenance.AI_WRITTEN,
+            SurfaceProvenanceSubject.REASONS,
+            rate,
+            "/feedback/rating",
+        )
     private val unavailable =
-        SurfaceNode.ProvenanceNote("n", Provenance.AI_UNAVAILABLE, ProvenanceSubject.REASONS, retry)
+        SurfaceNode.ProvenanceNote("n", SurfaceProvenance.AI_UNAVAILABLE, SurfaceProvenanceSubject.REASONS, retry)
 
     @Test
     fun `provenanceNote on ai_written can be rated and reads the stored rating`() {
@@ -311,11 +316,11 @@ class SurfaceBindingsTest {
 
         assertEquals(
             ProvenanceNoteBinding(
-                Provenance.AI_WRITTEN,
-                ProvenanceSubject.REASONS,
+                SurfaceProvenance.AI_WRITTEN,
+                SurfaceProvenanceSubject.REASONS,
                 canRetry = false,
                 canRate = true,
-                rating = ReasonsRating.DOWN,
+                rating = SurfaceRating.DOWN,
             ),
             binding,
         )
@@ -325,7 +330,7 @@ class SurfaceBindingsTest {
     fun `provenanceNote has no rating until one is stored, and ignores anything but up or down`() {
         assertNull(provenanceNote(surface("""{}"""), written).rating)
         assertNull(provenanceNote(surface("""{"feedback":{"rating":"meh"}}"""), written).rating)
-        assertEquals(ReasonsRating.UP, provenanceNote(surface("""{"feedback":{"rating":"up"}}"""), written).rating)
+        assertEquals(SurfaceRating.UP, provenanceNote(surface("""{"feedback":{"rating":"up"}}"""), written).rating)
     }
 
     @Test
@@ -339,7 +344,7 @@ class SurfaceBindingsTest {
 
     @Test
     fun `provenanceNote is only rated when AI wrote the wording`() {
-        val paused = written.copy(source = Provenance.AI_PAUSED)
+        val paused = written.copy(source = SurfaceProvenance.AI_PAUSED)
 
         assertFalse(provenanceNote(surface("""{}"""), paused).canRate)
     }
@@ -351,6 +356,23 @@ class SurfaceBindingsTest {
         assertTrue(provenanceNote(data, unavailable).canRetry)
         assertFalse(provenanceNote(data, unavailable.copy(action = null)).canRetry)
         assertFalse(provenanceNote(data, unavailable.copy(action = rate)).canRetry)
-        assertFalse(provenanceNote(data, unavailable.copy(source = Provenance.AI_PAUSED)).canRetry)
+        assertFalse(provenanceNote(data, unavailable.copy(source = SurfaceProvenance.AI_PAUSED)).canRetry)
+    }
+
+    @Test
+    fun `provenanceNote is only rated when the note is about reasons`() {
+        val questions = written.copy(subject = SurfaceProvenanceSubject.QUESTIONS)
+
+        assertFalse(provenanceNote(surface("""{}"""), questions).canRate)
+    }
+
+    @Test
+    fun `a rating is stored as the value provenanceNote reads back`() {
+        SurfaceRating.entries.forEach { rating ->
+            val stored = """{"feedback":{"rating":${ratingValue(rating)}}}"""
+
+            assertEquals(rating, provenanceNote(surface(stored), written).rating)
+        }
+        assertEquals(JsonPrimitive("up"), ratingValue(SurfaceRating.UP))
     }
 }
