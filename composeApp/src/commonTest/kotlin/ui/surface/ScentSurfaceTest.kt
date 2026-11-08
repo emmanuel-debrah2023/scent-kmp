@@ -369,7 +369,7 @@ abstract class ScentSurfaceTest {
     // recommendation card
 
     @Test
-    fun `a card is announced as its name then price, then its reason`() =
+    fun `a card is announced as its name then price then its reason`() =
         runComposeUiTest {
             val surface =
                 withData(
@@ -390,7 +390,7 @@ abstract class ScentSurfaceTest {
         }
 
     @Test
-    fun `a card with a meta line is announced as its name then price then meta, then its reason`() =
+    fun `a card with a meta line is announced as its name then price then meta then its reason`() =
         runComposeUiTest {
             val surface =
                 withData(
@@ -514,7 +514,7 @@ abstract class ScentSurfaceTest {
     )
 
     @Test
-    fun `an omitted node draws nothing, not even the fallback`() =
+    fun `an omitted node draws nothing and not even the fallback`() =
         runComposeUiTest {
             val surface =
                 surfaceOf(
@@ -545,7 +545,7 @@ abstract class ScentSurfaceTest {
         }
 
     @Test
-    fun `tapping a thumb stores the rating, then sends the note's action`() =
+    fun `tapping a thumb stores the rating then sends the note's action`() =
         runComposeUiTest {
             val events = mutableListOf<SurfaceEvent>()
 

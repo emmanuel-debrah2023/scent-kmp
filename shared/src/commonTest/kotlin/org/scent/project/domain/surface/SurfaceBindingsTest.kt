@@ -226,7 +226,7 @@ class SurfaceBindingsTest {
     }
 
     @Test
-    fun `recommendation reads up to three reasons in order, trimmed, skipping blanks and non text`() {
+    fun `recommendation reads up to three reasons in order trimmed and skips blanks and non text`() {
         val data =
             surface(
                 """{"results":[{},{"name":"Cedar","reasons":[" Dry wood ","",4,"Easy to wear","Decant","Fourth"]}]}""",
@@ -327,7 +327,7 @@ class SurfaceBindingsTest {
     }
 
     @Test
-    fun `provenanceNote has no rating until one is stored, and ignores anything but up or down`() {
+    fun `provenanceNote has no rating until one is stored and ignores anything but up or down`() {
         assertNull(provenanceNote(surface("""{}"""), written).rating)
         assertNull(provenanceNote(surface("""{"feedback":{"rating":"meh"}}"""), written).rating)
         assertEquals(SurfaceRating.UP, provenanceNote(surface("""{"feedback":{"rating":"up"}}"""), written).rating)
