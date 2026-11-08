@@ -92,6 +92,8 @@ fun Application.module() {
                 mode = System.getProperty("ASK_BACK_AGENT"),
                 modelOverride = System.getProperty("AGENT_MODEL"),
                 budgetMillis = System.getProperty("ASK_BACK_BUDGET_MS"),
+                userDailyLimit = System.getProperty("ASK_USER_DAILY_LIMIT"),
+                globalDailyLimit = System.getProperty("ASK_GLOBAL_DAILY_LIMIT"),
             ),
         )
     }

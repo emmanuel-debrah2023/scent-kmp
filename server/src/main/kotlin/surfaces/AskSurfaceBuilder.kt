@@ -3,6 +3,7 @@ package surfaces
 import askback.AskBack
 import askback.GENERIC_WHY
 import askback.WhyLine
+import askback.WordedBy
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -42,7 +43,10 @@ private const val EDIT_HEADING = "Change your answers"
 private const val NO_MATCH = "Nothing matches yet. Try changing your answers."
 private const val QUESTION_CAPTION = "Question written by AI"
 private const val REASONS_CAPTION = "Reasons written by AI · prices from Scent"
+private const val QUESTION_PAUSED = "AI help is paused for today, so these are our standard questions."
+private const val REASONS_PAUSED = "AI help is paused for today, so these reasons come from each fragrance's notes."
 private const val CAPTION_ID = "caption"
+private const val NOTICE_ID = "notice"
 private const val QUESTIONS_ID = "questions"
 private const val META_SEPARATOR = " · "
 private const val WHOLE_PERCENT = 100.0
@@ -106,7 +110,14 @@ object AskSurfaceBuilder {
             }
         val cards = candidates.mapIndexed { index, candidate -> card(index, candidate) }
         val body = if (cards.isEmpty()) listOf(ScentComponent.Text("empty", NO_MATCH)) else cards
-        val caption = captionIf(cards.isNotEmpty() && whyLines.any { it.modelWritten }, REASONS_CAPTION)
+        val reasonsBy =
+            when {
+                cards.isEmpty() -> WordedBy.RULES
+                whyLines.any { it.wordedBy == WordedBy.MODEL } -> WordedBy.MODEL
+                whyLines.any { it.wordedBy == WordedBy.RULES_OVER_LIMIT } -> WordedBy.RULES_OVER_LIMIT
+                else -> WordedBy.RULES
+            }
+        val caption = labelFor(reasonsBy, REASONS_CAPTION, REASONS_PAUSED)
         val components =
             listOf(ScentComponent.Column("root", listOf("summary") + (caption + body).mapNotNull { it.id })) +
                 ScentComponent.PreferenceSummary(
@@ -158,7 +169,7 @@ object AskSurfaceBuilder {
                 }
             }
         val inputs = questions.map { input(it) }
-        val caption = captionIf(askBack.modelWritten, QUESTION_CAPTION)
+        val caption = labelFor(askBack.wordedBy, QUESTION_CAPTION, QUESTION_PAUSED)
         val components =
             listOf(
                 ScentComponent.Column(
@@ -174,12 +185,19 @@ object AskSurfaceBuilder {
         return listOf(dataModel(surfaceId, data), components(surfaceId, components))
     }
 
-    // Only for wording a model really wrote; the rules and fixed headings never say AI wrote them.
-    private fun captionIf(
-        modelWritten: Boolean,
-        text: String,
+    // The AI caption only for wording a model really wrote; the rules and fixed headings never say AI
+    // wrote them. The paused notice is body text, because the client draws every caption with the AI
+    // sparkle and no model wrote this.
+    private fun labelFor(
+        wordedBy: WordedBy,
+        aiCaption: String,
+        pausedNotice: String,
     ): List<ScentComponent> =
-        if (modelWritten) listOf(ScentComponent.Text(CAPTION_ID, text, TextVariant.CAPTION)) else emptyList()
+        when (wordedBy) {
+            WordedBy.MODEL -> listOf(ScentComponent.Text(CAPTION_ID, aiCaption, TextVariant.CAPTION))
+            WordedBy.RULES_OVER_LIMIT -> listOf(ScentComponent.Text(NOTICE_ID, pausedNotice, TextVariant.BODY))
+            WordedBy.RULES -> emptyList()
+        }
 
     private fun input(question: QuestionSpec): ScentComponent =
         when (question) {

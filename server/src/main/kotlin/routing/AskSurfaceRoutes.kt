@@ -24,6 +24,7 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
+import plugins.requireUserId
 import preferences.ListingCandidateSource
 import preferences.ScentPreferences
 import preferences.activeListingPriceRange
@@ -36,10 +37,8 @@ private const val MAX_QUERY_LENGTH = 500
 /**
  * The ask-back surface. Stateless: POST /ask mints a surface id and returns the first messages, and
  * POST /ask/actions answers an action on that surface from the answers the client echoes back, which
- * are re-validated every time. Both need a signed-in user.
- *
- * TODO(chore/ask-route-rate-limit): limit per user and globally before any model call, so the free
- * model quota cannot be burned.
+ * are re-validated every time. Both need a signed-in user, whose id the agent counts each model
+ * call against.
  */
 fun Route.askSurfaceRoutes(
     agent: AskBackAgent,
@@ -49,10 +48,12 @@ fun Route.askSurfaceRoutes(
     authenticate("auth-jwt") {
         route("/api/v1/surfaces/ask") {
             post {
-                respondBatch(call) { startSurface(call.receiveText(), agent, candidates, newSurfaceId()) }
+                respondBatch(call) {
+                    startSurface(call.requireUserId(), call.receiveText(), agent, candidates, newSurfaceId())
+                }
             }
             post("/actions") {
-                respondBatch(call) { answerAction(call.receiveText(), agent, candidates) }
+                respondBatch(call) { answerAction(call.requireUserId(), call.receiveText(), agent, candidates) }
             }
         }
     }
@@ -73,6 +74,7 @@ private suspend fun respondBatch(
 }
 
 private suspend fun startSurface(
+    callerId: Int,
     body: String,
     agent: AskBackAgent,
     candidates: ListingCandidateSource,
@@ -84,9 +86,9 @@ private suspend fun startSurface(
         query.length > MAX_QUERY_LENGTH -> invalid("query")
         else ->
             activeListingPriceRange().flatMap { range ->
-                agent.ask(query, range).flatMap { askBack ->
+                agent.ask(callerId, query, range).flatMap { askBack ->
                     if (askBack.questions.isEmpty()) {
-                        resultsFor(surfaceId, true, askBack.preferences, agent, candidates)
+                        resultsFor(callerId, surfaceId, true, askBack.preferences, agent, candidates)
                     } else {
                         AskSurfaceBuilder.initial(surfaceId, askBack).asRight()
                     }
@@ -96,6 +98,7 @@ private suspend fun startSurface(
 }
 
 private suspend fun answerAction(
+    callerId: Int,
     body: String,
     agent: AskBackAgent,
     candidates: ListingCandidateSource,
@@ -116,6 +119,7 @@ private suspend fun answerAction(
                         ScentAction.EDIT_ANSWERS -> AskSurfaceBuilder.edit(surfaceId, preferences, range).asRight()
                         ScentAction.ANSWER_QUESTIONS ->
                             resultsFor(
+                                callerId,
                                 surfaceId,
                                 false,
                                 preferences,
@@ -130,6 +134,7 @@ private suspend fun answerAction(
 }
 
 private suspend fun resultsFor(
+    callerId: Int,
     surfaceId: String,
     create: Boolean,
     preferences: ScentPreferences,
@@ -137,7 +142,7 @@ private suspend fun resultsFor(
     candidates: ListingCandidateSource,
 ): Result<List<A2uiServerMessage>> =
     candidates.find(preferences).flatMap { found ->
-        agent.explain(preferences, found).map { why ->
+        agent.explain(callerId, preferences, found).map { why ->
             AskSurfaceBuilder.results(surfaceId, create, preferences, found, why)
         }
     }

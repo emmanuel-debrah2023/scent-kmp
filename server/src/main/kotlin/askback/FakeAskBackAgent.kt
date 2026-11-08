@@ -14,6 +14,7 @@ import preferences.ScentPreferences
  */
 class FakeAskBackAgent : AskBackAgent {
     override suspend fun ask(
+        callerId: Int,
         query: String,
         priceRange: PriceRange?,
     ): Result<AskBack> {
@@ -23,13 +24,14 @@ class FakeAskBackAgent : AskBackAgent {
             PreferenceQuestionPlanner.plan(preferences, priceRange),
             "Let's find the right gift",
             "Show gifts",
-            modelWritten = true,
+            WordedBy.MODEL,
         ).asRight()
     }
 
     override suspend fun explain(
+        callerId: Int,
         preferences: ScentPreferences,
         candidates: List<ListingCandidate>,
     ): Result<List<WhyLine>> =
-        candidates.map { WhyLine(it.listingId, "Easy to wear and easy to give", modelWritten = true) }.asRight()
+        candidates.map { WhyLine(it.listingId, "Easy to wear and easy to give", WordedBy.MODEL) }.asRight()
 }

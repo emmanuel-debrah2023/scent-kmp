@@ -25,6 +25,7 @@ class FallbackBudgetTest {
         var finished = false
 
         override suspend fun ask(
+            callerId: Int,
             query: String,
             priceRange: PriceRange?,
         ): Result<AskBack> {
@@ -34,6 +35,7 @@ class FallbackBudgetTest {
         }
 
         override suspend fun explain(
+            callerId: Int,
             preferences: ScentPreferences,
             candidates: List<ListingCandidate>,
         ): Result<List<WhyLine>> {
@@ -51,7 +53,7 @@ class FallbackBudgetTest {
             val slow = Delayed("model", takes = 30_000)
             val agent = FallbackAskBackAgent(slow, Delayed("rules", takes = 0), budget = 12.seconds)
 
-            val answer = agent.ask("q", range).getOrNull()
+            val answer = agent.ask(TEST_CALLER_ID, "q", range).getOrNull()
 
             assertEquals("rules", answer?.heading)
             assertEquals(12_000, currentTime)
@@ -64,7 +66,7 @@ class FallbackBudgetTest {
             val agent =
                 FallbackAskBackAgent(Delayed("model", takes = 5_000), Delayed("rules", takes = 0), budget = 12.seconds)
 
-            assertEquals("model", agent.ask("q", range).getOrNull()?.heading)
+            assertEquals("model", agent.ask(TEST_CALLER_ID, "q", range).getOrNull()?.heading)
             assertEquals(5_000, currentTime)
         }
 
@@ -79,7 +81,7 @@ class FallbackBudgetTest {
             assertEquals(
                 "rules",
                 slow
-                    .explain(ScentPreferences(), emptyList())
+                    .explain(TEST_CALLER_ID, ScentPreferences(), emptyList())
                     .getOrNull()
                     ?.single()
                     ?.text,
@@ -87,7 +89,7 @@ class FallbackBudgetTest {
             assertEquals(
                 "model",
                 fast
-                    .explain(ScentPreferences(), emptyList())
+                    .explain(TEST_CALLER_ID, ScentPreferences(), emptyList())
                     .getOrNull()
                     ?.single()
                     ?.text,

@@ -11,6 +11,7 @@ import askback.RulesAskBackAgent
 import askback.WhyLine
 import askback.WhyLineOutput
 import askback.WhyOutput
+import askback.WordedBy
 import kotlinx.coroutines.runBlocking
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.model.ListingKind
@@ -41,7 +42,7 @@ class AskBackAgentsTest {
 
     @Test
     fun `rules asks every missing question with the fixed heading`() {
-        val result = runBlocking { RulesAskBackAgent().ask("anything at all", range) }.getOrNull()
+        val result = runBlocking { RulesAskBackAgent().ask(TEST_CALLER_ID, "anything at all", range) }.getOrNull()
 
         assertEquals(listOf(QuestionId.FAMILY, QuestionId.BUDGET, QuestionId.SIZE), result?.questions?.map { it.id })
         assertEquals(RULES_HEADING, result?.heading)
@@ -51,7 +52,7 @@ class AskBackAgentsTest {
 
     @Test
     fun `rules skips the budget question when there is no usable price range`() {
-        val result = runBlocking { RulesAskBackAgent().ask("gift", null) }.getOrNull()
+        val result = runBlocking { RulesAskBackAgent().ask(TEST_CALLER_ID, "gift", null) }.getOrNull()
 
         assertEquals(listOf(QuestionId.FAMILY, QuestionId.SIZE), result?.questions?.map { it.id })
     }
@@ -64,7 +65,14 @@ class AskBackAgentsTest {
                 candidate(2, listOf("no.5 note", "oud")),
                 candidate(3, emptyList()),
             )
-        val lines = runBlocking { RulesAskBackAgent().explain(preferences, candidates) }.getOrNull().orEmpty()
+        val lines =
+            runBlocking {
+                RulesAskBackAgent().explain(
+                    TEST_CALLER_ID,
+                    preferences,
+                    candidates,
+                )
+            }.getOrNull().orEmpty()
 
         val asOutput = WhyOutput(lines.map { WhyLineOutput(it.listingId, it.text) })
         val vocabulary = setOf("cedar", "vanilla", "rose", "oud", "no.5 note")
@@ -83,11 +91,13 @@ class AskBackAgentsTest {
         var calls = 0
 
         override suspend fun ask(
+            callerId: Int,
             query: String,
             priceRange: PriceRange?,
         ): Result<AskBack> = ask.also { calls++ }
 
         override suspend fun explain(
+            callerId: Int,
             preferences: ScentPreferences,
             candidates: List<ListingCandidate>,
         ): Result<List<WhyLine>> = explain.also { calls++ }
@@ -114,10 +124,14 @@ class AskBackAgentsTest {
         ).forEach { error ->
             val agent = decorated(failing(error))
 
-            assertEquals("fallback", runBlocking { agent.ask("q", range) }.getOrNull()?.heading, "ask after $error")
+            assertEquals(
+                "fallback",
+                runBlocking { agent.ask(TEST_CALLER_ID, "q", range) }.getOrNull()?.heading,
+                "ask after $error",
+            )
             assertEquals(
                 fallbackWhy,
-                runBlocking { agent.explain(preferences, emptyList()) }.getOrNull(),
+                runBlocking { agent.explain(TEST_CALLER_ID, preferences, emptyList()) }.getOrNull(),
                 "explain after $error",
             )
         }
@@ -128,9 +142,35 @@ class AskBackAgentsTest {
         val fallback = Scripted(fallbackAnswer.asRight(), fallbackWhy.asRight())
         val agent = FallbackAskBackAgent(Scripted(good.asRight(), goodWhy.asRight()), fallback)
 
-        assertEquals("primary", runBlocking { agent.ask("q", range) }.getOrNull()?.heading)
-        assertEquals(goodWhy, runBlocking { agent.explain(preferences, emptyList()) }.getOrNull())
+        assertEquals("primary", runBlocking { agent.ask(TEST_CALLER_ID, "q", range) }.getOrNull()?.heading)
+        assertEquals(goodWhy, runBlocking { agent.explain(TEST_CALLER_ID, preferences, emptyList()) }.getOrNull())
         assertEquals(0, fallback.calls)
+    }
+
+    @Test
+    fun `an over-limit primary is answered by the fallback, tagged as over the limit`() {
+        listOf(AppError.AgentError.QuotaExceeded.Scope.USER, AppError.AgentError.QuotaExceeded.Scope.GLOBAL)
+            .forEach { scope ->
+                val agent = decorated(failing(AppError.AgentError.QuotaExceeded(scope)))
+
+                val askBack = runBlocking { agent.ask(TEST_CALLER_ID, "q", range) }.getOrNull()
+                val why = runBlocking { agent.explain(TEST_CALLER_ID, preferences, emptyList()) }.getOrNull()
+
+                assertEquals("fallback", askBack?.heading)
+                assertEquals(WordedBy.RULES_OVER_LIMIT, askBack?.wordedBy, "ask over $scope")
+                assertEquals(listOf(WordedBy.RULES_OVER_LIMIT), why?.map { it.wordedBy }, "explain over $scope")
+            }
+    }
+
+    @Test
+    fun `a quota that cannot be read fails closed to the plain rules answer`() {
+        val agent = decorated(failing(AppError.StorageError.WriteFailed()))
+
+        assertEquals(WordedBy.RULES, runBlocking { agent.ask(TEST_CALLER_ID, "q", range) }.getOrNull()?.wordedBy)
+        assertEquals(
+            listOf(WordedBy.RULES),
+            runBlocking { agent.explain(TEST_CALLER_ID, preferences, emptyList()) }.getOrNull()?.map { it.wordedBy },
+        )
     }
 
     @Test
@@ -141,15 +181,15 @@ class AskBackAgentsTest {
                 failing(AppError.AgentError.NotConfigured()),
             )
 
-        assertIs<AppError.AgentError.NotConfigured>(runBlocking { agent.ask("q", range) }.leftOrNull())
+        assertIs<AppError.AgentError.NotConfigured>(runBlocking { agent.ask(TEST_CALLER_ID, "q", range) }.leftOrNull())
     }
 
     // fake
 
     @Test
     fun `the fake gives the same gift answer every time`() {
-        val first = runBlocking { FakeAskBackAgent().ask("anything", range) }.getOrNull()
-        val second = runBlocking { FakeAskBackAgent().ask("something else", range) }.getOrNull()
+        val first = runBlocking { FakeAskBackAgent().ask(TEST_CALLER_ID, "anything", range) }.getOrNull()
+        val second = runBlocking { FakeAskBackAgent().ask(TEST_CALLER_ID, "something else", range) }.getOrNull()
 
         assertEquals(first, second)
         assertTrue(first?.questions?.isNotEmpty() == true)

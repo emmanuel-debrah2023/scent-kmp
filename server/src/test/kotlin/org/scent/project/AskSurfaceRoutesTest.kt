@@ -1,11 +1,15 @@
 package org.scent.project
 
+import agent.AgentLlm
+import agent.AgentProvider
 import askback.AskBack
 import askback.AskBackAgent
 import askback.FallbackAskBackAgent
+import askback.KoogAskBackAgent
 import askback.RULES_HEADING
 import askback.RulesAskBackAgent
 import askback.WhyLine
+import askback.WordedBy
 import data.schema.ListingMediaTable
 import data.schema.ListingsTable
 import io.ktor.client.HttpClient
@@ -41,6 +45,7 @@ import org.scent.project.domain.util.asRight
 import plugins.configureSecurity
 import preferences.ListingCandidate
 import preferences.ListingCandidateSource
+import preferences.NoteVocabulary
 import preferences.PreferenceQuestionPlanner
 import preferences.PriceRange
 import preferences.ScentFamily
@@ -58,6 +63,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class AskSurfaceRoutesTest {
     private val goodId = "ask-123e4567-e89b-42d3-a456-426614174000"
     private var token = ""
+    private var shopper = 0
 
     @BeforeTest
     fun setUp() {
@@ -65,7 +71,8 @@ class AskSurfaceRoutesTest {
         val seller = seedUser("seller")
         seedListing(seller, seedFragrance(seller), price = 30.0)
         seedListing(seller, seedFragrance(seller), price = 120.0)
-        token = generateTestToken(seedUser("shopper"))
+        shopper = seedUser("shopper")
+        token = generateTestToken(shopper)
     }
 
     private class Source(
@@ -79,29 +86,52 @@ class AskSurfaceRoutesTest {
         }
     }
 
-    // Answers ask with a fixed AskBack and explain with one line per candidate.
+    // Answers ask with a fixed AskBack and explain with one line per candidate; records who asked.
     private class Agent(
         private val askBack: Result<AskBack>,
         private val delayMs: Long = 0,
     ) : AskBackAgent {
+        val callers = mutableListOf<Int>()
+
         override suspend fun ask(
+            callerId: Int,
             query: String,
             priceRange: PriceRange?,
         ): Result<AskBack> {
+            callers += callerId
             delay(delayMs)
             return askBack
         }
 
         override suspend fun explain(
+            callerId: Int,
             preferences: ScentPreferences,
             candidates: List<ListingCandidate>,
-        ): Result<List<WhyLine>> = candidates.map { WhyLine(it.listingId, "Has cedar") }.asRight()
+        ): Result<List<WhyLine>> {
+            callers += callerId
+            return candidates.map { WhyLine(it.listingId, "Has cedar") }.asRight()
+        }
     }
+
+    // The real fallback chain with a model whose quota refuses every call; [client] records any call.
+    private fun overLimit(
+        scope: AppError.AgentError.QuotaExceeded.Scope,
+        client: ScriptedLLMClient = ScriptedLLMClient(emptyList()),
+    ) = FallbackAskBackAgent(
+        KoogAskBackAgent(
+            AgentLlm.Configured(AgentProvider.OPENROUTER, client),
+            "test/model:free",
+            NoteVocabulary { setOf("cedar").asRight() },
+            FakeAskQuota(AppError.AgentError.QuotaExceeded(scope)),
+        ),
+        RulesAskBackAgent(),
+    )
 
     private class RecordingAgent : AskBackAgent {
         var calls = 0
 
         override suspend fun ask(
+            callerId: Int,
             query: String,
             priceRange: PriceRange?,
         ): Result<AskBack> {
@@ -110,6 +140,7 @@ class AskSurfaceRoutesTest {
         }
 
         override suspend fun explain(
+            callerId: Int,
             preferences: ScentPreferences,
             candidates: List<ListingCandidate>,
         ): Result<List<WhyLine>> {
@@ -461,6 +492,48 @@ class AskSurfaceRoutesTest {
             assertFalse(body.contains("written by AI"))
         }
 
+    // daily limit
+
+    @Test
+    fun `both routes ask the agent as the signed-in user`() {
+        val agent = askNothing()
+        withApp(agent = agent) {
+            client.ask("""{"query":"a"}""")
+            client.act(action())
+        }
+        assertEquals(listOf(shopper, shopper, shopper), agent.callers)
+    }
+
+    @Test
+    fun `a user over the daily limit gets the rules questions with a paused notice and no model call`() {
+        val model = ScriptedLLMClient(emptyList())
+        withApp(agent = overLimit(AppError.AgentError.QuotaExceeded.Scope.USER, model)) {
+            val response = client.ask("""{"query":"a"}""")
+            val body = response.bodyAsText()
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertTrue(body.contains(RULES_HEADING))
+            assertTrue(body.contains("AI help is paused for today"))
+            assertFalse(body.contains("written by AI"))
+        }
+        assertEquals(0, model.prompts.size)
+    }
+
+    @Test
+    fun `over the global cap the results still come back, with the paused notice and no model call`() {
+        val model = ScriptedLLMClient(emptyList())
+        withApp(agent = overLimit(AppError.AgentError.QuotaExceeded.Scope.GLOBAL, model)) {
+            val response = client.act(action())
+            val body = response.bodyAsText()
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertTrue(body.contains("Has cedar notes"))
+            assertTrue(body.contains("AI help is paused for today"))
+            assertFalse(body.contains("written by AI"))
+        }
+        assertEquals(0, model.prompts.size)
+    }
+
     @Test
     fun `a model that answers is captioned as AI`() =
         withApp(
@@ -471,7 +544,7 @@ class AskSurfaceRoutesTest {
                         PreferenceQuestionPlanner.plan(ScentPreferences(), PriceRange(30.0, 120.0)),
                         "Hello",
                         "Show picks",
-                        modelWritten = true,
+                        wordedBy = WordedBy.MODEL,
                     ).asRight(),
                 ),
         ) {

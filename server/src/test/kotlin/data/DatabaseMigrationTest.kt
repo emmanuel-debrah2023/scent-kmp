@@ -62,7 +62,7 @@ class DatabaseMigrationTest {
         )
 
     @Test
-    fun `initDatabase applies V1 and V2 migrations cleanly against a real Postgres schema`() {
+    fun `initDatabase applies V1 to V3 migrations cleanly against a real Postgres schema`() {
         initDatabase(testConfig())
 
         DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
@@ -75,7 +75,16 @@ class DatabaseMigrationTest {
                 while (historyRs.next()) {
                     versions.add(historyRs.getString("version") to historyRs.getBoolean("success"))
                 }
-                assertEquals(listOf("1" to true, "2" to true), versions)
+                assertEquals(listOf("1" to true, "2" to true, "3" to true), versions)
+
+                val quotaRs =
+                    statement.executeQuery(
+                        """
+                        SELECT table_name FROM information_schema.tables
+                        WHERE table_schema = 'public' AND table_name = 'ask_quota_usage'
+                        """.trimIndent(),
+                    )
+                assertTrue(quotaRs.next(), "ask_quota_usage table should exist in public schema after V3")
 
                 val tablesRs =
                     statement.executeQuery(
@@ -119,7 +128,7 @@ class DatabaseMigrationTest {
                     rs.next()
                     rs.getInt(1)
                 }
-            assertEquals(2, count, "re-running migrate() must not reapply already-applied versions")
+            assertEquals(3, count, "re-running migrate() must not reapply already-applied versions")
         }
     }
 }

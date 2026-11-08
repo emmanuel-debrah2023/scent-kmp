@@ -25,7 +25,15 @@ application {
 // `./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake`
 // or `-DAGENT_MODEL=<id>` reaches it. A property left off this list is silently ignored.
 tasks.named<JavaExec>("run") {
-    listOf("STREAM_PROVIDER", "IMAGE_PROVIDER", "ASK_BACK_AGENT", "AGENT_MODEL", "ASK_BACK_BUDGET_MS").forEach { name ->
+    listOf(
+        "STREAM_PROVIDER",
+        "IMAGE_PROVIDER",
+        "ASK_BACK_AGENT",
+        "AGENT_MODEL",
+        "ASK_BACK_BUDGET_MS",
+        "ASK_USER_DAILY_LIMIT",
+        "ASK_GLOBAL_DAILY_LIMIT",
+    ).forEach { name ->
         System.getProperty(name)?.let { systemProperty(name, it) }
     }
 }

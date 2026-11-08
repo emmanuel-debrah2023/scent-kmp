@@ -2,6 +2,7 @@ package org.scent.project
 
 import askback.AskBack
 import askback.WhyLine
+import askback.WordedBy
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -271,6 +272,55 @@ class AskSurfaceBuilderTest {
     private fun caption(messages: List<A2uiServerMessage>): ScentComponent.Text? =
         messages.components().filterIsInstance<ScentComponent.Text>().firstOrNull { it.id == "caption" }
 
+    private fun notice(messages: List<A2uiServerMessage>): ScentComponent.Text? =
+        messages.components().filterIsInstance<ScentComponent.Text>().firstOrNull { it.id == "notice" }
+
+    @Test
+    fun `rules questions given over the limit say AI help is paused, as body text with no AI caption`() {
+        val messages = AskSurfaceBuilder.initial(id, askBack().copy(wordedBy = WordedBy.RULES_OVER_LIMIT))
+
+        assertEquals(listOf("notice", "heading", "questions", "submit"), rootChildren(messages))
+        assertEquals("AI help is paused for today, so these are our standard questions.", notice(messages)?.text)
+        assertEquals(TextVariant.BODY, notice(messages)?.variant)
+        assertNull(caption(messages))
+    }
+
+    @Test
+    fun `rules reasons given over the limit say AI help is paused, as body text with no AI caption`() {
+        val messages =
+            AskSurfaceBuilder.results(
+                id,
+                false,
+                ScentPreferences(),
+                listOf(candidate(1)),
+                listOf(WhyLine(1, "Has cedar notes", WordedBy.RULES_OVER_LIMIT)),
+            )
+
+        assertEquals(listOf("summary", "notice", "card_1"), rootChildren(messages))
+        assertEquals(
+            "AI help is paused for today, so these reasons come from each fragrance's notes.",
+            notice(messages)?.text,
+        )
+        assertEquals(TextVariant.BODY, notice(messages)?.variant)
+        assertNull(caption(messages))
+    }
+
+    @Test
+    fun `plain rules wording has neither the AI caption nor the paused notice`() {
+        val questions = AskSurfaceBuilder.initial(id, askBack())
+        val results =
+            AskSurfaceBuilder.results(
+                id,
+                false,
+                ScentPreferences(),
+                listOf(candidate(1)),
+                listOf(WhyLine(1, "Has cedar")),
+            )
+
+        assertNull(notice(questions))
+        assertNull(notice(results))
+    }
+
     @Test
     fun `the questions sit in one raised column with the heading and button outside it`() {
         val messages = AskSurfaceBuilder.initial(id, askBack())
@@ -284,7 +334,7 @@ class AskSurfaceBuilderTest {
 
     @Test
     fun `a question the model wrote has the AI caption above the heading`() {
-        val messages = AskSurfaceBuilder.initial(id, askBack().copy(modelWritten = true))
+        val messages = AskSurfaceBuilder.initial(id, askBack().copy(wordedBy = WordedBy.MODEL))
 
         assertEquals(listOf("caption", "heading", "questions", "submit"), rootChildren(messages))
         assertEquals("Question written by AI", caption(messages)?.text)
@@ -380,7 +430,7 @@ class AskSurfaceBuilderTest {
                 false,
                 ScentPreferences(),
                 listOf(candidate(1)),
-                listOf(WhyLine(1, "Warm cedar", modelWritten = true)),
+                listOf(WhyLine(1, "Warm cedar", WordedBy.MODEL)),
             )
 
         assertEquals(listOf("summary", "caption", "card_1"), rootChildren(messages))
@@ -411,7 +461,7 @@ class AskSurfaceBuilderTest {
                 false,
                 ScentPreferences(),
                 listOf(candidate(1), candidate(2)),
-                listOf(WhyLine(1, "Warm cedar", modelWritten = true)),
+                listOf(WhyLine(1, "Warm cedar", WordedBy.MODEL)),
             )
 
         assertNotNull(caption(messages))

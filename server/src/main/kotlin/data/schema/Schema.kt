@@ -2,6 +2,7 @@ package data.schema
 
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.datetime.date
 import org.jetbrains.exposed.v1.datetime.datetime
 
 // ─────────────────────────────────────────────
@@ -265,4 +266,15 @@ object ListingsTable : IntIdTable("listings") {
 
     /** Reserved for ESTIMATED/VERIFIED fill; nothing writes it while fill is DECLARED-only. */
     val fillConfidence = double("fill_confidence").nullable()
+}
+
+/**
+ * Model calls the ask route made, per scope and UTC day (V3). A scope is `user:<id>` or `global`.
+ * A row is created on the first call of the day and only ever counted up.
+ */
+object AskQuotaUsageTable : Table("ask_quota_usage") {
+    val scope = varchar("scope", 32)
+    val day = date("day")
+    val calls = integer("calls").default(0)
+    override val primaryKey = PrimaryKey(scope, day)
 }

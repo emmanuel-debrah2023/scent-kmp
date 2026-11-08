@@ -37,30 +37,35 @@ private val replyJson =
  * Asks a model (through OpenRouter, or a local Ollama) and returns only what [AskBackValidator]
  * accepts. A provider failure is returned as an [AppError.AgentError], never thrown. One retry on
  * a bad answer, passing back the rule it broke; never a retry on a provider failure, because a
- * rate limit gets worse when hammered.
+ * rate limit gets worse when hammered. Every model call, retries included, first takes one call
+ * from [quota], so a caller over the limit never reaches the model.
  */
 class KoogAskBackAgent(
     private val llm: AgentLlm,
     private val modelId: String,
     private val vocabulary: NoteVocabulary,
+    private val quota: AskQuota,
     private val timeout: Duration = 20.seconds,
 ) : AskBackAgent {
     override suspend fun ask(
+        callerId: Int,
         query: String,
         priceRange: PriceRange?,
     ): Result<AskBack> {
         val askable = PreferenceQuestionPlanner.plan(ScentPreferences(), priceRange).map { it.id }
         return converse(
+            callerId = callerId,
             build = { feedback -> AskBackPrompts.ask(query, askable, feedback) },
             accept = { text ->
                 decode<AskBackOutput>(text)
                     .flatMap { AskBackValidator.toAskBack(it, query, priceRange) }
-                    .map { it.copy(modelWritten = true) }
+                    .map { it.copy(wordedBy = WordedBy.MODEL) }
             },
         )
     }
 
     override suspend fun explain(
+        callerId: Int,
         preferences: ScentPreferences,
         candidates: List<ListingCandidate>,
     ): Result<List<WhyLine>> {
@@ -71,16 +76,18 @@ class KoogAskBackAgent(
                 is Either.Right -> loaded.value
             }
         return converse(
+            callerId = callerId,
             build = { feedback -> AskBackPrompts.explain(candidates, feedback) },
             accept = { text ->
                 decode<WhyOutput>(text)
                     .flatMap { AskBackValidator.toWhyLines(it, candidates, notes) }
-                    .map { lines -> lines.map { it.copy(modelWritten = true) } }
+                    .map { lines -> lines.map { it.copy(wordedBy = WordedBy.MODEL) } }
             },
         )
     }
 
     private suspend fun <T> converse(
+        callerId: Int,
         build: (String?) -> Prompt,
         accept: (String) -> Result<T>,
     ): Result<T> {
@@ -92,7 +99,7 @@ class KoogAskBackAgent(
         var feedback: String? = null
         repeat(MAX_ATTEMPTS) {
             val text =
-                when (val reply = call(client, build(feedback))) {
+                when (val reply = call(callerId, client, build(feedback))) {
                     is Either.Left -> return reply
                     is Either.Right -> reply.value
                 }
@@ -104,10 +111,17 @@ class KoogAskBackAgent(
         return AppError.AgentError.InvalidOutput(feedback ?: "answer was not accepted").asLeft()
     }
 
+    // The quota is taken outside the try: inside it, a failure there could be caught below and
+    // reported as Unavailable.
     private suspend fun call(
+        callerId: Int,
         client: LLMClient,
         prompt: Prompt,
     ): Result<String> {
+        when (val taken = quota.take(callerId)) {
+            is Either.Left -> return taken
+            is Either.Right -> Unit
+        }
         val model = LLModel(client.llmProvider(), modelId, listOf(LLMCapability.Completion))
         return try {
             withTimeoutOrNull(timeout) { client.execute(prompt, model).textContent() }
