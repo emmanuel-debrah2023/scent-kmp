@@ -59,8 +59,13 @@ Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the s
 - **Layout:** the question inputs sit in a `Column` with `variant` `raised`; the heading and button stay outside
   it. A client that does not know the prop ignores it and draws a plain column.
 - **AI captions:** a `caption` text says "Question written by AI" above the heading or "Reasons written by AI ·
-  prices from Scent" above the cards. It is sent only when `modelWritten` is true, so the rules fallback and the
+  prices from Scent" above the cards. It is sent only when `wordedBy` is `MODEL`, so the rules fallback and the
   fixed edit heading never claim AI wrote them. The reasons caption shows if any reason came from the model.
+- **Paused notice:** when the daily limit stops the model (see "Daily limits"), the rules wording is tagged
+  `RULES_OVER_LIMIT` and a `notice` text takes the caption's place: "AI help is paused for today, so these are
+  our standard questions." or "..., so these reasons come from each fragrance's notes." It is `body` text, not a
+  `caption`, because the client draws every caption with the AI sparkle and no model wrote it. The edit step
+  makes no model call, so it never shows the notice.
 - **Opening a listing:** each result card carries an `open_listing` action whose `listingId` context entry is
   bound to `/results/<i>/listingId`. The action is client-handled (`ScentAction.handledOnClient`): the app
   navigates to the listing itself, so `POST /ask/actions` answers it with a 400 "Invalid action" and never
@@ -70,7 +75,35 @@ Both routes need a signed-in user and speak A2UI v0.9 with `A2uiJson` (not the s
   cancelled, its late answer discarded and the rules answer returned. Straight-to-results makes two model steps,
   so the worst case is about 24 s.
 - **Errors:** invalid input is a 400, storage or assistant failures a 503, with a short `ErrorResponse`; an
-  expected failure is never a 500.
+  expected failure is never a 500. Being over the daily limit is not an error to the client: the route answers
+  200 with the rules surface and the paused notice.
+
+## Daily limits
+
+The model costs money and the free tiers cap requests, so the ask routes limit how often they call it. Both
+limits count **model calls, not asks**: a full ask that goes straight to results makes two, and a retry after a
+rejected answer counts as another. Answers from the rules cost nothing and are never limited.
+
+| Setting | Default | Effect |
+|---|---|---|
+| `ASK_USER_DAILY_LIMIT` | 20 | Model calls one signed-in user may make per UTC day. |
+| `ASK_GLOBAL_DAILY_LIMIT` | 200 | Model calls everyone together may make per UTC day. |
+
+Set either in the environment, in `.env` or with `-D` (both are forwarded by `:server:run`). A blank value,
+anything that is not a whole number, or a number of 0 or below uses the default.
+
+- **Checked before the call:** `KoogAskBackAgent` takes one call from `AskQuota` before each request to the
+  model, so a caller over either limit never reaches it. `FallbackAskBackAgent` turns the refusal
+  (`AgentError.QuotaExceeded`, with scope `USER` or `GLOBAL`) into the rules answer tagged `RULES_OVER_LIMIT`.
+  `QuotaExceeded` is Scent's own limit; a 429 from the provider is still `RateLimited`.
+- **Where it is counted:** `ask_quota_usage` (V3) holds one row per scope (`user:<id>` or `global`) per UTC day.
+  The user row is counted first, then the global row, in one transaction, and only below its limit. If either
+  is full, both are rolled back, so a refused call spends nothing. The count is committed before the model is
+  called, so no connection is held during the call.
+- **Fails closed:** if the count cannot be read or written, the model is not called and the plain rules answer
+  is returned, without the notice.
+- **Not counted:** `-DASK_BACK_AGENT=fake` and `rules` make no model call, so E2E runs never touch the limits.
+- **Old rows** are not pruned yet (`chore/prune-ask-quota-usage`).
 
 ## Timeout policy
 
@@ -143,6 +176,7 @@ every option and price; the model only chooses and words. The route that serves 
 - The reply is untrusted. `AskBackValidator` is the safety boundary: enums, a budget that appears as a
   number in the query, question ids from the planner, no digits, £ or links in any model-written text,
   and why lines may only name notes the fragrance has. A broken rule triggers one retry, then rules.
+- Each model call first counts against the daily limits ("Daily limits" above).
 - Provider failures (429, 403, timeout, not configured) come back as `AppError.AgentError`, never
   thrown, are never retried, and fall back to the rules answer. Only the error type and status are
   logged, never the query or the provider's body.

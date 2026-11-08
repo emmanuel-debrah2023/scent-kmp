@@ -179,6 +179,18 @@ sealed class AppError {
             override val cause: Throwable? = null,
         ) : AgentError()
 
+        /**
+         * Scent's own daily limit on model calls was reached, for this user or for everyone. Not the
+         * provider's 429, which is [RateLimited].
+         */
+        data class QuotaExceeded(
+            val scope: Scope,
+            override val message: String = "The assistant has reached today's limit",
+            override val cause: Throwable? = null,
+        ) : AgentError() {
+            enum class Scope { USER, GLOBAL }
+        }
+
         data class Unavailable(
             val statusCode: Int? = null,
             override val message: String = "The assistant is unavailable (Code: $statusCode)",

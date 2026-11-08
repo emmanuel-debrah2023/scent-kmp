@@ -49,12 +49,13 @@ class KoogFailureMappingTest {
             AgentLlm.Configured(AgentProvider.OPENROUTER, ScriptedLLMClient(listOf(step))),
             "test/model:free",
             NoteVocabulary { emptySet<String>().asRight() },
+            FakeAskQuota(),
         )
 
     @Test
     fun `an exception Koog lets escape is Unavailable with no status and no provider text`() {
         escaping.forEach { thrown ->
-            val error = runBlocking { agent(Step.Fail(thrown)).ask("gift", range) }.leftOrNull()
+            val error = runBlocking { agent(Step.Fail(thrown)).ask(TEST_CALLER_ID, "gift", range) }.leftOrNull()
 
             val unavailable = assertIs<AppError.AgentError.Unavailable>(error, thrown::class.simpleName)
             assertNull(unavailable.statusCode)
@@ -68,7 +69,7 @@ class KoogFailureMappingTest {
         escaping.forEach { thrown ->
             val agent = FallbackAskBackAgent(agent(Step.Fail(thrown)), RulesAskBackAgent())
 
-            val result = runBlocking { agent.ask("gift", range) }
+            val result = runBlocking { agent.ask(TEST_CALLER_ID, "gift", range) }
 
             assertTrue(result.isRight, thrown::class.simpleName)
         }
@@ -79,7 +80,7 @@ class KoogFailureMappingTest {
     @Test
     fun `cancellation is never mapped to an error`() {
         assertFailsWith<CancellationException> {
-            runBlocking { agent(Step.Fail(CancellationException("cancelled"))).ask("gift", range) }
+            runBlocking { agent(Step.Fail(CancellationException("cancelled"))).ask(TEST_CALLER_ID, "gift", range) }
         }
     }
 
@@ -87,7 +88,7 @@ class KoogFailureMappingTest {
     fun `an outer time budget still cancels a model that never answers`() {
         val result =
             runBlocking {
-                withTimeoutOrNull(50.milliseconds) { agent(Step.Hang).ask("gift", range) }
+                withTimeoutOrNull(50.milliseconds) { agent(Step.Hang).ask(TEST_CALLER_ID, "gift", range) }
             }
 
         assertNull(result)
@@ -100,7 +101,12 @@ class KoogFailureMappingTest {
         root.addAppender(captured)
         try {
             escaping.forEach { thrown ->
-                runBlocking { FallbackAskBackAgent(agent(Step.Fail(thrown)), RulesAskBackAgent()).ask("gift", range) }
+                runBlocking {
+                    FallbackAskBackAgent(
+                        agent(Step.Fail(thrown)),
+                        RulesAskBackAgent(),
+                    ).ask(TEST_CALLER_ID, "gift", range)
+                }
             }
         } finally {
             root.detachAppender(captured)

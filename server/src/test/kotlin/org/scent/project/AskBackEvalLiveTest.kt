@@ -116,6 +116,7 @@ class AskBackEvalLiveTest {
                 AgentLlm.Configured(agent.AgentProvider.OPENROUTER, counting),
                 model,
                 NoteVocabulary { error("not used by ask") },
+                FakeAskQuota(),
             )
         val range = PriceRange(20.0, 200.0)
 
@@ -146,6 +147,7 @@ class AskBackEvalLiveTest {
                 AgentLlm.Configured(agent.AgentProvider.OPENROUTER, counting),
                 model,
                 NoteVocabulary { vocabulary.asRight() },
+                FakeAskQuota(),
             )
         val preferences = ScentPreferences(Intent.GIFT, ScentFamily.WOODY, null, null)
 
@@ -155,7 +157,7 @@ class AskBackEvalLiveTest {
                     runBlocking { delay(PACING) }
                     val before = counting.calls
                     val start = System.nanoTime()
-                    val result = runBlocking { agent.explain(preferences, candidates(cards)) }
+                    val result = runBlocking { agent.explain(TEST_CALLER_ID, preferences, candidates(cards)) }
                     val latencyMs = (System.nanoTime() - start) / NANOS_PER_MS
                     val error = result.leftOrNull()?.let { it::class.simpleName } ?: ""
                     listOf(cards, attempt, error.isEmpty(), error, counting.calls - before, latencyMs, model)
@@ -257,7 +259,7 @@ class AskBackEvalLiveTest {
     ): Timed {
         val before = counting.calls
         val start = System.nanoTime()
-        val result = runBlocking { agent.ask(case.query, range) }
+        val result = runBlocking { agent.ask(TEST_CALLER_ID, case.query, range) }
         return Timed(
             result.getOrNull(),
             result.leftOrNull(),

@@ -18,6 +18,7 @@ private const val NOTES_PER_LINE = 2
  */
 class RulesAskBackAgent : AskBackAgent {
     override suspend fun ask(
+        callerId: Int,
         query: String,
         priceRange: PriceRange?,
     ): Result<AskBack> {
@@ -32,6 +33,7 @@ class RulesAskBackAgent : AskBackAgent {
 
     // Wording comes from the fragrance's own notes only, never its name or brand: brands can carry digits.
     override suspend fun explain(
+        callerId: Int,
         preferences: ScentPreferences,
         candidates: List<ListingCandidate>,
     ): Result<List<WhyLine>> =
