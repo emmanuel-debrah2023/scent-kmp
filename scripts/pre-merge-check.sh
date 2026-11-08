@@ -285,9 +285,27 @@ android_ready() {
     done
 }
 
-# android_app_ready: the emulator can restart parts of Android under load and briefly lose the app.
+# android_settle: a cold boot keeps optimising apps for a while, and flows started then hit
+# "System UI isn't responding". Waits (up to 2 min) for the guest's 1-minute load to drop.
+android_settle() {
+    local waited=0 load
+    while [ "$waited" -lt 120 ]; do
+        load=$(adb shell cat /proc/loadavg | awk '{ print int($1) }')
+        [ "${load:-99}" -lt 4 ] && return 0
+        sleep 5; waited=$((waited + 5))
+    done
+    echo "[android] guest still busy (load $load) after 2 min; carrying on"
+}
+
+# android_app_ready: the emulator can restart parts of Android under load and briefly lose the app,
+# or leave an ANR dialog over it.
 android_app_ready() {
     android_ready || return 1
+    if adb shell dumpsys window | grep -q "Application Not Responding\|isn't responding"; then
+        echo "[android] dismissing a system ANR dialog left by the emulator"
+        adb shell input keyevent KEYCODE_BACK
+        sleep 2
+    fi
     adb shell pm path "$PRE_MERGE_ANDROID_APP_ID" >/dev/null 2>&1 && return 0
     echo "[android] $PRE_MERGE_ANDROID_APP_ID missing after an emulator restart; reinstalling"
     adb install -r "$ANDROID_APK" >/dev/null
@@ -314,6 +332,7 @@ android_job() {
     echo "$serial" >"$STATE/android-serial"
     export ANDROID_SERIAL="$serial"
     android_ready || { fail_platform android "emulator didn't finish booting within ${PRE_MERGE_BOOT_TIMEOUT_S}s"; return; }
+    [ -f "$STATE/android-booted" ] && android_settle
 
     # Large text, no animations. TalkBack stays off: it changes how Maestro's taps are delivered.
     adb shell settings get system font_scale | tr -d '\r' | sed 's/^null$/1.0/' >"$STATE/android-font-scale"
