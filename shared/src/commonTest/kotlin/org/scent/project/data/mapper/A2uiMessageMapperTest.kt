@@ -7,6 +7,8 @@ import org.scent.project.data.mapper.A2uiMessageMapper.toSurfaceMessages
 import org.scent.project.data.remote.a2ui.A2uiJson
 import org.scent.project.data.remote.a2ui.A2uiMessageBatch
 import org.scent.project.data.remote.a2ui.A2uiServerMessage
+import org.scent.project.data.remote.a2ui.catalog.Provenance
+import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
 import org.scent.project.domain.error.AppError
 import org.scent.project.domain.surface.ActionTemplate
 import org.scent.project.domain.surface.SurfaceMessage
@@ -256,6 +258,23 @@ class A2uiMessageMapperTest {
     }
 
     @Test
+    fun `a recommendation card reads its reasons path ahead of an older server's why`() {
+        val base = """{"id":"r","component":"RecommendationCard","name":{"path":"/n"},"price":{"path":"/p"}"""
+
+        assertEquals(
+            "/rs",
+            (node("""$base,"reasons":{"path":"/rs"},"why":{"path":"/w"}}""") as SurfaceNode.RecommendationCard)
+                .reasonsPath,
+        )
+        assertEquals(
+            "/rs",
+            (node("""$base,"reasons":{"path":"/rs"}}""") as SurfaceNode.RecommendationCard).reasonsPath,
+        )
+        assertEquals("/w", (node("""$base,"why":{"path":"/w"}}""") as SurfaceNode.RecommendationCard).reasonsPath)
+        assertEquals(SurfaceNode.Unsupported("r"), node("$base}"))
+    }
+
+    @Test
     fun `a recommendation card keeps an optional meta path and is still shown without one`() {
         val json =
             """{"id":"r","component":"RecommendationCard","name":{"path":"/n"},"price":{"path":"/p"},""" +
@@ -325,5 +344,84 @@ class A2uiMessageMapperTest {
     @Test
     fun `decodeBatch rejects a batch with a broken message`() {
         assertRejected(decodeBatch("""{"messages":[{"version":"v0.1","deleteSurface":{"surfaceId":"s"}}]}"""))
+    }
+
+    // ProvenanceNote
+
+    private fun note(
+        source: String?,
+        subject: String? = "reasons",
+        extra: String? = null,
+    ): SurfaceNode {
+        val props =
+            listOfNotNull(
+                """"id":"n","component":"ProvenanceNote"""",
+                source?.let { """"source":"$it"""" },
+                subject?.let { """"subject":"$it"""" },
+                extra,
+            )
+        return node(props.joinToString(",", "{", "}"))
+    }
+
+    @Test
+    fun `a provenance note maps every source wire name to that source`() {
+        Provenance.entries.forEach { source ->
+            assertEquals(
+                SurfaceNode.ProvenanceNote("n", source, ProvenanceSubject.REASONS),
+                note(source.wireName),
+            )
+        }
+    }
+
+    @Test
+    fun `a provenance note maps every subject wire name to that subject`() {
+        ProvenanceSubject.entries.forEach { subject ->
+            assertEquals(
+                SurfaceNode.ProvenanceNote("n", Provenance.AI_PAUSED, subject),
+                note("ai_paused", subject.wireName),
+            )
+        }
+    }
+
+    @Test
+    fun `a provenance note with an unknown or missing source is omitted and never claims AI`() {
+        assertEquals(SurfaceNode.Omitted("n"), note("ai_maybe"))
+        assertEquals(SurfaceNode.Omitted("n"), note("AI_WRITTEN"))
+        assertEquals(SurfaceNode.Omitted("n"), note(null))
+    }
+
+    @Test
+    fun `a provenance note with an unknown or missing subject is omitted`() {
+        assertEquals(SurfaceNode.Omitted("n"), note("ai_written", "prices"))
+        assertEquals(SurfaceNode.Omitted("n"), note("ai_written", null))
+    }
+
+    @Test
+    fun `a provenance note keeps its action and rating path`() {
+        val mapped =
+            note(
+                "ai_written",
+                extra =
+                    """"action":{"event":{"name":"rate_reasons","context":{"rating":{"path":"/feedback/rating"}}}},""" +
+                        """"rating":{"path":"/feedback/rating"}""",
+            )
+
+        assertEquals(
+            SurfaceNode.ProvenanceNote(
+                "n",
+                Provenance.AI_WRITTEN,
+                ProvenanceSubject.REASONS,
+                ActionTemplate("rate_reasons", mapOf("rating" to "/feedback/rating")),
+                "/feedback/rating",
+            ),
+            mapped,
+        )
+    }
+
+    @Test
+    fun `a provenance note drops a rating path that is not a pointer`() {
+        val mapped = note("ai_written", extra = """"rating":{"path":"feedback"}""")
+
+        assertNull(assertIs<SurfaceNode.ProvenanceNote>(mapped).ratingPath)
     }
 }

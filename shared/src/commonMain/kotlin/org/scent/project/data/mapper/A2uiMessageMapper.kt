@@ -16,6 +16,8 @@ import org.scent.project.data.remote.a2ui.UpdateComponents
 import org.scent.project.data.remote.a2ui.UpdateDataModel
 import org.scent.project.data.remote.a2ui.catalog.A2uiAction
 import org.scent.project.data.remote.a2ui.catalog.ColumnVariant
+import org.scent.project.data.remote.a2ui.catalog.Provenance
+import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
 import org.scent.project.data.remote.a2ui.catalog.ScentComponent
 import org.scent.project.data.remote.a2ui.catalog.TextVariant
 import org.scent.project.domain.error.AppError
@@ -128,6 +130,7 @@ object A2uiMessageMapper {
                 items.bound()?.let { SurfaceNode.PreferenceSummary(id, it, action.toTemplate()) }
                     ?: SurfaceNode.Unsupported(id)
             is ScentComponent.RecommendationCard -> recommendationCard(id)
+            is ScentComponent.ProvenanceNote -> provenanceNote(id)
             is ScentComponent.Unknown -> SurfaceNode.Unsupported(id)
         }.asRight()
     }
@@ -168,7 +171,8 @@ object A2uiMessageMapper {
     }
 
     private fun ScentComponent.RecommendationCard.recommendationCard(id: String): SurfaceNode {
-        val paths = listOf(name, price, why).map { it.bound() }
+        // A server sends reasons, or (before reasons existed) a single why; either is enough to show the card.
+        val paths = listOf(name.bound(), price.bound(), reasons.bound() ?: why.bound())
         return if (paths.all {
                 it != null
             }
@@ -183,6 +187,18 @@ object A2uiMessageMapper {
             )
         } else {
             SurfaceNode.Unsupported(id)
+        }
+    }
+
+    // Both enums must be read exactly. Anything else is omitted, not shown as a placeholder or guessed: a
+    // guess could say AI wrote words that came from the rules.
+    private fun ScentComponent.ProvenanceNote.provenanceNote(id: String): SurfaceNode {
+        val source = Provenance.fromWireName(source)
+        val subject = ProvenanceSubject.fromWireName(subject)
+        return if (source != null && subject != null) {
+            SurfaceNode.ProvenanceNote(id, source, subject, action.toTemplate(), rating.bound())
+        } else {
+            SurfaceNode.Omitted(id)
         }
     }
 

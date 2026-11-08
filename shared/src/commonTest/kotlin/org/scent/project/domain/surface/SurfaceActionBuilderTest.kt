@@ -27,6 +27,9 @@ class SurfaceActionBuilderTest {
                 """"price":{"path":"/results/0/price"},"why":{"path":"/results/0/why"},""" +
                 """"action":{"event":{"name":"open_listing","context":{"listingId":{"path":"/results/0/listingId"}}}}}"""
         val plain = """{"id":"plain","component":"Button","label":"x"}"""
+        val note =
+            """{"id":"note","component":"ProvenanceNote","source":"ai_unavailable","subject":"reasons",""" +
+                """"action":{"event":{"name":"retry_ask","context":{"family":{"path":"/answers/family"}}}}}"""
         val state =
             reduce(
                 batch(
@@ -39,6 +42,7 @@ class SurfaceActionBuilderTest {
                         card,
                         rogue,
                         plain,
+                        note,
                         """{"id":"txt","component":"Text","text":"x"}""",
                     ),
                 ),
@@ -123,5 +127,14 @@ class SurfaceActionBuilderTest {
         val action = SurfaceActionBuilder.build(requireNotNull(edited).surface(), "submit", now).getOrNull()
 
         assertEquals(JsonPrimitive("FRESH"), action?.context?.get("family"))
+    }
+
+    @Test
+    fun `a provenance note's Try again builds retry_ask from the bound answers`() {
+        val action = SurfaceActionBuilder.build(surface(), "note", now).getOrNull()
+
+        assertEquals("retry_ask", action?.name)
+        assertEquals("note", action?.sourceComponentId)
+        assertEquals(JsonPrimitive("WOODY"), action?.context?.get("family"))
     }
 }

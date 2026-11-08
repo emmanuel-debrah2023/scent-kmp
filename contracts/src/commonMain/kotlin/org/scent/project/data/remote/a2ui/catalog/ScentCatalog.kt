@@ -95,12 +95,32 @@ sealed interface ScentComponent {
         val name: DataBinding? = null,
         @SchemaDescription("Data path of the price")
         val price: DataBinding? = null,
-        @SchemaDescription("Data path of the one line reason this result fits")
+        @SchemaDescription("Data path of the one line reason this result fits, sent by servers older than reasons")
         val why: DataBinding? = null,
         @SchemaDescription("Event sent when the card is tapped; open_listing with a listingId binding")
         val action: A2uiAction? = null,
         @SchemaDescription("Data path of the formatted facts line, e.g. Sealed · 100 ml · Atelier Nord")
         val meta: DataBinding? = null,
+        @SchemaDescription(
+            "Data path of up to three reasons this result fits, in order: smell, when to wear, why it fits",
+        )
+        val reasons: DataBinding? = null,
+    ) : ScentComponent
+
+    // Says who wrote the wording near it. The server sends only enum values; the app owns every word,
+    // so a model can never word its own attribution.
+    @Serializable
+    @SerialName("ProvenanceNote")
+    data class ProvenanceNote(
+        override val id: String? = null,
+        @SchemaDescription("Who wrote the nearby wording: ai_written, ai_paused or ai_unavailable")
+        val source: String? = null,
+        @SchemaDescription("What the note is about: questions or reasons")
+        val subject: String? = null,
+        @SchemaDescription("Event sent from the note: retry_ask on ai_unavailable, rate_reasons on ai_written")
+        val action: A2uiAction? = null,
+        @SchemaDescription("Data path the reader's rating, up or down, is written to before rate_reasons is sent")
+        val rating: DataBinding? = null,
     ) : ScentComponent
 
     // Decode only: a component name this app does not know. It keeps the surface decodable so the

@@ -12,6 +12,8 @@ enum class ScentAction(
     ANSWER_QUESTIONS("answer_questions"),
     EDIT_ANSWERS("edit_answers"),
     OPEN_LISTING("open_listing", handledOnClient = true),
+    RETRY_ASK("retry_ask"),
+    RATE_REASONS("rate_reasons"),
     ;
 
     companion object {

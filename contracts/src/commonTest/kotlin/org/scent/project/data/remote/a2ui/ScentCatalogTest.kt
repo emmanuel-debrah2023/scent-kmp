@@ -7,6 +7,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.scent.project.data.remote.a2ui.catalog.A2uiAction
 import org.scent.project.data.remote.a2ui.catalog.A2uiEvent
+import org.scent.project.data.remote.a2ui.catalog.Provenance
+import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
+import org.scent.project.data.remote.a2ui.catalog.ReasonsRating
 import org.scent.project.data.remote.a2ui.catalog.ScentAction
 import org.scent.project.data.remote.a2ui.catalog.ScentComponent
 import kotlin.test.Test
@@ -42,6 +45,14 @@ class ScentCatalogTest {
                 DataBinding("/r/0/why"),
                 A2uiAction(A2uiEvent("open_listing", mapOf("listingId" to DataBinding("/r/0/listingId")))),
                 DataBinding("/r/0/meta"),
+                DataBinding("/r/0/reasons"),
+            ),
+            ScentComponent.ProvenanceNote(
+                "n",
+                "ai_written",
+                "reasons",
+                A2uiAction(A2uiEvent("rate_reasons", mapOf("rating" to DataBinding("/feedback/rating")))),
+                DataBinding("/feedback/rating"),
             ),
         )
 
@@ -143,5 +154,42 @@ class ScentCatalogTest {
         assertNull(ScentAction.fromWireName("delete_everything"))
         assertNull(ScentAction.fromWireName(null))
         assertEquals(ScentAction.EDIT_ANSWERS, ScentAction.fromWireName("edit_answers"))
+    }
+
+    @Test
+    fun `every provenance source is read from its wire name`() {
+        assertEquals(Provenance.AI_WRITTEN, Provenance.fromWireName("ai_written"))
+        assertEquals(Provenance.AI_PAUSED, Provenance.fromWireName("ai_paused"))
+        assertEquals(Provenance.AI_UNAVAILABLE, Provenance.fromWireName("ai_unavailable"))
+    }
+
+    @Test
+    fun `an unknown or missing provenance source is no source`() {
+        assertNull(Provenance.fromWireName("ai_maybe"))
+        assertNull(Provenance.fromWireName("AI_WRITTEN"))
+        assertNull(Provenance.fromWireName(null))
+    }
+
+    @Test
+    fun `every provenance subject is read from its wire name and anything else is none`() {
+        assertEquals(ProvenanceSubject.QUESTIONS, ProvenanceSubject.fromWireName("questions"))
+        assertEquals(ProvenanceSubject.REASONS, ProvenanceSubject.fromWireName("reasons"))
+        assertNull(ProvenanceSubject.fromWireName("prices"))
+        assertNull(ProvenanceSubject.fromWireName(null))
+    }
+
+    @Test
+    fun `retry_ask and rate_reasons are allowed and sent to the server`() {
+        assertEquals(ScentAction.RETRY_ASK, ScentAction.fromWireName("retry_ask"))
+        assertEquals(ScentAction.RATE_REASONS, ScentAction.fromWireName("rate_reasons"))
+        assertEquals(false, ScentAction.RETRY_ASK.handledOnClient)
+        assertEquals(false, ScentAction.RATE_REASONS.handledOnClient)
+    }
+
+    @Test
+    fun `a reasons rating is up or down and nothing else`() {
+        assertEquals(ReasonsRating.UP, ReasonsRating.fromWireName("up"))
+        assertEquals(ReasonsRating.DOWN, ReasonsRating.fromWireName("down"))
+        assertNull(ReasonsRating.fromWireName("meh"))
     }
 }

@@ -2,6 +2,8 @@ package org.scent.project.domain.surface
 
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import org.scent.project.data.remote.a2ui.catalog.Provenance
+import org.scent.project.data.remote.a2ui.catalog.ProvenanceSubject
 
 /** What a button, summary or card sends when pressed: an action name and, per key, the data path to read. */
 data class ActionTemplate(
@@ -63,17 +65,38 @@ sealed interface SurfaceNode {
         val action: ActionTemplate?,
     ) : SurfaceNode
 
+    /**
+     * [reasonsPath] points at a list of reasons, or at the single `why` line an older server sends; the
+     * bindings read either shape.
+     */
     data class RecommendationCard(
         override val id: String,
         val namePath: String,
         val pricePath: String,
-        val whyPath: String,
+        val reasonsPath: String,
         val action: ActionTemplate?,
         val metaPath: String? = null,
     ) : SurfaceNode
 
+    /** Who wrote the wording beside it. The app owns every word; the server sends only [source] and [subject]. */
+    data class ProvenanceNote(
+        override val id: String,
+        val source: Provenance,
+        val subject: ProvenanceSubject,
+        val action: ActionTemplate? = null,
+        val ratingPath: String? = null,
+    ) : SurfaceNode
+
     /** A component this client does not know or cannot bind. Shown as a quiet placeholder. */
     data class Unsupported(
+        override val id: String,
+    ) : SurfaceNode
+
+    /**
+     * A component that must not be drawn at all, not even as a placeholder: a ProvenanceNote whose source or
+     * subject this client cannot read, because guessing could claim AI wrote something it did not.
+     */
+    data class Omitted(
         override val id: String,
     ) : SurfaceNode
 }

@@ -127,6 +127,12 @@ private suspend fun answerAction(
                                 candidates,
                             )
                         ScentAction.OPEN_LISTING -> invalid("action")
+                        // TODO(feature/ask-provenance-note-server): retry_ask and rate_reasons are in the
+                        //  allowlist so the app can send them, but nothing answers them yet. Safe while the
+                        //  builder sends no ProvenanceNote, since only a note carries either action.
+                        ScentAction.RETRY_ASK,
+                        ScentAction.RATE_REASONS,
+                        -> invalid("action")
                     }
                 }
             }
