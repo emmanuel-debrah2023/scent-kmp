@@ -58,6 +58,8 @@ fun LoginScreen(
             modifier =
                 Modifier
                     .widthIn(max = 384.dp)
+                    // TODO(fix/auth-forms-and-viewmodel): no imePadding, so on iOS at accessibility-large the
+                    // keyboard covers SIGN IN and nothing dismisses it.
                     .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

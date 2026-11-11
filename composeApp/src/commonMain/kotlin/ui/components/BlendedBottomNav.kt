@@ -91,6 +91,8 @@ fun BlendedBottomNav(
                             .weight(1f)
                             .padding(vertical = spacing.xxs),
                 ) {
+                    // TODO(fix/a11y-contrast-and-tab-semantics): the item's target measures 48x35dp on Android
+                    // (font 2.0) and 48x36pt on iOS; make the whole item the >=48dp target.
                     IconButton(
                         onClick = { onTabSelected(index) },
                         modifier = Modifier.size(spacing.iconSizeMedium),

@@ -192,6 +192,18 @@ But always run the full `allTests` as the final gate before push.
 
 ---
 
+## Before Merge
+
+This loop never boots an emulator or simulator. Device checks are too slow for every iteration,
+so keep it that way: no gate here starts a device.
+
+Before a PR that touches app or shared UI code merges, run the **`scent-pre-merge`** skill
+(`scripts/pre-merge-check.sh`). It checks that the semantics these gates test on the JVM actually
+reach TalkBack and VoiceOver on a running Android emulator and iOS simulator at large text. Tiers:
+`docs/testing-a11y.md`.
+
+---
+
 ## Stopping Conditions
 
 Keep looping until all five gates are clean. If you hit the same failure twice in a row without a clear fix, or you're past 5 iterations, stop and surface exactly what's still failing and what was tried — don't keep silently retrying the same fix, and don't ship a partial pass without flagging it explicitly.

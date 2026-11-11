@@ -1,0 +1,6 @@
+required:
+  - Marketplace
+  - Search listings
+  - Filters
+  # Listing cards carry one rewritten announcement (clearedDescription), not concatenated children.
+  - "re:.* condition, .*sold by .*"

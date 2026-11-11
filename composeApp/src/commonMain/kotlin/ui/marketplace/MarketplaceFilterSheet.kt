@@ -105,6 +105,8 @@ fun MarketplaceFilterSheet(
         }
     }
 
+    // TODO(fix/a11y-contrast-and-tab-semantics): the default drag handle adds an unlabelled 32x48dp clickable
+    // on Android; pass a labelled >=48dp dragHandle.
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Column(
             modifier =

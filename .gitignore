@@ -49,3 +49,7 @@ api_keys.properties
 snapshots/
 # Working notes for a paused ticket — not part of this branch
 docs/inset-audit.md
+
+# Python (scripts/a11y_check.py and its tests)
+__pycache__/
+.pytest_cache/

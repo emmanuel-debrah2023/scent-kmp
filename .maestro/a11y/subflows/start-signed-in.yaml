@@ -1,0 +1,21 @@
+appId: ${APP_ID}
+---
+# Starts signed in on Home on either platform, for the pre-merge a11y flows.
+# Android uses the gray-box launch-argument start (ADR-0002). iOS has no launch-argument hook, so
+# it relaunches into the session that setup/ios-sign-in.yaml stored (pre-merge-check.sh runs it first).
+# APP_ID comes from scripts/pre-merge-check.sh, because the bundle IDs differ per platform.
+- runFlow:
+    when:
+      platform: Android
+    file: ../../subflows/start-authenticated.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          stopApp: true
+      - extendedWaitUntil:
+          visible: "Home"
+          timeout: 15000
+- assertNotVisible: "Welcome back"
+- assertVisible: "Home"

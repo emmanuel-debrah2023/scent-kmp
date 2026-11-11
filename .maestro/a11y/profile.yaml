@@ -1,0 +1,11 @@
+appId: ${APP_ID}
+tags:
+  - a11y
+---
+# Pre-merge a11y: ends settled on the Profile tab so the checker can read its accessibility tree.
+- runFlow: subflows/start-signed-in.yaml
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible: "EDIT PROFILE"
+    timeout: 15000
+- assertVisible: "EDIT PROFILE"

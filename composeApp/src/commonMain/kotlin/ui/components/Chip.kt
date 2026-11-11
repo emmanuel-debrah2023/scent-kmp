@@ -144,6 +144,8 @@ fun SelectableChip(
             modifier
                 .heightIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
                 .widthIn(min = ScentThemeExtras.spacing.inlineActionMinTouchTarget)
+                // TODO(fix/ios-selectable-chip-state): correct on Android, but the iOS bridge exposes the chip as a
+                // plain Button with no selected state, so VoiceOver never says "selected".
                 .accessibleToggle(
                     value = selected,
                     label = label,

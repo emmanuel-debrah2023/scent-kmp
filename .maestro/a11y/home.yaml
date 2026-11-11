@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+tags:
+  - a11y
+---
+# Pre-merge a11y: ends settled on the Home feed so the checker can read its accessibility tree.
+- runFlow: subflows/start-signed-in.yaml
+- extendedWaitUntil:
+    visible: "VIEW FRAGRANCE"
+    timeout: 15000
+- assertVisible: "VIEW FRAGRANCE"

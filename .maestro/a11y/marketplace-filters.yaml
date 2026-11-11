@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+tags:
+  - a11y
+---
+# Pre-merge a11y: ends with the Marketplace filter sheet open, the screen that holds the toggles (condition chips).
+- runFlow: subflows/start-signed-in.yaml
+- tapOn: "Market"
+- extendedWaitUntil:
+    visible: "Marketplace"
+    timeout: 15000
+- assertVisible: "Marketplace"
+- tapOn: "Filters"
+- extendedWaitUntil:
+    visible: "CONDITION"
+    timeout: 15000
+- assertVisible: "CONDITION"
