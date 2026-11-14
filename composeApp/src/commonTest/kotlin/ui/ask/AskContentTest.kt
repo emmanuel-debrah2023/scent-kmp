@@ -75,12 +75,12 @@ abstract class AskContentTest {
         }
 
     @Test
-    fun `a slow round trip adds the twenty second note`() =
+    fun `a slow round trip announces the twenty second note`() =
         runComposeUiTest {
             val state = AskUiState(phase = AskPhase.Asking, isSlow = true)
             setContent { MaterialTheme { AskContent(state.toUiModel(), AskActions.noOp()) } }
 
-            onNodeWithText("This can take up to 20 seconds.").assertExists()
+            onNodeWithText("This can take up to 20 seconds.").assert(liveRegion(LiveRegionMode.Polite))
         }
 
     @Test

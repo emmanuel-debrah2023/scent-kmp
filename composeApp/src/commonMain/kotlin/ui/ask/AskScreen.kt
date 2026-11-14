@@ -141,11 +141,13 @@ private fun AskProgress(slowNote: String?) {
     ) {
         // The status line above announces the wait; the spinner would only add noise.
         CircularProgressIndicator(modifier = Modifier.decorative())
+        // Arrives seconds after the status line has been read, so it must announce itself.
         slowNote?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.accessibleLiveRegion(),
             )
         }
     }

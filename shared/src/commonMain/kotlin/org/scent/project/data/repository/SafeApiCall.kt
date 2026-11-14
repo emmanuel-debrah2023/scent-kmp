@@ -32,6 +32,9 @@ suspend fun <T> safeApiCall(
     } catch (e: ConnectTimeoutException) {
         AppError.NetworkError.Timeout(cause = e).asLeft()
     } catch (e: IOException) {
+        // TODO(fix/ktor-client-error-handling): a refused connection (device online, server not
+        //  listening) lands here too, so Ask and Marketplace say "You are offline". Safe while production
+        //  fronts the server with Render's proxy, which answers 502/503 (ServerError) when the app is down.
         AppError.NetworkError.NoConnection(cause = e).asLeft()
     } catch (e: SerializationException) {
         AppError.NetworkError.ParseError(cause = e).asLeft()
