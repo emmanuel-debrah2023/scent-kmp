@@ -2,6 +2,7 @@ package ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +55,8 @@ fun MainGraph(
                 onTabSelected = { nav.selectTab(Tab.entries[it]) },
                 snackbarHostState = snackbarHostState,
             ) { innerPadding ->
-                Box(modifier = Modifier.padding(innerPadding)) {
+                // Consuming what the bars already pad stops imePadding() below from counting the bottom bar twice.
+                Box(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)) {
                     when (nav.selectedTab) {
                         Tab.HOME -> Unit
                         Tab.SEARCH ->
