@@ -2846,9 +2846,34 @@ app/src/
 
 ---
 
+## Window Insets Ownership
+
+The app draws edge to edge (`enableEdgeToEdge()` in `MainActivity`), so every inset is handled in Compose, and each inset has exactly one owner. The decision and its reasoning are recorded in [ADR-0005](adr/0005-window-insets-ownership.md).
+
+- **The root scaffold owns the system-bar and display-cutout insets.** In Scent that is `BlendedScaffold`, whose content lambda receives the measured header and bottom-nav heights as `innerPadding`. Screens never add status-bar or navigation-bar padding of their own.
+- **The content root applies the scaffold's padding and then consumes it:** `Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)`. In Scent this belongs in `MainGraph`, once for every tab. The M3 `Scaffold` (and `BlendedScaffold`, which mirrors it) hands over `innerPadding` but does not mark those insets as consumed. Without `consumeWindowInsets`, a later `imePadding()` adds the navigation-bar and bottom-bar height a second time and leaves a gap above the keyboard.
+- **Full-bleed screens** that draw under the chrome (Home's feed) may use `innerPadding` as `contentPadding` instead. If one ever takes text input, it consumes the padding as above first.
+- **The screen owns IME padding**, at the form root or on a pinned action bar. The scaffold does not, because not every screen should resize when the keyboard opens (the video feed, for one).
+- **Nested scaffolds** (in a sheet or a sub-flow) pass `contentWindowInsets = WindowInsets(0)`, so the outer scaffold's insets are not applied twice.
+- **Android:** set `android:windowSoftInputMode="adjustResize"` explicitly on the activity in the manifest.
+- **Multiline fields** (Bio, a listing description) use a `BringIntoViewRequester` so the cursor stays above the keyboard as the field grows.
+- A submit error on a form is announced through a live region (see [Live regions](#live-regions)), because the keyboard can hide it.
+
+Where the code stands (2026-11-14): `MainGraph` consumes `innerPadding` from PR #152, and only the Ask tab applies `imePadding()`. The manifest entry, IME padding on the other forms and the Bio `BringIntoViewRequester` are `fix/form-ime-insets`.
+
+```kotlin
+// Once, where the root scaffold hands over its padding
+BlendedScaffold(selectedTab = tab, onTabSelected = onTabSelected) { innerPadding ->
+    Box(Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)) { TabContent() }
+}
+
+// In the screen: IME padding at the form root
+Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) { /* fields, submit */ }
+```
+
 ## Accessibility (Compose Semantics)
 
-**CRITICAL**: All interactive and meaningful UI elements MUST expose correct Compose semantics so TalkBack and other accessibility services can announce and operate them correctly. Don't hand-write `Modifier.semantics { ... }` blocks inline in screen code — use the shared accessibility Modifier extensions in `ui/accessibility/AccessibilityModifiers.kt` (`accessibleLabel`, `accessibleClickable`, `accessibleCombinedClickable`, `mergedGroup`, `accessibleToggle`, `clearedDescription`, `withCustomActions`, `collectionContainer`/`collectionItem`, `accessibleHeading`, `accessiblePane`, `accessibleState`, `decorative`) so the merge-vs-clear distinction stays consistent across the codebase instead of being re-decided ad hoc on every card.
+**CRITICAL**: All interactive and meaningful UI elements MUST expose correct Compose semantics so TalkBack and other accessibility services can announce and operate them correctly. Don't hand-write `Modifier.semantics { ... }` blocks inline in screen code — use the shared accessibility Modifier extensions in `ui/accessibility/AccessibilityModifiers.kt` (`accessibleLabel`, `accessibleClickable`, `accessibleCombinedClickable`, `mergedGroup`, `accessibleToggle`, `clearedDescription`, `withCustomActions`, `collectionContainer`/`collectionItem`, `accessibleHeading`, `accessiblePane`, `accessibleState`, `accessibleLiveRegion`, `decorative`) so the merge-vs-clear distinction stays consistent across the codebase instead of being re-decided ad hoc on every card.
 
 ### Core rule: merge vs. clear
 
@@ -2857,6 +2882,25 @@ app/src/
 - A clear wipes every semantics modifier to its right on the same node, not only the children. Pass custom actions through `clearedDescription(customActions = …)` rather than a later `withCustomActions`, and when the click comes from a component's own `onClick` (such as `Card(onClick)`), pass it as `clearedDescription(onClick = …)` so the card stays actionable.
 - `accessibleClickable()` / `accessibleCombinedClickable()` clear descendants too: the label is the whole announcement and stays on the clickable node. Never put an independently interactive child inside one, and place any semantics the node must keep (live region, collection item) to the left of it.
 - Never attach `clickable`/`toggleable` to a child living inside a `mergedGroup()` block. Anything independently actionable either stays outside the merged group as its own focusable control, or gets exposed via `withCustomActions` on the parent.
+
+### Live regions
+
+`accessibleLiveRegion(mode)` makes TalkBack announce a node when its content changes, without moving focus.
+
+- **Default to `LiveRegionMode.Polite`.** Use `Assertive` only for urgent changes the user must hear straight away. An ordinary form error is not urgent.
+- **Use it for** form and submit errors, async status messages ("Listing published", "Upload failed"), and an empty or error state that changes after a retry.
+- **Don't use it for** content that updates often: character counters, timers, progress percentages, or text that changes as the user types. Every change would interrupt.
+- **Keep the node composed and change its text.** Don't add the node to composition only when an error appears, because the announcement is unreliable that way. Leave it in place, empty, when there is nothing to say.
+- **iOS: verify on device.** VoiceOver support for these regions through Compose Multiplatform has not been tested yet, so don't claim it works on both platforms until it has.
+- A form's error region sits inside the IME-padded form root (see [Window Insets Ownership](#window-insets-ownership)), so it stays on screen above the keyboard as well as being heard.
+
+```kotlin
+// The node is always there; only its text changes
+Text(
+    text = state.submitError.orEmpty(),
+    modifier = Modifier.accessibleLiveRegion(),
+)
+```
 
 ### Mandatory Patterns
 
