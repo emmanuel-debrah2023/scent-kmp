@@ -163,12 +163,15 @@ fun Modifier.accessibleState(description: String): Modifier = semantics { stateD
 
 /**
  * Marks a region whose content changes should be announced without the user moving
- * focus — e.g. a typeahead's suggestion list appearing under the field being typed in.
- * Polite queues behind whatever is currently being spoken; assertive interrupts, which
- * is almost never right for content the user did not explicitly request.
+ * focus — e.g. a submit error, "Listing published", or an empty state replaced after a retry.
+ * Polite queues behind whatever is currently being spoken; assertive interrupts, so keep it
+ * for urgent changes the user must hear at once (an ordinary form error is not urgent).
+ * Keep the node composed and change its text rather than composing it only when there is
+ * something to say. Never use it on text that changes often (counters, timers, typing).
+ * Rules: the Live regions part of ADS-STE100's Accessibility section.
  */
-fun Modifier.accessibleLiveRegion(polite: Boolean = true): Modifier =
-    semantics { liveRegion = if (polite) LiveRegionMode.Polite else LiveRegionMode.Assertive }
+fun Modifier.accessibleLiveRegion(mode: LiveRegionMode = LiveRegionMode.Polite): Modifier =
+    semantics { liveRegion = mode }
 
 /** Hides a purely decorative container (background shape, divider, gradient) from a11y services. */
 fun Modifier.decorative(): Modifier = clearAndSetSemantics {}
