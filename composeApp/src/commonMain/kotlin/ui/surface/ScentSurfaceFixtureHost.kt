@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.serialization.json.JsonElement
 import org.scent.project.data.mapper.A2uiMessageMapper
+import org.scent.project.domain.surface.SurfaceRating
 import org.scent.project.domain.surface.SurfaceReducer
 import org.scent.project.domain.surface.SurfaceState
 
@@ -40,6 +41,14 @@ internal class SurfaceFixture(
     ) {
         SurfaceReducer.setValue(state, surfaceId, path, value).getOrNull()?.let { state = it }
     }
+
+    fun rate(
+        surfaceId: String,
+        noteId: String,
+        rating: SurfaceRating,
+    ) {
+        SurfaceReducer.setRating(state, surfaceId, noteId, rating).getOrNull()?.let { state = it }
+    }
 }
 
 /**
@@ -60,6 +69,10 @@ internal fun ScentSurfaceFixtureHost(
             when (event) {
                 is SurfaceEvent.ValueChanged -> fixture.edit(event.surfaceId, event.path, event.value)
                 is SurfaceEvent.ActionTriggered -> onAction(event)
+                is SurfaceEvent.RatingChosen -> {
+                    fixture.rate(event.surfaceId, event.componentId, event.rating)
+                    onAction(SurfaceEvent.ActionTriggered(event.surfaceId, event.componentId))
+                }
             }
         },
         modifier = modifier,

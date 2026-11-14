@@ -126,6 +126,9 @@ object ScentThemeExtras {
     val interactive: Color get() = ScentInteractive
     val onInteractive: Color get() = ScentOnInteractive
 
+    // Tint for a card's warm drop shadow.
+    val cardShadow: Color get() = ScentCardShadow
+
     // Listing image placeholder tint — mirrors Home's full-bleed card tones.
     val listingPlaceholder: Color get() = ScentListingPlaceholder
 

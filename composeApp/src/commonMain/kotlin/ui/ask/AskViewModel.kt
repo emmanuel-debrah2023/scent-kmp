@@ -15,10 +15,12 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.surface.SurfaceAction
 import org.scent.project.domain.surface.SurfaceActionBuilder
 import org.scent.project.domain.surface.SurfaceMessage
+import org.scent.project.domain.surface.SurfaceNode
 import org.scent.project.domain.surface.SurfaceReducer
 import org.scent.project.domain.surface.SurfaceState
 import org.scent.project.domain.surface.handledOnClient
 import org.scent.project.domain.surface.listingToOpen
+import org.scent.project.domain.surface.ratesReasons
 import org.scent.project.domain.surface.reopensAnswers
 import org.scent.project.domain.usecase.SendAskActionUseCase
 import org.scent.project.domain.usecase.StartAskUseCase
@@ -78,6 +80,7 @@ class AskViewModel(
         when (event) {
             is SurfaceEvent.ValueChanged -> editValue(event)
             is SurfaceEvent.ActionTriggered -> triggerAction(event)
+            is SurfaceEvent.RatingChosen -> chooseRating(event)
         }
     }
 
@@ -163,8 +166,26 @@ class AskViewModel(
         )
     }
 
+    // The rating is stored before the action is built, so the action reads it from the data model.
+    private fun chooseRating(event: SurfaceEvent.RatingChosen) {
+        val showing = _uiState.value.phase as? AskPhase.Showing ?: return
+        if (showing.pending != null) return
+        SurfaceReducer.setRating(surfaces, event.surfaceId, event.componentId, event.rating).handleResult(
+            onError = { error -> updateShowing { it.copy(actionError = error) } },
+            onSuccess = { rated ->
+                surfaces = rated
+                updateShowing { it.copy(surface = rated.surfaces[it.surface.id] ?: it.surface) }
+                triggerAction(SurfaceEvent.ActionTriggered(event.surfaceId, event.componentId))
+            },
+        )
+    }
+
     // A client-handled action (open_listing) never reaches the server and never changes the phase.
     private fun onActionBuilt(action: SurfaceAction) {
+        if (action.ratesReasons) {
+            sendRating(action)
+            return
+        }
         if (!action.handledOnClient) {
             sendAction(action)
             return
@@ -195,6 +216,33 @@ class AskViewModel(
                 onError = { error -> updateShowing { it.copy(pending = null, actionError = error) } },
                 onSuccess = { messages -> onActionAnswered(messages) },
             )
+        }
+    }
+
+    // A rating is feedback, not a round trip: it shows no progress, never becomes the action retry() resends
+    // and never cancels the round trip in flight. If it does not land, the thumb is cleared, so the shopper
+    // can see it was not recorded.
+    private fun sendRating(action: SurfaceAction) {
+        viewModelScope.launch {
+            sendAskAction(action).handleResult(
+                onError = { clearRating(action) },
+                onSuccess = { messages ->
+                    val reduction = SurfaceReducer.apply(surfaces, messages)
+                    if (reduction.applied) {
+                        surfaces = reduction.state
+                        updateShowing { it.copy(surface = surfaces.surfaces[it.surface.id] ?: it.surface) }
+                    }
+                },
+            )
+        }
+    }
+
+    private fun clearRating(action: SurfaceAction) {
+        val note = surfaces.surfaces[action.surfaceId]?.nodes?.get(action.sourceComponentId)
+        val path = (note as? SurfaceNode.ProvenanceNote)?.ratingPath ?: return
+        SurfaceReducer.setValue(surfaces, action.surfaceId, path, null).onRight { cleared ->
+            surfaces = cleared
+            updateShowing { it.copy(surface = cleared.surfaces[it.surface.id] ?: it.surface) }
         }
     }
 

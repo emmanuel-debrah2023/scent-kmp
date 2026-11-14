@@ -50,6 +50,13 @@ class SurfaceActionKindTest {
     }
 
     @Test
+    fun `only rate_reasons is a rating`() {
+        assertTrue(action("rate_reasons").ratesReasons)
+        assertFalse(action("retry_ask").ratesReasons)
+        assertFalse(action("answer_questions").ratesReasons)
+    }
+
+    @Test
     fun `only open_listing is handled on the client`() {
         assertTrue(action("open_listing").handledOnClient)
         assertFalse(action("answer_questions").handledOnClient)

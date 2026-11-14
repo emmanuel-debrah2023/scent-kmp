@@ -33,7 +33,16 @@ class CatalogSchemaTest {
     @Test
     fun `the schema lists every catalog component and not the decode only fallback`() {
         assertEquals(
-            setOf("Column", "Text", "Button", "ChoicePicker", "RangeSlider", "PreferenceSummary", "RecommendationCard"),
+            setOf(
+                "Column",
+                "Text",
+                "Button",
+                "ChoicePicker",
+                "RangeSlider",
+                "PreferenceSummary",
+                "RecommendationCard",
+                "ProvenanceNote",
+            ),
             components.keys,
         )
     }

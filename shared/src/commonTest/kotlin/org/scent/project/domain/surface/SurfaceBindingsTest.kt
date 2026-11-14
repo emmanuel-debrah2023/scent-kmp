@@ -1,9 +1,12 @@
 package org.scent.project.domain.surface
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import org.scent.project.domain.surface.SurfaceBindings.choicePicker
 import org.scent.project.domain.surface.SurfaceBindings.preferenceSummary
+import org.scent.project.domain.surface.SurfaceBindings.provenanceNote
 import org.scent.project.domain.surface.SurfaceBindings.rangeSlider
+import org.scent.project.domain.surface.SurfaceBindings.ratingValue
 import org.scent.project.domain.surface.SurfaceBindings.recommendation
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -213,13 +216,25 @@ class SurfaceBindingsTest {
         )
 
     @Test
-    fun `recommendation reads the name and price and why of its own result`() {
+    fun `recommendation reads the name and price and an older server's why as one reason`() {
         val data =
             surface(
                 """{"results":[{"name":"A","price":"£1","why":"a"},{"name":"Cedar","price":"£76","why":"Dry wood"}]}""",
             )
 
-        assertEquals(RecommendationBinding("Cedar", "£76", "Dry wood", false), recommendation(data, card))
+        assertEquals(RecommendationBinding("Cedar", "£76", listOf("Dry wood"), false), recommendation(data, card))
+    }
+
+    @Test
+    fun `recommendation reads up to three reasons in order trimmed and skips blanks and non text`() {
+        val data =
+            surface(
+                """{"results":[{},{"name":"Cedar","reasons":[" Dry wood ","",4,"Easy to wear","Decant","Fourth"]}]}""",
+            )
+
+        val binding = recommendation(data, card.copy(reasonsPath = "/results/1/reasons"))
+
+        assertEquals(listOf("Dry wood", "Easy to wear", "Decant"), binding?.reasons)
     }
 
     @Test
@@ -245,7 +260,7 @@ class SurfaceBindingsTest {
         val noExtras = surface("""{"results":[{},{"name":"Cedar"}]}""")
         val noName = surface("""{"results":[{},{"name":"  ","price":"£76"}]}""")
 
-        assertEquals(RecommendationBinding("Cedar", "", "", false), recommendation(noExtras, card))
+        assertEquals(RecommendationBinding("Cedar", "", emptyList(), false), recommendation(noExtras, card))
         assertNull(recommendation(noName, card))
         assertNull(recommendation(surface("""{}"""), card))
     }
@@ -278,5 +293,86 @@ class SurfaceBindingsTest {
         assertEquals(false, recommendation(data, other)?.opensListing)
         assertEquals(false, recommendation(data, noPath)?.opensListing)
         assertEquals(false, recommendation(data, card)?.opensListing)
+    }
+
+    // ProvenanceNote
+
+    private val rate = ActionTemplate("rate_reasons", mapOf("rating" to "/feedback/rating"))
+    private val retry = ActionTemplate("retry_ask", mapOf("budget" to "/answers/budget"))
+    private val written =
+        SurfaceNode.ProvenanceNote(
+            "n",
+            SurfaceProvenance.AI_WRITTEN,
+            SurfaceProvenanceSubject.REASONS,
+            rate,
+            "/feedback/rating",
+        )
+    private val unavailable =
+        SurfaceNode.ProvenanceNote("n", SurfaceProvenance.AI_UNAVAILABLE, SurfaceProvenanceSubject.REASONS, retry)
+
+    @Test
+    fun `provenanceNote on ai_written can be rated and reads the stored rating`() {
+        val binding = provenanceNote(surface("""{"feedback":{"rating":"down"}}"""), written)
+
+        assertEquals(
+            ProvenanceNoteBinding(
+                SurfaceProvenance.AI_WRITTEN,
+                SurfaceProvenanceSubject.REASONS,
+                canRetry = false,
+                canRate = true,
+                rating = SurfaceRating.DOWN,
+            ),
+            binding,
+        )
+    }
+
+    @Test
+    fun `provenanceNote has no rating until one is stored and ignores anything but up or down`() {
+        assertNull(provenanceNote(surface("""{}"""), written).rating)
+        assertNull(provenanceNote(surface("""{"feedback":{"rating":"meh"}}"""), written).rating)
+        assertEquals(SurfaceRating.UP, provenanceNote(surface("""{"feedback":{"rating":"up"}}"""), written).rating)
+    }
+
+    @Test
+    fun `provenanceNote cannot be rated without a rate_reasons action and a rating path`() {
+        val data = surface("""{}""")
+
+        assertFalse(provenanceNote(data, written.copy(ratingPath = null)).canRate)
+        assertFalse(provenanceNote(data, written.copy(action = null)).canRate)
+        assertFalse(provenanceNote(data, written.copy(action = retry)).canRate)
+    }
+
+    @Test
+    fun `provenanceNote is only rated when AI wrote the wording`() {
+        val paused = written.copy(source = SurfaceProvenance.AI_PAUSED)
+
+        assertFalse(provenanceNote(surface("""{}"""), paused).canRate)
+    }
+
+    @Test
+    fun `provenanceNote offers Try again only on ai_unavailable with a retry_ask action`() {
+        val data = surface("""{}""")
+
+        assertTrue(provenanceNote(data, unavailable).canRetry)
+        assertFalse(provenanceNote(data, unavailable.copy(action = null)).canRetry)
+        assertFalse(provenanceNote(data, unavailable.copy(action = rate)).canRetry)
+        assertFalse(provenanceNote(data, unavailable.copy(source = SurfaceProvenance.AI_PAUSED)).canRetry)
+    }
+
+    @Test
+    fun `provenanceNote is only rated when the note is about reasons`() {
+        val questions = written.copy(subject = SurfaceProvenanceSubject.QUESTIONS)
+
+        assertFalse(provenanceNote(surface("""{}"""), questions).canRate)
+    }
+
+    @Test
+    fun `a rating is stored as the value provenanceNote reads back`() {
+        SurfaceRating.entries.forEach { rating ->
+            val stored = """{"feedback":{"rating":${ratingValue(rating)}}}"""
+
+            assertEquals(rating, provenanceNote(surface(stored), written).rating)
+        }
+        assertEquals(JsonPrimitive("up"), ratingValue(SurfaceRating.UP))
     }
 }

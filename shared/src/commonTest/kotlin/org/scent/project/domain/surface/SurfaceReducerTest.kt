@@ -202,4 +202,48 @@ class SurfaceReducerTest {
             SurfaceReducer.setValue(base, "s1", "no-slash", JsonPrimitive(1)).leftOrNull(),
         )
     }
+
+    // setRating
+
+    private val rateProps =
+        ""","action":{"event":{"name":"rate_reasons","context":{}}},"rating":{"path":"/feedback/rating"}"""
+
+    private fun noteState(
+        source: String = "ai_written",
+        subject: String = "reasons",
+        props: String = rateProps,
+    ) = reduce(
+        batch(
+            create(),
+            data("s1", "/", """{"feedback":{"rating":null}}"""),
+            components(
+                "s1",
+                """{"id":"note","component":"ProvenanceNote","source":"$source","subject":"$subject"$props}""",
+                """{"id":"t","component":"Text","text":"Hi"}""",
+            ),
+        ),
+    ).state
+
+    @Test
+    fun `setRating stores the rating at the note's own rating path`() {
+        val rated = SurfaceReducer.setRating(noteState(), "s1", "note", SurfaceRating.DOWN).getOrNull()
+
+        assertEquals(json("""{"feedback":{"rating":"down"}}"""), rated?.surface()?.data)
+    }
+
+    @Test
+    fun `setRating on anything but a note that can be rated is a Left and changes nothing`() {
+        val noRatingPath = noteState(props = ""","action":{"event":{"name":"rate_reasons","context":{}}}""")
+        val paused = noteState(source = "ai_paused")
+        val questions = noteState(subject = "questions")
+
+        listOf(
+            SurfaceReducer.setRating(noteState(), "nope", "note", SurfaceRating.UP),
+            SurfaceReducer.setRating(noteState(), "s1", "t", SurfaceRating.UP),
+            SurfaceReducer.setRating(noteState(), "s1", "missing", SurfaceRating.UP),
+            SurfaceReducer.setRating(noRatingPath, "s1", "note", SurfaceRating.UP),
+            SurfaceReducer.setRating(paused, "s1", "note", SurfaceRating.UP),
+            SurfaceReducer.setRating(questions, "s1", "note", SurfaceRating.UP),
+        ).forEach { assertIs<AppError.SurfaceError.Invalid>(it.leftOrNull()) }
+    }
 }

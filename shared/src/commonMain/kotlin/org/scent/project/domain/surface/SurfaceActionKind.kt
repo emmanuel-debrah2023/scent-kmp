@@ -14,6 +14,13 @@ internal const val LISTING_ID_KEY = "listingId"
 val SurfaceAction.reopensAnswers: Boolean
     get() = name == ScentAction.EDIT_ANSWERS.wireName
 
+/**
+ * True for the thumbs on AI-written reasons. A rating is feedback, not a round trip: the surface stays on
+ * screen and nothing else waits on it.
+ */
+val SurfaceAction.ratesReasons: Boolean
+    get() = name == ScentAction.RATE_REASONS.wireName
+
 /** True for an action the app handles itself and must never send to the server (open_listing). */
 val SurfaceAction.handledOnClient: Boolean
     get() = ScentAction.fromWireName(name)?.handledOnClient == true

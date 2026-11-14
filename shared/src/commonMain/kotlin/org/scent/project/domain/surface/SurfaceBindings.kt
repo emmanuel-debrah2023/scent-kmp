@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import org.scent.project.data.remote.a2ui.JsonPointer
+import org.scent.project.data.remote.a2ui.catalog.ReasonsRating
 import org.scent.project.data.remote.a2ui.catalog.ScentAction
 import kotlin.math.abs
 
@@ -45,13 +46,28 @@ data class PreferenceSummaryBinding(
 data class RecommendationBinding(
     val name: String,
     val price: String,
-    val why: String,
+    val reasons: List<String>,
     val opensListing: Boolean,
     val meta: String = "",
 )
 
+/**
+ * What a ProvenanceNote can do. [canRetry] and [canRate] are true only when the server's action matches the
+ * source (Try again on ai_unavailable, thumbs on AI-written reasons), so a mismatched note offers nothing.
+ */
+data class ProvenanceNoteBinding(
+    val source: SurfaceProvenance,
+    val subject: SurfaceProvenanceSubject,
+    val canRetry: Boolean,
+    val canRate: Boolean,
+    val rating: SurfaceRating?,
+)
+
 // A slider with more stops than this cannot be used by touch; the surface falls back instead.
 private const val MAX_POSITIONS = 500
+
+// Smell, when to wear, why it fits: the catalog's fixed order and its limit.
+private const val MAX_REASONS = 3
 
 /** Reads the facts a node's data paths point at. Null means the node cannot be shown. */
 object SurfaceBindings {
@@ -108,10 +124,54 @@ object SurfaceBindings {
         return RecommendationBinding(
             name = name,
             price = surface.read(node.pricePath).text().orEmpty(),
-            why = surface.read(node.whyPath).text().orEmpty(),
+            reasons = reasons(surface.read(node.reasonsPath)),
             opensListing = opensListing(surface, node.action),
             meta = node.metaPath?.let { surface.read(it).text() }.orEmpty(),
         )
+    }
+
+    fun provenanceNote(
+        surface: Surface,
+        node: SurfaceNode.ProvenanceNote,
+    ): ProvenanceNoteBinding {
+        val action = node.action?.name
+        val ratingPath = node.ratingPath
+        return ProvenanceNoteBinding(
+            source = node.source,
+            subject = node.subject,
+            canRetry = node.source == SurfaceProvenance.AI_UNAVAILABLE && action == ScentAction.RETRY_ASK.wireName,
+            canRate =
+                node.source == SurfaceProvenance.AI_WRITTEN &&
+                    node.subject == SurfaceProvenanceSubject.REASONS &&
+                    action == ScentAction.RATE_REASONS.wireName &&
+                    ratingPath != null,
+            rating = ratingPath?.let { rating(surface.read(it).text()) },
+        )
+    }
+
+    /** What a rating is stored as in the data model; [SurfaceReducer.setRating] writes it. */
+    internal fun ratingValue(rating: SurfaceRating): JsonElement =
+        JsonPrimitive(
+            when (rating) {
+                SurfaceRating.UP -> ReasonsRating.UP
+                SurfaceRating.DOWN -> ReasonsRating.DOWN
+            }.wireName,
+        )
+
+    private fun rating(stored: String?): SurfaceRating? =
+        when (ReasonsRating.fromWireName(stored)) {
+            ReasonsRating.UP -> SurfaceRating.UP
+            ReasonsRating.DOWN -> SurfaceRating.DOWN
+            null -> null
+        }
+
+    // A list of reasons, or the single why line an older server sends. Blank and non-text entries are dropped,
+    // and never more than the catalog allows.
+    private fun reasons(element: JsonElement?): List<String> {
+        val entries = (element as? JsonArray) ?: listOfNotNull(element)
+        return entries
+            .mapNotNull { it.text()?.trim()?.takeIf(String::isNotEmpty) }
+            .take(MAX_REASONS)
     }
 
     // Tappable only when the card's action opens a listing and its bound path holds a valid id, so a card

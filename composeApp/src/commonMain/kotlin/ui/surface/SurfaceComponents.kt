@@ -1,5 +1,10 @@
 package ui.surface
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -7,9 +12,15 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.scent.project.domain.surface.Surface
 import org.scent.project.domain.surface.SurfaceBindings
 import org.scent.project.domain.surface.SurfaceNode
+import org.scent.project.domain.surface.SurfaceProvenance
+import org.scent.project.domain.surface.SurfaceRating
 import ui.components.ChoiceChips
 import ui.components.LabelledSlider
 import ui.components.PreferenceSummaryBar
+import ui.components.ProvenanceNote
+import ui.components.ProvenanceNoteAction
+import ui.components.ProvenanceNoteIcon
+import ui.components.RatingThumbs
 import ui.components.RecommendationCard
 
 @Composable
@@ -107,9 +118,61 @@ internal fun SurfaceRecommendationCard(
     RecommendationCard(
         name = binding.name,
         price = binding.price,
-        why = binding.why,
+        reasons = binding.reasons,
         modifier = modifier,
         meta = binding.meta,
         onClick = if (binding.opensListing) ({ onEvent(SurfaceEvent.ActionTriggered(surface.id, node.id)) }) else null,
     )
+}
+
+@Composable
+internal fun SurfaceProvenanceNote(
+    surface: Surface,
+    node: SurfaceNode.ProvenanceNote,
+    onEvent: (SurfaceEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val binding = SurfaceBindings.provenanceNote(surface, node)
+    val copy = ProvenanceLabels.copy(binding.source, binding.subject)
+    val sendAction = { onEvent(SurfaceEvent.ActionTriggered(surface.id, node.id)) }
+    val rate: (SurfaceRating) -> Unit = { onEvent(SurfaceEvent.RatingChosen(surface.id, node.id, it)) }
+    val action: (@Composable () -> Unit)? =
+        when {
+            binding.canRetry -> {
+                { ProvenanceNoteAction(ProvenanceLabels.TRY_AGAIN, onClick = sendAction) }
+            }
+            binding.canRate -> {
+                {
+                    RatingThumbs(
+                        upSelected = binding.rating == SurfaceRating.UP,
+                        downSelected = binding.rating == SurfaceRating.DOWN,
+                        upLabel = ProvenanceLabels.REASONS_HELPED,
+                        downLabel = ProvenanceLabels.REASONS_DID_NOT_HELP,
+                        onRateUp = { rate(SurfaceRating.UP) },
+                        onRateDown = { rate(SurfaceRating.DOWN) },
+                    )
+                }
+            }
+            else -> null
+        }
+    ProvenanceNote(
+        icon = { ProvenanceNoteGlyph(binding.source) },
+        label = copy.label,
+        detail = copy.detail,
+        modifier = modifier,
+        announce = copy.announce,
+        action = action,
+    )
+}
+
+// Each source has its own glyph as well as its own words, so colour is never the only signal. Only
+// AI-written wording gets the green sparkle.
+@Composable
+private fun ProvenanceNoteGlyph(source: SurfaceProvenance) {
+    when (source) {
+        SurfaceProvenance.AI_WRITTEN ->
+            ProvenanceNoteIcon(Icons.Outlined.AutoAwesome, tint = MaterialTheme.colorScheme.primary)
+        SurfaceProvenance.AI_PAUSED -> ProvenanceNoteIcon(Icons.Outlined.HourglassEmpty)
+        SurfaceProvenance.AI_UNAVAILABLE -> ProvenanceNoteIcon(Icons.Outlined.WaterDrop)
+    }
 }

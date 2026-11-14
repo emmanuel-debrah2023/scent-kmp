@@ -15,6 +15,25 @@ enum class SurfaceTextStyle {
     CAPTION,
 }
 
+/** Who wrote the wording a provenance note sits beside, as Kotlin recorded it; never the model's own claim. */
+enum class SurfaceProvenance {
+    AI_WRITTEN,
+    AI_PAUSED,
+    AI_UNAVAILABLE,
+}
+
+/** What a provenance note is about, which picks the app's wording for it. */
+enum class SurfaceProvenanceSubject {
+    QUESTIONS,
+    REASONS,
+}
+
+/** The reader's verdict on AI-written reasons. */
+enum class SurfaceRating {
+    UP,
+    DOWN,
+}
+
 /**
  * One component of a surface, with every field non-null (ADS-STE100): a missing label is empty, a
  * missing list is empty. A component whose required data paths are missing cannot be shown, so it is
@@ -63,17 +82,38 @@ sealed interface SurfaceNode {
         val action: ActionTemplate?,
     ) : SurfaceNode
 
+    /**
+     * [reasonsPath] points at a list of reasons, or at the single `why` line an older server sends; the
+     * bindings read either shape.
+     */
     data class RecommendationCard(
         override val id: String,
         val namePath: String,
         val pricePath: String,
-        val whyPath: String,
+        val reasonsPath: String,
         val action: ActionTemplate?,
         val metaPath: String? = null,
     ) : SurfaceNode
 
+    /** Who wrote the wording beside it. The app owns every word; the server sends only [source] and [subject]. */
+    data class ProvenanceNote(
+        override val id: String,
+        val source: SurfaceProvenance,
+        val subject: SurfaceProvenanceSubject,
+        val action: ActionTemplate? = null,
+        val ratingPath: String? = null,
+    ) : SurfaceNode
+
     /** A component this client does not know or cannot bind. Shown as a quiet placeholder. */
     data class Unsupported(
+        override val id: String,
+    ) : SurfaceNode
+
+    /**
+     * A component that must not be drawn at all, not even as a placeholder: a ProvenanceNote whose source or
+     * subject this client cannot read, because guessing could claim AI wrote something it did not.
+     */
+    data class Omitted(
         override val id: String,
     ) : SurfaceNode
 }
