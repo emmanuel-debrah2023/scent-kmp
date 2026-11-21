@@ -37,7 +37,7 @@ private val mockCommunityItems: List<CommunityFeedItem> =
             id = "mock_1",
             username = "scentnerdd",
             timeAgo = "2h",
-            timeAgoDescription = "2 hours ago",
+            headerDescription = "scentnerdd, 2 hours ago",
             caption =
                 "Tested 12 ouds this weekend so you don't have to. " +
                     "The Amouage Interlude Black Iris still wins by a mile.",
@@ -49,7 +49,7 @@ private val mockCommunityItems: List<CommunityFeedItem> =
             id = "mock_2",
             username = "maya.decants",
             timeAgo = "5h",
-            timeAgoDescription = "5 hours ago",
+            headerDescription = "maya.decants, 5 hours ago",
             caption = "Nothing compares to the silage on this one.",
             hashtags = "#tomford #velvetorchid #vanilla",
             likeCount = "1.2k",
@@ -60,7 +60,7 @@ private val mockCommunityItems: List<CommunityFeedItem> =
             id = "mock_3",
             username = "the.decant.bar",
             timeAgo = "8h",
-            timeAgoDescription = "8 hours ago",
+            headerDescription = "the.decant.bar, 8 hours ago",
             caption = "Creed Aventus batch variation is REAL — here's what to look for.",
             hashtags = "#creed #aventus #batch",
             likeCount = "1.6k",
@@ -72,7 +72,7 @@ private val mockCommunityItems: List<CommunityFeedItem> =
             id = "mock_4",
             username = "fraghead.ph",
             timeAgo = "1d",
-            timeAgoDescription = "1 day ago",
+            headerDescription = "fraghead.ph, 1 day ago",
             caption = "Hot take: Dior Sauvage is the most overrated fragrance of the decade. Change my mind.",
             hashtags = "#dior #sauvage #hotTake",
             likeCount = "3.4k",
@@ -82,7 +82,7 @@ private val mockCommunityItems: List<CommunityFeedItem> =
             id = "mock_5",
             username = "thenicheshelf",
             timeAgo = "1d",
-            timeAgoDescription = "1 day ago",
+            headerDescription = "thenicheshelf, 1 day ago",
             caption = "Just landed: my top 5 winter niche picks arranged by sillage.",
             hashtags = "#niche #winter #collection",
             likeCount = "920",
@@ -99,13 +99,16 @@ fun List<Post>.toCommunityFeedItems(nowMillis: Long): List<CommunityFeedItem> {
         val commentCount = post.commentCount.toDisplayCount()
         val colorIndex = index % 3
         val postedAgo = postedAgo(nowMillis - post.createdAt)
+        // One spoken header: the compact "2h" reads badly to a screen reader.
+        val headerDescription =
+            listOf(post.username, postedAgo.description).filter { it.isNotBlank() }.joinToString(", ")
         when (post.contentFormat) {
             ContentFormat.TEXT ->
                 CommunityFeedItem.Text(
                     id = post.id,
                     username = post.username,
                     timeAgo = postedAgo.compact,
-                    timeAgoDescription = postedAgo.description,
+                    headerDescription = headerDescription,
                     caption = post.textContent,
                     hashtags = hashtags,
                     likeCount = likeCount,
@@ -116,7 +119,7 @@ fun List<Post>.toCommunityFeedItems(nowMillis: Long): List<CommunityFeedItem> {
                     id = post.id,
                     username = post.username,
                     timeAgo = postedAgo.compact,
-                    timeAgoDescription = postedAgo.description,
+                    headerDescription = headerDescription,
                     caption = post.textContent,
                     hashtags = hashtags,
                     likeCount = likeCount,
@@ -128,7 +131,7 @@ fun List<Post>.toCommunityFeedItems(nowMillis: Long): List<CommunityFeedItem> {
                     id = post.id,
                     username = post.username,
                     timeAgo = postedAgo.compact,
-                    timeAgoDescription = postedAgo.description,
+                    headerDescription = headerDescription,
                     caption = post.textContent,
                     hashtags = hashtags,
                     likeCount = likeCount,

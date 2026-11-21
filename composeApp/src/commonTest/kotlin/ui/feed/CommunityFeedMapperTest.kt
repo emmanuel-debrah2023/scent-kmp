@@ -35,13 +35,19 @@ class CommunityFeedMapperTest {
     ) {
         val item = itemFor(ageMillis)
         assertEquals(compact, item.timeAgo)
-        assertEquals(description, item.timeAgoDescription)
+        assertEquals("amara, $description", item.headerDescription)
     }
 
     @Test
     fun `username comes from the post username and not the user id`() {
         val item = listOf(post(createdAt = now, username = "amara", userId = "42")).toCommunityFeedItems(now).first()
         assertEquals("amara", item.username)
+    }
+
+    @Test
+    fun `a blank username leaves only the time in the header description`() {
+        val item = listOf(post(createdAt = now - 2 * hour, username = "")).toCommunityFeedItems(now).first()
+        assertEquals("2 hours ago", item.headerDescription)
     }
 
     @Test
