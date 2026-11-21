@@ -111,4 +111,6 @@ check_seeded "$SEED_COUNT listings" "$(post "/api/v1/dev/seed-listings?count=$SE
 echo
 echo "E2E stack ready at $API_URL. Sign in as $EMAIL."
 echo "Each run replaces the seed data: $SEED_COUNT feed posts plus one video post, and $SEED_COUNT listings."
+# TODO(fix/e2e-up-reused-server-exit): returns 1 when a reused server left no PID file, so
+#  pre-merge-check.sh (pipefail) reports the backend as down even though it is ready.
 [ -f "$PID_FILE" ] && echo "Stop the server with: ./scripts/e2e-up.sh --down"
