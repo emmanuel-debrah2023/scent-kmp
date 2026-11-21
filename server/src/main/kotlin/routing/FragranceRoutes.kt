@@ -38,6 +38,7 @@ import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.scent.project.data.remote.api.FragranceQueryParams
 import org.scent.project.data.remote.dto.ErrorResponse
 import org.scent.project.data.remote.dto.FragranceListResponseDto
 import org.scent.project.data.remote.dto.FragranceNoteDto
@@ -49,13 +50,13 @@ fun Route.fragranceRoutes() {
     route("/api/v1/fragrances") {
         get {
             val query =
-                this.call.request.queryParameters["query"]
+                this.call.request.queryParameters[FragranceQueryParams.QUERY]
                     ?.lowercase()
             val cursor =
-                this.call.request.queryParameters["cursor"]
+                this.call.request.queryParameters[FragranceQueryParams.CURSOR]
                     ?.toIntOrNull()
             val limit =
-                this.call.request.queryParameters["limit"]
+                this.call.request.queryParameters[FragranceQueryParams.LIMIT]
                     ?.toIntOrNull() ?: 20
 
             val result =
