@@ -1169,6 +1169,9 @@ private fun LazyListScope.listingsTabContent(
     }
 }
 
+// TODO(chore/profile-listing-row-mapper): move this mapping out of the screen file into
+// ui/profile/ProfileMapper.kt, per ADS-STE100 "Mapper Placement".
+
 /**
  * The one place [Listing] gets translated into [ProfileListingRowUiModel] — condition
  * mapping, fill-percent arithmetic, price formatting, and the accessibility string all
