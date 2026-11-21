@@ -48,11 +48,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
+import ui.accessibility.mergedGroup
 import ui.base.UiState
 import ui.components.BlendedScaffold
 import ui.components.VideoPlayer
@@ -578,6 +581,7 @@ private val PostPlaceholderColors = listOf(Color(0xFFB08052), Color(0xFF7E5700),
 private fun TextPostCard(item: CommunityFeedItem.Text) {
     val username = item.username
     val timeAgo = item.timeAgo
+    val timeAgoDescription = item.timeAgoDescription
     val caption = item.caption
     val hashtags = item.hashtags
     val likeCount = item.likeCount
@@ -600,6 +604,7 @@ private fun TextPostCard(item: CommunityFeedItem.Text) {
     ) {
         Column(modifier = Modifier.padding(spacing.cardPadding)) {
             Row(
+                modifier = Modifier.mergedGroup(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(spacing.xs),
             ) {
@@ -624,7 +629,12 @@ private fun TextPostCard(item: CommunityFeedItem.Text) {
                     color = colorScheme.onSurface,
                 )
                 Box(modifier = Modifier.size(3.dp).background(colorScheme.outline, CircleShape))
-                Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
+                Text(
+                    text = timeAgo,
+                    fontSize = 12.sp,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { contentDescription = timeAgoDescription },
+                )
             }
             Text(
                 text = caption,
@@ -686,6 +696,7 @@ private fun TextPostCard(item: CommunityFeedItem.Text) {
 private fun PhotoPostCard(item: CommunityFeedItem.Photo) {
     val username = item.username
     val timeAgo = item.timeAgo
+    val timeAgoDescription = item.timeAgoDescription
     val caption = item.caption
     val hashtags = item.hashtags
     val likeCount = item.likeCount
@@ -721,6 +732,7 @@ private fun PhotoPostCard(item: CommunityFeedItem.Photo) {
             )
             Column(modifier = Modifier.padding(spacing.cardPadding)) {
                 Row(
+                    modifier = Modifier.mergedGroup(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(spacing.xs),
                 ) {
@@ -745,7 +757,12 @@ private fun PhotoPostCard(item: CommunityFeedItem.Photo) {
                         color = colorScheme.onSurface,
                     )
                     Box(modifier = Modifier.size(3.dp).background(colorScheme.outline, CircleShape))
-                    Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
+                    Text(
+                        text = timeAgo,
+                        fontSize = 12.sp,
+                        color = colorScheme.onSurfaceVariant,
+                        modifier = Modifier.semantics { contentDescription = timeAgoDescription },
+                    )
                 }
                 Text(
                     text = caption,
@@ -811,6 +828,7 @@ private fun CommunityPostCard(
 ) {
     val username = item.username
     val timeAgo = item.timeAgo
+    val timeAgoDescription = item.timeAgoDescription
     val caption = item.caption
     val hashtags = item.hashtags
     val likeCount = item.likeCount
@@ -890,6 +908,7 @@ private fun CommunityPostCard(
             Column(modifier = Modifier.padding(spacing.cardPadding)) {
                 // Author row
                 Row(
+                    modifier = Modifier.mergedGroup(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(spacing.xs),
                 ) {
@@ -919,7 +938,12 @@ private fun CommunityPostCard(
                                 .size(3.dp)
                                 .background(colorScheme.outline, CircleShape),
                     )
-                    Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
+                    Text(
+                        text = timeAgo,
+                        fontSize = 12.sp,
+                        color = colorScheme.onSurfaceVariant,
+                        modifier = Modifier.semantics { contentDescription = timeAgoDescription },
+                    )
                 }
 
                 // Caption

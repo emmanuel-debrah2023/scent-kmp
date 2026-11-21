@@ -41,7 +41,7 @@ class FeedViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         every { postRepository.getFeedFlow() } returns feedFlow
-        viewModel = FeedViewModel(postRepository, likePostUseCase)
+        viewModel = FeedViewModel(postRepository, likePostUseCase, nowMillis = { 0L })
     }
 
     @AfterTest

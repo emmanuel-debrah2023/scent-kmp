@@ -42,6 +42,7 @@ object PostMapper {
         return Post(
             id = postId,
             userId = postUserId,
+            username = username ?: "",
             contentFormat = ContentFormat.fromString(contentFormat),
             textContent = textContent ?: "",
             mediaUrls = mediaUrls?.filterNotNull() ?: emptyList(),
