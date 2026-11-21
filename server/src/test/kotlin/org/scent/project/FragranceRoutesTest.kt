@@ -22,6 +22,7 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
+import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -38,6 +39,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
+import org.scent.project.data.remote.api.FragranceQueryParams
 import plugins.configureSecurity
 import routing.fragranceRoutes
 import java.util.Date
@@ -132,6 +134,28 @@ class FragranceRoutesTest {
                 "Sauvage",
                 fragrances[0].jsonObject["name"]?.jsonPrimitive?.content,
             )
+        }
+
+    @Test
+    fun `GET fragrances with a query returns fewer rows than an empty query`() =
+        testApplication {
+            application {
+                install(ContentNegotiation) { json() }
+                configureSecurity()
+                routing { fragranceRoutes() }
+            }
+
+            val userId = seedUser()
+            seedFragrance(userId, "Baccarat Rouge 540", "Maison Francis Kurkdjian")
+            seedFragrance(userId, "Sauvage", "Dior")
+            seedFragrance(userId, "Bleu de Chanel", "Chanel")
+
+            val all = fetchNames("/api/v1/fragrances?${FragranceQueryParams.QUERY}=")
+            val filtered = fetchNames("/api/v1/fragrances?${FragranceQueryParams.QUERY}=baccarat")
+
+            assertEquals(3, all.size)
+            assertTrue(filtered.size < all.size)
+            assertEquals(listOf("Baccarat Rouge 540"), filtered)
         }
 
     @Test
@@ -253,6 +277,22 @@ class FragranceRoutesTest {
                 ReviewsTable,
             )
         }
+    }
+
+    private suspend fun ApplicationTestBuilder.fetchNames(path: String): List<String> {
+        val response = client.get(path)
+        assertEquals(HttpStatusCode.OK, response.status)
+        return Json
+            .parseToJsonElement(response.bodyAsText())
+            .jsonObject["fragrances"]
+            ?.jsonArray
+            .orEmpty()
+            .map {
+                it.jsonObject["name"]
+                    ?.jsonPrimitive
+                    ?.content
+                    .orEmpty()
+            }
     }
 
     private fun seedUser(): Int =

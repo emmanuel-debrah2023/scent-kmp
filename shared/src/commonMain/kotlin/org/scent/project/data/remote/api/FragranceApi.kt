@@ -30,9 +30,9 @@ class FragranceApiImpl(
     ): FragranceListResponseDto =
         httpClient
             .get(fragrancesUrl) {
-                parameter("q", query)
-                cursor?.let { parameter("cursor", it) }
-                parameter("limit", limit)
+                parameter(FragranceQueryParams.QUERY, query)
+                cursor?.let { parameter(FragranceQueryParams.CURSOR, it) }
+                parameter(FragranceQueryParams.LIMIT, limit)
             }.body()
 
     override suspend fun getFragranceDetail(fragranceId: Int): FragranceResponse =
