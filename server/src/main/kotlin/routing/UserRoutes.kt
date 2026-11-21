@@ -2,6 +2,7 @@ package routing
 
 import data.dbQuery
 import data.schema.CollectionStatus
+import data.schema.FollowsTable
 import data.schema.FragrancesTable
 import data.schema.PostFragrancesTable
 import data.schema.PostHashtagsTable
@@ -15,6 +16,8 @@ import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -48,6 +51,11 @@ import plugins.requireUserId
 @OptIn(kotlin.time.ExperimentalTime::class)
 fun Route.userRoutes() {
     route("/api/v1/users/{id}") {
+        // Public profile: optional auth only decides whether the caller sees the email.
+        authenticate("auth-jwt", optional = true) {
+            get { handleGetUser(call) }
+        }
+
         get("/posts") {
             val userId =
                 call.parameters["id"]?.toIntOrNull()
@@ -92,6 +100,27 @@ fun Route.userRoutes() {
             patch { handleUpdateUser(call) }
         }
     }
+}
+
+private suspend fun handleGetUser(call: ApplicationCall) {
+    val userId =
+        call.parameters["id"]?.toIntOrNull()
+            ?: return call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid user ID"))
+    val user =
+        dbQuery {
+            UsersTable
+                .selectAll()
+                .where { UsersTable.id eq userId }
+                .singleOrNull()
+                ?.let { buildUserResponse(userId, it) }
+        } ?: return call.respond(HttpStatusCode.NotFound, ErrorResponse("User not found"))
+    val callerId =
+        call
+            .principal<JWTPrincipal>()
+            ?.payload
+            ?.getClaim("userId")
+            ?.asInt()
+    call.respond(HttpStatusCode.OK, if (callerId == userId) user else user.copy(email = null))
 }
 
 /**
@@ -139,10 +168,17 @@ private suspend fun handleUpdateUser(call: ApplicationCall) {
         }
     }
 
-    val updatedRow = dbQuery { UsersTable.selectAll().where { UsersTable.id eq targetUserId }.single() }
-    call.respond(HttpStatusCode.OK, buildUserResponse(targetUserId, updatedRow))
+    val updated =
+        dbQuery {
+            buildUserResponse(targetUserId, UsersTable.selectAll().where { UsersTable.id eq targetUserId }.single())
+        }
+    call.respond(HttpStatusCode.OK, updated)
 }
 
+/**
+ * Counts come from the rows themselves, not the denormalised `users.follower_count`
+ * column, which nothing maintains. Must run inside a transaction.
+ */
 private fun buildUserResponse(
     userId: Int,
     row: ResultRow,
@@ -154,6 +190,29 @@ private fun buildUserResponse(
         email = row[UsersTable.email],
         avatarUrl = row[UsersTable.avatarUrl],
         bio = row[UsersTable.bio],
+        isSeller = row[UsersTable.isSeller],
+        createdAt =
+            row[UsersTable.createdAt]
+                .toInstant(TimeZone.currentSystemDefault())
+                .toEpochMilliseconds(),
+        postCount =
+            PostsTable
+                .selectAll()
+                .where { PostsTable.userId eq userId }
+                .count()
+                .toInt(),
+        followerCount =
+            FollowsTable
+                .selectAll()
+                .where { FollowsTable.followingId eq userId }
+                .count()
+                .toInt(),
+        followingCount =
+            FollowsTable
+                .selectAll()
+                .where { FollowsTable.followerId eq userId }
+                .count()
+                .toInt(),
     )
 
 @OptIn(kotlin.time.ExperimentalTime::class)

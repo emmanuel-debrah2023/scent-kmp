@@ -16,9 +16,9 @@ fun AuthUser.toProfileUser(): User =
 
 /**
  * Seeds Room with what the session already knows, so [org.scent.project.domain.repository.UserRepository.getProfileFlow]
- * resolves for the signed-in user without a dedicated `/profile/{id}` endpoint.
- * `avatarUrl`/`bio`/`isSeller`/`postCount` stay at their defaults — AuthUser carries
- * none of them — and are backfilled once that endpoint exists.
+ * resolves for the signed-in user straight away. AuthUser carries no avatar, bio, seller flag
+ * or counts, so those stay empty until [org.scent.project.domain.repository.UserRepository.refreshProfile]
+ * backfills them from `GET /api/v1/users/{id}`.
  */
 fun AuthUser.toUserEntity(): UserEntity =
     UserEntity(
@@ -30,5 +30,7 @@ fun AuthUser.toUserEntity(): UserEntity =
         bio = "",
         isSeller = false,
         postCount = 0,
+        followerCount = 0,
+        followingCount = 0,
         createdAt = 0L,
     )

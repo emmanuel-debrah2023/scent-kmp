@@ -5,10 +5,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * A user profile, cached for the profile detail screen. Follower and
- * following counts are deliberately excluded — they are derived via
- * `combine()` in `UserRepository.getProfileFlow`, never stored redundantly
- * on this row.
+ * A user profile, cached for the profile detail screen. The counts are the
+ * server's, written by `UserRepository.refreshProfile`. They are not derived
+ * from the local `follows` table, which holds only the part of the follow
+ * graph this device has seen.
  */
 @Entity(tableName = "users", indices = [Index("username")])
 data class UserEntity(
@@ -20,6 +20,8 @@ data class UserEntity(
     val bio: String,
     val isSeller: Boolean,
     val postCount: Int,
+    val followerCount: Int,
+    val followingCount: Int,
     val createdAt: Long,
 )
 

@@ -60,7 +60,7 @@ class ProfileViewModelTest {
 
     private fun viewModel(): ProfileViewModel {
         every { userRepository.getProfileFlow(1) } returns profileFlow
-        coEvery { userRepository.refreshProfile(1) } returns Unit.asRight()
+        coEvery { userRepository.refreshProfile(1) } returns testUser().asRight()
         coEvery { getUserWishlist(1) } returns emptyList<CollectionEntry>().asRight()
         coEvery { getUserLikes(1) } returns emptyList<Post>().asRight()
         return ProfileViewModel(sampleAuthUser, userRepository, toggleFollowUseCase, getUserWishlist, getUserLikes)
@@ -93,6 +93,49 @@ class ProfileViewModelTest {
         }
 
     @Test
+    fun `profileState success carries the bio and the post follower and following counts`() =
+        runTest {
+            val viewModel = viewModel()
+
+            profileFlow.emit(
+                testUser()
+                    .copy(
+                        bio = "Oud and amber",
+                        postCount = 2,
+                        followerCount = 248,
+                        followingCount = 4,
+                    ).asRight(),
+            )
+
+            val state = viewModel.profileState.value
+            assertIs<UiState.Success<User>>(state)
+            assertEquals("Oud and amber", state.data.bio)
+            assertEquals(2, state.data.postCount)
+            assertEquals(248, state.data.followerCount)
+            assertEquals(4, state.data.followingCount)
+        }
+
+    @Test
+    fun `a failed refresh keeps showing the cached profile and reports the error`() =
+        runTest {
+            val error = AppError.NetworkError.NoConnection()
+            every { userRepository.getProfileFlow(1) } returns profileFlow
+            coEvery { userRepository.refreshProfile(1) } returns error.asLeft()
+            coEvery { getUserWishlist(1) } returns emptyList<CollectionEntry>().asRight()
+            coEvery { getUserLikes(1) } returns emptyList<Post>().asRight()
+            profileFlow.emit(testUser().asRight())
+
+            val viewModel =
+                ProfileViewModel(sampleAuthUser, userRepository, toggleFollowUseCase, getUserWishlist, getUserLikes)
+
+            viewModel.error.test {
+                viewModel.retry()
+                assertEquals(error, awaitItem())
+            }
+            assertIs<UiState.Success<User>>(viewModel.profileState.value)
+        }
+
+    @Test
     fun `profileState surfaces an error when the Flow emits Left`() =
         runTest {
             val error = AppError.NetworkError.NotFound(message = "User 1 is not cached")
@@ -111,7 +154,7 @@ class ProfileViewModelTest {
     @Test
     fun `wishlistState and likesState load independently of the profile Flow`() =
         runTest {
-            coEvery { userRepository.refreshProfile(1) } returns Unit.asRight()
+            coEvery { userRepository.refreshProfile(1) } returns testUser().asRight()
             every { userRepository.getProfileFlow(1) } returns profileFlow
             val entry =
                 CollectionEntry(

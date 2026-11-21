@@ -144,6 +144,57 @@ class UserMapperTest {
     }
 
     @Test
+    fun `toUser maps the post follower and following counts`() {
+        val dto =
+            UserResponse(
+                id = 2,
+                username = "bob",
+                displayName = "Bob",
+                postCount = 2,
+                followerCount = 248,
+                followingCount = 4,
+            )
+
+        val user = dto.toUser().getOrNull()!!
+
+        assertEquals(2, user.postCount)
+        assertEquals(248, user.followerCount)
+        assertEquals(4, user.followingCount)
+    }
+
+    @Test
+    fun `toUser defaults missing counts to zero`() {
+        val dto = UserResponse(id = 2, username = "bob", displayName = "Bob")
+
+        val user = dto.toUser().getOrNull()!!
+
+        assertEquals(0, user.postCount)
+        assertEquals(0, user.followerCount)
+        assertEquals(0, user.followingCount)
+    }
+
+    @Test
+    fun `toUser maps the seller flag and the creation time`() {
+        val dto =
+            UserResponse(id = 2, username = "bob", displayName = "Bob", isSeller = true, createdAt = 1_700_000_000_000L)
+
+        val user = dto.toUser().getOrNull()!!
+
+        assertEquals(true, user.isSeller)
+        assertEquals(1_700_000_000_000L, user.createdAt)
+    }
+
+    @Test
+    fun `toUser defaults the seller flag to false and the creation time to zero`() {
+        val dto = UserResponse(id = 2, username = "bob", displayName = "Bob")
+
+        val user = dto.toUser().getOrNull()!!
+
+        assertEquals(false, user.isSeller)
+        assertEquals(0L, user.createdAt)
+    }
+
+    @Test
     fun `toUser round-trip — any DTO with non-null non-blank required fields produces Right`() {
         val validDtos =
             listOf(

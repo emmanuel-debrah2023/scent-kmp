@@ -56,9 +56,7 @@ class ProfileViewModel(
                 )
             }
         }
-        viewModelScope.launch {
-            retry()
-        }
+        retry()
     }
 
     fun selectTab(tab: ProfileTab) {
@@ -72,10 +70,9 @@ class ProfileViewModel(
         loadLikes()
     }
 
-    // TODO(fix/room-optimistic-writeback): this optimistic write is clobbered by the
-    // getProfileFlow collector in init — that flow derives follower counts from FollowDao's
-    // COUNT(*), and nothing calls FollowDao.upsertFollow, so the toggle visibly reverts on
-    // the next Room emission. The toggle needs to persist a FollowEntity.
+    // TODO(fix/room-optimistic-writeback): this optimistic write lives only in memory, so the
+    // next getProfileFlow emission (any users-row upsert, e.g. refreshProfile) reverts the
+    // count. The toggle needs to persist through Room (a FollowEntity and the cached counts).
     fun toggleFollow() {
         val user = (_profileState.value as? UiState.Success)?.data ?: return
         toggleFollowUseCase(user, _isFollowing.value).handleResult(
@@ -89,9 +86,11 @@ class ProfileViewModel(
 
     private fun refreshProfile() {
         viewModelScope.launch {
+            // A failed refresh must not replace a cached profile: the Flow keeps rendering the
+            // last good row, and an empty cache already surfaces as an Error from the Flow.
             userRepository.refreshProfile(userId).handleResult(
                 onSuccess = {},
-                onError = { error -> _profileState.value = UiState.Error(error) },
+                onError = { error -> handleError(error) },
             )
         }
     }

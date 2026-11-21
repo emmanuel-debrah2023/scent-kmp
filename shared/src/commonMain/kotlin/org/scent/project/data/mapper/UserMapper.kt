@@ -20,6 +20,7 @@ object UserMapper {
      * - [UserResponse.email] → empty string
      * - [UserResponse.avatarUrl] → empty string
      * - [UserResponse.bio] → empty string
+     * - the post, follower and following counts → 0
      */
     fun UserResponse.toUser(): Result<User> {
         val id =
@@ -41,15 +42,15 @@ object UserMapper {
             email = email.orEmpty(),
             avatarUrl = avatarUrl.orEmpty(),
             bio = bio.orEmpty(),
+            postCount = postCount ?: 0,
+            followerCount = followerCount ?: 0,
+            followingCount = followingCount ?: 0,
+            isSeller = isSeller ?: false,
+            createdAt = createdAt,
         ).asRight()
     }
 
-    /**
-     * Refreshes a cached row after a successful profile edit — [followerCount]/
-     * [followingCount] are deliberately excluded (see [UserEntity]'s own doc); they're
-     * derived from [org.scent.project.domain.repository.UserRepository.getProfileFlow]'s
-     * `combine()` with `FollowDao`, never stored on this row.
-     */
+    /** The cache row for a user the server just returned, after a refresh or a profile edit. */
     fun User.toUserEntity(): UserEntity =
         UserEntity(
             id = id,
@@ -60,6 +61,8 @@ object UserMapper {
             bio = bio,
             isSeller = isSeller,
             postCount = postCount,
+            followerCount = followerCount,
+            followingCount = followingCount,
             createdAt = createdAt,
         )
 }

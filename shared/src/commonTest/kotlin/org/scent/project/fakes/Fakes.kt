@@ -877,17 +877,11 @@ class FakeUserDao : UserDao {
 // -------------------------------------------------------------------------
 
 class FakeFollowDao : FollowDao {
-    private val followerCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
-    private val followingCounts = mutableMapOf<Int, MutableStateFlow<Int>>()
     private val follows = MutableStateFlow<List<FollowEntity>>(emptyList())
     private val users = MutableStateFlow<List<UserEntity>>(emptyList())
 
     /** Set to make reads fail, covering the Flow's error path. */
     var readException: Throwable? = null
-
-    override fun getFollowerCount(userId: Int): Flow<Int> = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
-
-    override fun getFollowingCount(userId: Int): Flow<Int> = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
 
     override fun getFollowers(userId: Int): Flow<List<UserEntity>> =
         combine(follows, users) { fs, us ->
@@ -905,16 +899,6 @@ class FakeFollowDao : FollowDao {
         follows.value =
             follows.value.filterNot { it.followerId == follow.followerId && it.followingId == follow.followingId } +
             follow
-    }
-
-    fun addFollower(userId: Int) {
-        val flow = followerCounts.getOrPut(userId) { MutableStateFlow(0) }
-        flow.value = (flow.value) + 1
-    }
-
-    fun addFollowing(userId: Int) {
-        val flow = followingCounts.getOrPut(userId) { MutableStateFlow(0) }
-        flow.value = (flow.value) + 1
     }
 
     fun seedUser(user: UserEntity) {
