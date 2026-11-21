@@ -45,6 +45,8 @@ data class ScentSpacing(
     val profileRowPillPaddingV: Dp = 3.dp,
     val profileRowPillTopOffset: Dp = 2.dp,
     val profileRowHorizontalPadding: Dp = 22.dp,
+    // Community feed card's author avatar, sized to the stacked username and time beside it.
+    val avatarSizeXSmall: Dp = 36.dp,
     // Small avatar for a compact list row (Followers/Following) — distinct from the
     // profile header's larger avatar.
     val avatarSizeSmall: Dp = 44.dp,
