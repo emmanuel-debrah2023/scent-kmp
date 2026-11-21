@@ -21,6 +21,7 @@ data class FeedState(
 class FeedViewModel(
     private val postRepository: PostRepository,
     private val likePostUseCase: LikePostUseCase,
+    private val nowMillis: () -> Long,
 ) : BaseViewModel() {
     private val _uiState = MutableStateFlow<UiState<FeedState>>(UiState.Idle)
     val uiState: StateFlow<UiState<FeedState>> = _uiState.asStateFlow()
@@ -59,7 +60,7 @@ class FeedViewModel(
                             UiState.Success(
                                 FeedState(
                                     posts = posts,
-                                    communityItems = posts.toCommunityFeedItems(),
+                                    communityItems = posts.toCommunityFeedItems(nowMillis()),
                                     isLoadingMore = current?.isLoadingMore ?: false,
                                 ),
                             )
@@ -116,7 +117,7 @@ class FeedViewModel(
             UiState.Success(
                 current.copy(
                     posts = optimisticPosts,
-                    communityItems = optimisticPosts.toCommunityFeedItems(),
+                    communityItems = optimisticPosts.toCommunityFeedItems(nowMillis()),
                 ),
             )
         viewModelScope.launch {
@@ -135,7 +136,7 @@ class FeedViewModel(
                         UiState.Success(
                             latest.copy(
                                 posts = confirmedPosts,
-                                communityItems = confirmedPosts.toCommunityFeedItems(),
+                                communityItems = confirmedPosts.toCommunityFeedItems(nowMillis()),
                             ),
                         )
                 },

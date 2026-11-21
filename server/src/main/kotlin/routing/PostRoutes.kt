@@ -7,6 +7,7 @@ import data.schema.PostLikesTable
 import data.schema.PostListingsTable
 import data.schema.PostMediaTable
 import data.schema.PostsTable
+import data.schema.UsersTable
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
@@ -165,7 +166,7 @@ fun Route.postRoutes() {
 
             val posts =
                 dbQuery {
-                    var query = PostsTable.selectAll()
+                    var query = (PostsTable innerJoin UsersTable).selectAll()
                     if (cursor != null) {
                         query = query.where { PostsTable.id less cursor }
                     }
@@ -211,6 +212,7 @@ fun Route.postRoutes() {
                         PostDto(
                             id = id.toString(),
                             userId = row[PostsTable.userId].value.toString(),
+                            username = row[UsersTable.username],
                             contentFormat = row[PostsTable.contentFormat],
                             textContent = row[PostsTable.textContent],
                             mediaUrls = media,
