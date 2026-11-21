@@ -351,4 +351,15 @@ class PostRepositoryImplTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun `a failing single-post read surfaces as Left rather than crashing the collector`() =
+        runTest {
+            val dao = FakePostDao().apply { readException = IllegalStateException("db corrupt") }
+
+            repo(dao = dao).getPostFlow("p1").test {
+                assertIs<AppError.Unknown>(awaitItem().leftOrNull())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 }

@@ -32,6 +32,8 @@ fun ScentHomeHost(
                 onOpenAuthor = onOpenUserProfile,
                 modifier = modifier,
             )
+        // TODO(feature/get-profile-by-id-endpoint): another user's profile can't be loaded yet, so the
+        // author row from VideoPostScreen lands on a placeholder.
         is HomeRoute.UserProfile -> PlaceholderScreen("User Profile", onBack = onBack)
         // Nothing pushes the other Home routes yet; they fall back to the feed rather than a blank screen.
         is HomeRoute.Feed,

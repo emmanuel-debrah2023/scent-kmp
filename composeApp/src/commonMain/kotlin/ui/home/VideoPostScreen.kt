@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -63,33 +64,14 @@ import ui.theme.ScentThemeExtras
 // ─────────────────────────────────────────────
 // Local design tokens
 // ─────────────────────────────────────────────
+// TODO(chore/design-system-conformance): Ink, the amber placeholder stops and VideoLikeRed are hex
+// literals (HomeFullBleedScreen carries copies). Move them to theme tokens.
 private val Ink = Color(0xFF140E07)
 private val VideoPlaceholderAmberStart = Color(0xFFE67E22)
 private val VideoPlaceholderAmberEnd = Color(0xFF9C5F17)
 private val VideoLikeRed = Color(0xFFE4362E)
 private val VideoPlaceholderBrush =
     Brush.radialGradient(listOf(VideoPlaceholderAmberStart, VideoPlaceholderAmberEnd))
-
-// ─────────────────────────────────────────────
-// Actions
-// ─────────────────────────────────────────────
-
-data class VideoPostActions(
-    val onBack: () -> Unit,
-    val onToggleLike: () -> Unit,
-    val onOpenAuthor: (userId: String) -> Unit,
-    val onRetry: () -> Unit,
-) {
-    companion object {
-        fun noOp(): VideoPostActions =
-            VideoPostActions(
-                onBack = {},
-                onToggleLike = {},
-                onOpenAuthor = {},
-                onRetry = {},
-            )
-    }
-}
 
 // ─────────────────────────────────────────────
 // Screen
@@ -114,14 +96,6 @@ fun VideoPostScreen(
         }
     }
 
-    val actions =
-        VideoPostActions(
-            onBack = onBack,
-            onToggleLike = viewModel::toggleLike,
-            onOpenAuthor = onOpenAuthor,
-            onRetry = viewModel::retry,
-        )
-
     Box(modifier = modifier.fillMaxSize().background(Ink)) {
         when (val state = uiState) {
             is UiState.Idle, is UiState.Loading ->
@@ -136,18 +110,25 @@ fun VideoPostScreen(
                     message = state.error.message,
                     modifier = Modifier.align(Alignment.Center).padding(horizontal = 24.dp),
                     actionLabel = "RETRY",
-                    onAction = actions.onRetry,
+                    onAction = viewModel::retry,
                     announce = true,
                 )
-            is UiState.Success -> VideoPostContent(state = state.data, actions = actions)
+            is UiState.Success ->
+                VideoPostContent(
+                    state = state.data,
+                    onToggleLike = viewModel::toggleLike,
+                    onOpenAuthor = onOpenAuthor,
+                )
         }
 
         BackButton(
-            onBack = actions.onBack,
+            onBack = onBack,
             tint = Color.White,
             modifier =
                 Modifier
                     .align(Alignment.TopStart)
+                    // TODO(fix/video-post-status-bar-icons): ADR-0005 gives bar insets to the root
+                    // scaffold, but VideoDetail renders outside BlendedScaffold, so the screen pads itself.
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(horizontal = 12.dp),
         )
@@ -166,7 +147,8 @@ fun VideoPostScreen(
 @Composable
 private fun VideoPostContent(
     state: VideoPostUi,
-    actions: VideoPostActions,
+    onToggleLike: () -> Unit,
+    onOpenAuthor: (userId: String) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         VideoSurface(state)
@@ -208,7 +190,7 @@ private fun VideoPostContent(
             verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            LikeRailItem(state = state, onToggleLike = actions.onToggleLike)
+            LikeRailItem(state = state, onToggleLike = onToggleLike)
             // TODO(feature/post-comments): comment count is read-only until comments exist.
             CommentRailItem(commentCount = state.commentCount, commentCountLabel = state.commentCountLabel)
             // TODO(feature/post-share-sheet): share action removed until a share sheet exists.
@@ -221,6 +203,7 @@ private fun VideoPostContent(
             modifier =
                 Modifier
                     .align(Alignment.BottomStart)
+                    // TODO(fix/video-post-status-bar-icons): screen-level navigation-bar padding, as above.
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -231,9 +214,10 @@ private fun VideoPostContent(
                 modifier =
                     Modifier
                         .widthIn(max = 268.dp)
+                        .heightIn(min = ScentThemeExtras.spacing.buttonHeight)
                         .accessibleClickable(
                             label = "View ${state.authorLabel}'s profile",
-                            onClick = { actions.onOpenAuthor(state.authorId) },
+                            onClick = { onOpenAuthor(state.authorId) },
                         ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
@@ -350,6 +334,7 @@ private fun VideoSurface(state: VideoPostUi) {
                     .fillMaxSize()
                     .clearedDescription("Video by ${state.authorLabel}. ${state.caption}")
                     .background(
+                        // TODO(chore/design-system-conformance): placeholder gradient stops are hex literals.
                         Brush.verticalGradient(listOf(Color(0xFF2A1F12), Color(0xFF55391C), Color(0xFF7E5700))),
                     ),
             contentAlignment = Alignment.Center,
@@ -460,7 +445,7 @@ private val previewPost =
 fun VideoPostScreenPreview() {
     ScentTheme {
         Box(modifier = Modifier.fillMaxSize().background(Ink)) {
-            VideoPostContent(state = previewPost, actions = VideoPostActions.noOp())
+            VideoPostContent(state = previewPost, onToggleLike = {}, onOpenAuthor = {})
         }
     }
 }
