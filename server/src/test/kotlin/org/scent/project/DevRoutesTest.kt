@@ -7,6 +7,7 @@ import data.schema.ListingMediaTable
 import data.schema.ListingsTable
 import data.schema.MediaItemsTable
 import data.schema.MediaLikesTable
+import data.schema.PostFragrancesTable
 import data.schema.PostHashtagsTable
 import data.schema.PostMediaTable
 import data.schema.PostsTable
@@ -72,6 +73,7 @@ class DevRoutesTest {
                 UsersTable,
                 PostsTable,
                 PostHashtagsTable,
+                PostFragrancesTable,
                 PostMediaTable,
                 FragrancesTable,
                 FragranceNotesTable,
@@ -96,6 +98,19 @@ class DevRoutesTest {
                 .selectAll()
                 .where { PostsTable.contentFormat eq "VIDEO" }
                 .map { it[PostMediaTable.url] }
+        }
+
+    private fun fragranceIdsTaggedOnVideoPosts(): List<Int> =
+        transaction {
+            (PostFragrancesTable innerJoin PostsTable)
+                .selectAll()
+                .where { PostsTable.contentFormat eq "VIDEO" }
+                .map { it[PostFragrancesTable.fragranceId].value }
+        }
+
+    private fun newestFragranceId(): Int =
+        transaction {
+            FragrancesTable.selectAll().maxOf { it[FragrancesTable.id].value }
         }
 
     private fun listingCount(): Long = transaction { ListingsTable.selectAll().count() }
@@ -268,6 +283,23 @@ class DevRoutesTest {
         }
         return types
     }
+
+    @Test
+    fun `seed-feed tags the video post with the newest fragrance when listings are seeded first`() =
+        withApp {
+            client.post("/api/v1/dev/seed-listings?count=3")
+            client.post("/api/v1/dev/seed-feed?count=1")
+
+            assertEquals(listOf(newestFragranceId()), fragranceIdsTaggedOnVideoPosts())
+        }
+
+    @Test
+    fun `seed-feed leaves the video post untagged when no fragrance exists`() =
+        withApp {
+            client.post("/api/v1/dev/seed-feed?count=1")
+
+            assertEquals(emptyList(), fragranceIdsTaggedOnVideoPosts())
+        }
 
     // ── seed-listings ────────────────────────────────────────────────────────
 
