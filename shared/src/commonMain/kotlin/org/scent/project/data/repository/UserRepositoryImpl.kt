@@ -2,10 +2,10 @@ package org.scent.project.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import org.scent.project.data.local.TokenStorage
-import org.scent.project.data.local.dao.FollowDao
 import org.scent.project.data.local.dao.UserDao
+import org.scent.project.data.mapper.UserEntityMapper.notCached
 import org.scent.project.data.mapper.UserEntityMapper.toDomain
 import org.scent.project.data.mapper.UserMapper.toUser
 import org.scent.project.data.mapper.UserMapper.toUserEntity
@@ -22,33 +22,32 @@ class UserRepositoryImpl(
     private val api: UserApi,
     private val tokenStorage: TokenStorage,
     private val userDao: UserDao,
-    private val followDao: FollowDao,
 ) : UserRepository {
     override fun getProfileFlow(userId: Int): Flow<Result<User>> =
-        combine(
-            userDao.getUser(userId),
-            followDao.getFollowerCount(userId),
-            followDao.getFollowingCount(userId),
-        ) { userEntity, followerCount, followingCount ->
-            val result: Result<User> =
-                if (userEntity != null) {
-                    userEntity.toDomain(followerCount, followingCount).asRight()
-                } else {
-                    AppError.NetworkError.NotFound(message = "User $userId is not cached").asLeft()
-                }
-            result
-        }.catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
+        userDao
+            .getUser(userId)
+            .map { userEntity ->
+                val result: Result<User> = userEntity?.toDomain()?.asRight() ?: notCached(userId)
+                result
+            }.catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
 
-    override suspend fun refreshProfile(userId: Int): Result<Unit> =
-        safeApiCall(
+    override suspend fun refreshProfile(userId: Int): Result<User> {
+        // Sent when stored, so the server can include the email if the caller owns this profile.
+        val token = tokenStorage.getToken().getOrNull()
+        return safeApiCall(
             onHttpError = { status ->
                 AppError.NetworkError.ServerError(statusCode = status).asLeft()
             },
         ) {
-            // TODO(feature/get-profile-by-id-endpoint): no GET /profile/{id} route exists yet.
-            // When it ships, fetch the user and upsert it into userDao.
-            Unit.asRight()
+            // TODO(fix/http-client-expect-success): with expectSuccess off, a 404 body parses as an
+            //  empty UserResponse and surfaces as ParseError instead of reaching onHttpError. Harmless:
+            //  either way it is a Left and the cached row is left untouched.
+            api
+                .getProfile(userId = userId, token = token)
+                .toUser()
+                .onRight { user -> userDao.upsertUser(user.toUserEntity()) }
         }
+    }
 
     override suspend fun updateProfile(
         userId: Int,

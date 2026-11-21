@@ -1,31 +1,41 @@
 package org.scent.project.data.repository
 
 import app.cash.turbine.test
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
+import kotlinx.io.IOException
+import kotlinx.serialization.json.Json
 import org.scent.project.data.local.entity.UserEntity
+import org.scent.project.data.remote.api.UserApi
+import org.scent.project.data.remote.api.UserApiImpl
 import org.scent.project.data.remote.dto.UserResponse
-import org.scent.project.fakes.FakeFollowDao
+import org.scent.project.domain.error.AppError
 import org.scent.project.fakes.FakeTokenStorage
 import org.scent.project.fakes.FakeUserApi
 import org.scent.project.fakes.FakeUserDao
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * getProfileFlow combines the cached user row with live follow counts
- * (ADR-0001). refreshProfile is a stub pending the /profile/{id} endpoint
- * (TODO(feature/get-profile-by-id-endpoint)), so these tests seed the DAOs
- * directly rather than going through the network writer.
+ * getProfileFlow reads the cached user row, counts included (ADR-0001);
+ * refreshProfile is the network writer that upserts it.
  */
 class UserRepositoryImplTest {
     private fun repo(
-        api: FakeUserApi = FakeUserApi(),
+        api: UserApi = FakeUserApi(),
         userDao: FakeUserDao = FakeUserDao(),
-        followDao: FakeFollowDao = FakeFollowDao(),
         storage: FakeTokenStorage = FakeTokenStorage(),
-    ) = UserRepositoryImpl(api = api, tokenStorage = storage, userDao = userDao, followDao = followDao)
+    ) = UserRepositoryImpl(api = api, tokenStorage = storage, userDao = userDao)
 
     private fun testUser(id: Int = 1) =
         UserEntity(
@@ -37,7 +47,21 @@ class UserRepositoryImplTest {
             bio = "Fragrance enthusiast",
             isSeller = true,
             postCount = 42,
+            followerCount = 248,
+            followingCount = 4,
             createdAt = 1000L,
+        )
+
+    private val serverUser =
+        UserResponse(
+            id = 1,
+            username = "alice",
+            displayName = "Alice",
+            email = "alice@example.com",
+            bio = "Oud and amber",
+            postCount = 2,
+            followerCount = 248,
+            followingCount = 4,
         )
 
     @Test
@@ -47,74 +71,188 @@ class UserRepositoryImplTest {
 
             repo.getProfileFlow(userId = 1).test {
                 val result = awaitItem()
-                assertTrue(result.isLeft)
+                assertIs<AppError.NetworkError.NotFound>(result.leftOrNull())
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `getProfileFlow emits the cached user`() =
+    fun `getProfileFlow emits the cached user with its stored counts`() =
         runTest {
             val userDao = FakeUserDao().apply { insertUser(testUser()) }
             val repo = repo(userDao = userDao)
 
             repo.getProfileFlow(userId = 1).test {
-                val result = awaitItem()
-                val user = result.getOrNull()
-                assertTrue(result.isRight)
+                val user = awaitItem().getOrNull()
                 assertEquals(1, user?.id)
-                assertEquals("alice", user?.username)
-                assertEquals(0, user?.followerCount) // no follows yet
-                assertEquals(0, user?.followingCount)
+                assertEquals(42, user?.postCount)
+                assertEquals(248, user?.followerCount)
+                assertEquals(4, user?.followingCount)
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `getProfileFlow live-updates when follower count changes`() =
+    fun `refreshProfile writes the server bio and counts over the login-seeded row`() =
         runTest {
-            val userDao = FakeUserDao().apply { insertUser(testUser()) }
-            val followDao = FakeFollowDao()
-            val repo = repo(userDao = userDao, followDao = followDao)
+            val loginSeeded = testUser().copy(bio = "", postCount = 0, followerCount = 0, followingCount = 0)
+            val userDao = FakeUserDao().apply { insertUser(loginSeeded) }
+            val api = FakeUserApi().apply { response = serverUser }
+            val repo = repo(api = api, userDao = userDao)
 
             repo.getProfileFlow(userId = 1).test {
                 assertEquals(0, awaitItem().getOrNull()?.followerCount)
 
-                // Simulate a follow being added to the database
-                followDao.addFollower(userId = 1)
+                val result = repo.refreshProfile(userId = 1)
 
-                assertEquals(1, awaitItem().getOrNull()?.followerCount)
+                assertEquals(null, result.leftOrNull())
+                val user = awaitItem().getOrNull()
+                assertEquals("Oud and amber", user?.bio)
+                assertEquals(2, user?.postCount)
+                assertEquals(248, user?.followerCount)
+                assertEquals(4, user?.followingCount)
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
     @Test
-    fun `getProfileFlow live-updates when following count changes`() =
+    fun `refreshProfile returns NoConnection and leaves the cache alone when offline`() =
         runTest {
             val userDao = FakeUserDao().apply { insertUser(testUser()) }
-            val followDao = FakeFollowDao()
-            val repo = repo(userDao = userDao, followDao = followDao)
-
-            repo.getProfileFlow(userId = 1).test {
-                assertEquals(0, awaitItem().getOrNull()?.followingCount)
-
-                // Simulate alice following someone
-                followDao.addFollowing(userId = 1)
-
-                assertEquals(1, awaitItem().getOrNull()?.followingCount)
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
-    fun `refreshProfile is a stub pending the get-profile-by-id endpoint`() =
-        runTest {
-            val repo = repo()
+            val api = FakeUserApi().apply { exception = IOException("offline") }
+            val repo = repo(api = api, userDao = userDao)
 
             val result = repo.refreshProfile(userId = 1)
 
-            assertTrue(result.isRight)
+            assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
+            repo.getProfileFlow(userId = 1).test {
+                assertEquals("Fragrance enthusiast", awaitItem().getOrNull()?.bio)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
+
+    @Test
+    fun `refreshProfile returns ParseError and leaves the cache alone when the response has no username`() =
+        runTest {
+            val userDao = FakeUserDao().apply { insertUser(testUser()) }
+            val api = FakeUserApi().apply { response = serverUser.copy(username = null) }
+            val repo = repo(api = api, userDao = userDao)
+
+            val result = repo.refreshProfile(userId = 1)
+
+            assertIs<AppError.NetworkError.ParseError>(result.leftOrNull())
+            repo.getProfileFlow(userId = 1).test {
+                assertEquals("Fragrance enthusiast", awaitItem().getOrNull()?.bio)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `updateProfile returns NoConnection and leaves the cache alone when offline`() =
+        runTest {
+            val userDao = FakeUserDao().apply { insertUser(testUser()) }
+            val api = FakeUserApi().apply { exception = IOException("offline") }
+            val storage = FakeTokenStorage().apply { storedToken = "token123" }
+            val repo = repo(api = api, userDao = userDao, storage = storage)
+
+            val result = repo.updateProfile(userId = 1, displayName = "Alice B", bio = "New bio")
+
+            assertIs<AppError.NetworkError.NoConnection>(result.leftOrNull())
+            repo.getProfileFlow(userId = 1).test {
+                assertEquals("Fragrance enthusiast", awaitItem().getOrNull()?.bio)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `updateProfile keeps the counts the server returns`() =
+        runTest {
+            val api = FakeUserApi().apply { response = serverUser.copy(bio = "New bio") }
+            val storage = FakeTokenStorage().apply { storedToken = "token123" }
+            val repo = repo(api = api, storage = storage)
+
+            repo.updateProfile(userId = 1, displayName = "Alice", bio = "New bio")
+
+            repo.getProfileFlow(userId = 1).test {
+                val user = awaitItem().getOrNull()
+                assertEquals(248, user?.followerCount)
+                assertEquals(4, user?.followingCount)
+                assertEquals(2, user?.postCount)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `refreshProfile keeps the server seller flag and creation time in the cache`() =
+        runTest {
+            val loginSeeded = testUser().copy(isSeller = false, createdAt = 0L)
+            val userDao = FakeUserDao().apply { insertUser(loginSeeded) }
+            val api =
+                FakeUserApi().apply {
+                    response = serverUser.copy(isSeller = true, createdAt = 1_700_000_000_000L)
+                }
+            val repo = repo(api = api, userDao = userDao)
+
+            repo.refreshProfile(userId = 1)
+
+            repo.getProfileFlow(userId = 1).test {
+                val user = awaitItem().getOrNull()
+                assertEquals(true, user?.isSeller)
+                assertEquals(1_700_000_000_000L, user?.createdAt)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    // Until fix/http-client-expect-success lands, a 500 is not thrown: its body is parsed, so the
+    // error surfaces as a ParseError rather than ServerError. These tests pin what must hold either
+    // way, that the call is a Left and the cached row is untouched.
+    @Test
+    fun `refreshProfile on an HTTP 500 is a Left and leaves the cache alone`() =
+        runTest {
+            val userDao = FakeUserDao().apply { insertUser(testUser()) }
+            val repo = repo(api = serverError(), userDao = userDao)
+
+            val result = repo.refreshProfile(userId = 1)
+
+            assertTrue(result.isLeft)
+            repo.getProfileFlow(userId = 1).test {
+                assertEquals("Fragrance enthusiast", awaitItem().getOrNull()?.bio)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `updateProfile on an HTTP 500 is a Left and leaves the cache alone`() =
+        runTest {
+            val userDao = FakeUserDao().apply { insertUser(testUser()) }
+            val storage = FakeTokenStorage().apply { storedToken = "token123" }
+            val repo = repo(api = serverError(), userDao = userDao, storage = storage)
+
+            val result = repo.updateProfile(userId = 1, displayName = "Alice B", bio = "New bio")
+
+            assertTrue(result.isLeft)
+            repo.getProfileFlow(userId = 1).test {
+                assertEquals("Fragrance enthusiast", awaitItem().getOrNull()?.bio)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    /** A real [UserApiImpl] over a mock engine that answers every request with HTTP 500. */
+    private fun serverError(): UserApi {
+        val client =
+            HttpClient(
+                MockEngine {
+                    respond(
+                        content = "{\"error\":\"boom\"}",
+                        status = HttpStatusCode.InternalServerError,
+                        headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                    )
+                },
+            ) {
+                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            }
+        return UserApiImpl(httpClient = client, baseUrl = "http://test")
+    }
 
     @Test
     fun `updateProfile returns Unauthorized when no token is stored`() =
@@ -123,7 +261,7 @@ class UserRepositoryImplTest {
 
             val result = repo.updateProfile(userId = 1, displayName = "Alice B", bio = "New bio")
 
-            assertTrue(result.isLeft)
+            assertIs<AppError.AuthError.Unauthorized>(result.leftOrNull())
         }
 
     @Test

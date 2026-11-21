@@ -6,14 +6,7 @@ import org.scent.project.domain.model.User
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asRight
 
-/**
- * Followers/following list rows. Follower/following counts are meaningful on
- * the profile detail screen (`UserEntityMapper.toDomain`), not on a plain list
- * row, so they default to 0 here.
- */
+/** Followers/following list rows. */
 object SocialEntityMapper {
-    fun List<UserEntity>.toDomainList(): Result<List<User>> =
-        map {
-            it.toDomain(followerCount = 0, followingCount = 0)
-        }.asRight()
+    fun List<UserEntity>.toDomainList(): Result<List<User>> = map { it.toDomain() }.asRight()
 }

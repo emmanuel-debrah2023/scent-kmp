@@ -8,19 +8,13 @@ import org.scent.project.data.local.entity.FollowEntity
 import org.scent.project.data.local.entity.UserEntity
 
 /**
- * Follow graph, used to live-update follower and following counts on the
- * profile screen, and to back the Followers/Following lists. No writers this
- * phase — the follow/unfollow endpoint does not exist yet. See
+ * Follow graph, backing the Followers/Following lists. Profile counts come from
+ * the server via `UserEntity`, not from here. No writers this phase — the
+ * follow/unfollow endpoint does not exist yet. See
  * `TODO(feature/follow-unfollow-endpoint)`.
  */
 @Dao
 interface FollowDao {
-    @Query("SELECT COUNT(*) FROM follows WHERE followingId = :userId")
-    fun getFollowerCount(userId: Int): Flow<Int>
-
-    @Query("SELECT COUNT(*) FROM follows WHERE followerId = :userId")
-    fun getFollowingCount(userId: Int): Flow<Int>
-
     /** Users following [userId] — joined against `users` to return full rows, not just ids. */
     @Query(
         """

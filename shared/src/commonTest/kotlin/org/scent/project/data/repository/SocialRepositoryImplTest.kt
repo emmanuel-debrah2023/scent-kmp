@@ -33,6 +33,8 @@ class SocialRepositoryImplTest {
         bio = "",
         isSeller = false,
         postCount = 0,
+        followerCount = 0,
+        followingCount = 0,
         createdAt = 0L,
     )
 

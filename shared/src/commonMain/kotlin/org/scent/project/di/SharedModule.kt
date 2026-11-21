@@ -147,7 +147,6 @@ fun sharedModule(
             api = get(),
             tokenStorage = get(),
             userDao = get(),
-            followDao = get(),
         )
     } bind UserRepository::class
 

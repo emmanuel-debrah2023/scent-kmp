@@ -11,6 +11,11 @@ data class UserResponse(
     @SerialName("email") val email: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("bio") val bio: String? = null,
+    @SerialName("post_count") val postCount: Int? = null,
+    @SerialName("follower_count") val followerCount: Int? = null,
+    @SerialName("following_count") val followingCount: Int? = null,
+    @SerialName("is_seller") val isSeller: Boolean? = null,
+    @SerialName("created_at") val createdAt: Long = 0L,
 )
 
 @Serializable
