@@ -40,6 +40,8 @@ tags:
 # Hide the keyboard so it cannot cover the suggestion rows.
 - hideKeyboard
 - assertVisible: "Use Dior Sauvage"
+# The typeahead must filter: unfiltered, Aventus is the second suggestion and would show here.
+- assertNotVisible: "Use Creed Aventus"
 - tapOn: "Use Dior Sauvage"
 - extendedWaitUntil:
     notVisible: "Use Dior Sauvage"
