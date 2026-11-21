@@ -63,6 +63,12 @@ data class ScentSpacing(
     val skeletonBadgeWidth: Dp = 32.dp,
     // Bottom-nav clearance for full-bleed scrolling lists: nav height + element-gap breathing room.
     val listBottomClearance: Dp = 96.dp,
+    // Home hero: the full-bleed media block and the two scrims that fade it into the page.
+    val heroHeight: Dp = 468.dp,
+    val heroTopScrimHeight: Dp = 208.dp,
+    val heroBottomScrimHeight: Dp = 300.dp,
+    // Round scrim behind a favourite icon laid over media; the icon button around it stays 48dp.
+    val favouriteScrimSize: Dp = 36.dp,
 )
 
 val LocalScentSpacing = staticCompositionLocalOf { ScentSpacing() }
@@ -80,3 +86,21 @@ data class ScentElevation(
 )
 
 val LocalScentElevation = staticCompositionLocalOf { ScentElevation() }
+
+// ─────────────────────────────────────────────
+// Alpha
+// Opacities for scrims and fades laid over media.
+// ─────────────────────────────────────────────
+@Immutable
+data class ScentAlpha(
+    // Far end of a placeholder media gradient.
+    val placeholderFade: Float = 0.6f,
+    // Round scrim behind an icon over media.
+    val mediaIconScrim: Float = 0.85f,
+    // Hero top scrim, at its middle stop.
+    val heroTopScrimMid: Float = 0.82f,
+    // Hero bottom scrim, once it has gone nearly solid.
+    val heroBottomScrimSolid: Float = 0.92f,
+)
+
+val LocalScentAlpha = staticCompositionLocalOf { ScentAlpha() }

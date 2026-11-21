@@ -53,6 +53,7 @@ import org.scent.project.domain.usecase.DeleteListingUseCase
 import org.scent.project.domain.usecase.GetBrandSuggestionsUseCase
 import org.scent.project.domain.usecase.GetCurrentUserUseCase
 import org.scent.project.domain.usecase.GetFragranceDetailUseCase
+import org.scent.project.domain.usecase.GetLatestVideoFeatureUseCase
 import org.scent.project.domain.usecase.GetListingUseCase
 import org.scent.project.domain.usecase.GetUserLikesUseCase
 import org.scent.project.domain.usecase.GetUserWishlistUseCase
@@ -176,6 +177,8 @@ fun sharedModule(
 
     // Feed / Posts
     factory { LikePostUseCase(repository = get()) }
+
+    factory { GetLatestVideoFeatureUseCase(postRepository = get()) }
 
     // Fragrances
     factory { SearchFragrancesUseCase(repository = get()) }
