@@ -36,6 +36,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
@@ -257,6 +258,20 @@ private suspend fun insertSeedVideoPost(
             this[PostHashtagsTable.postId] = postId
             this[PostHashtagsTable.hashtag] = tag
         }
+        // Tagging the newest active fragrance gives the Home Fragrances tab a hero to feature.
+        // No fragrance yet (listings not seeded) leaves the video untagged.
+        FragrancesTable
+            .selectAll()
+            .where { FragrancesTable.isActive eq true }
+            .orderBy(FragrancesTable.id, SortOrder.DESC)
+            .limit(1)
+            .firstOrNull()
+            ?.let { row ->
+                PostFragrancesTable.insert {
+                    it[PostFragrancesTable.postId] = postId
+                    it[PostFragrancesTable.fragranceId] = row[FragrancesTable.id]
+                }
+            }
     }
 }
 

@@ -52,6 +52,11 @@ on-tertiary-fixed-variant: '#484743'
 background: '#f9ecdc'
 on-background: '#201b11'
 surface-variant: '#ede1d1'
+placeholder-fragrance-1: '#e8d5b7'
+placeholder-fragrance-2: '#b08052'
+placeholder-fragrance-3: '#d9a05b'
+placeholder-hero-start: '#e67e22'
+placeholder-hero-end: '#9c5f17'
 typography:
 display-brand:
 fontFamily: Playfair Display

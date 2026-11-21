@@ -44,6 +44,7 @@ fun MainGraph(
             ScentHomeHost(
                 route = homeRoute,
                 onOpenVideo = { id -> nav.homeNav.navigateTo(HomeRoute.VideoDetail(id)) },
+                onOpenFragrance = { id -> nav.homeNav.navigateTo(HomeRoute.FragranceDetail(id)) },
                 onOpenUserProfile = { id -> nav.homeNav.navigateTo(HomeRoute.UserProfile(id)) },
                 onBack = { nav.onBackPressed() },
                 onNavTabSelected = { nav.selectTab(Tab.entries[it]) },
