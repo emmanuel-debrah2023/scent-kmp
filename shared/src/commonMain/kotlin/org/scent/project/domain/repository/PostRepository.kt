@@ -27,6 +27,15 @@ interface PostRepository {
      */
     suspend fun loadMoreFeed(limit: Int = DEFAULT_PAGE_SIZE): Result<Unit>
 
+    /**
+     * A single post, re-emitting whenever Room changes (ADR-0001). Emits
+     * `AppError.ContentError.PostNotFound` when the post is not cached.
+     *
+     * TODO(feature/post-detail-endpoint): the server has no GET /posts/{id}, so a
+     * post that is not already in the feed cache cannot be fetched on demand.
+     */
+    fun getPostFlow(postId: String): Flow<Result<Post>>
+
     suspend fun likePost(postId: String): Result<LikeResult>
 
     suspend fun createPost(params: CreatePostParams): Result<Post>

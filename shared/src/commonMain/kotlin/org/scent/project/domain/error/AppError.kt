@@ -143,6 +143,13 @@ sealed class AppError {
             override val message: String = "Could not get upload URL. Please try again.",
             override val cause: Throwable? = null,
         ) : ContentError()
+
+        /** The post is not in the local cache, or was removed since it was cached. */
+        data class PostNotFound(
+            val postId: String,
+            override val message: String = "This post is no longer available",
+            override val cause: Throwable? = null,
+        ) : ContentError()
     }
 
     sealed class StorageError : AppError() {

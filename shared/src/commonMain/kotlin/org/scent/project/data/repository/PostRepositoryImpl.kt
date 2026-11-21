@@ -7,6 +7,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.scent.project.data.local.TokenStorage
 import org.scent.project.data.local.dao.PostDao
+import org.scent.project.data.local.entity.PostWithListings
 import org.scent.project.data.mapper.PostEntityMapper.toDomainList
 import org.scent.project.data.mapper.PostEntityMapper.toEntity
 import org.scent.project.data.mapper.PostEntityMapper.toListingEntities
@@ -24,6 +25,7 @@ import org.scent.project.domain.repository.PostRepository
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
+import org.scent.project.data.mapper.PostEntityMapper.toDomain as entityToDomain
 
 class PostRepositoryImpl(
     private val api: PostApi,
@@ -48,6 +50,17 @@ class PostRepositoryImpl(
             .getFeed()
             .map { it.toDomainList() }
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
+
+    override fun getPostFlow(postId: String): Flow<Result<Post>> =
+        postDao
+            .observePost(postId)
+            .map { entity -> entity.toPostResult(postId) }
+            .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
+
+    private fun PostWithListings?.toPostResult(postId: String): Result<Post> {
+        if (this == null) return AppError.ContentError.PostNotFound(postId).asLeft()
+        return entityToDomain().asRight()
+    }
 
     override suspend fun refreshFeed(limit: Int): Result<Unit> =
         feedLock.withLock { fetchPage(cursor = null, limit = limit, append = false) }

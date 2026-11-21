@@ -313,6 +313,35 @@ class PostRepositoryImplTest {
         }
 
     @Test
+    fun `getPostFlow emits the cached post by id`() =
+        runTest {
+            val api = FakePostApi()
+            val dao = FakePostDao()
+            val repository = repo(api, dao)
+
+            api.feedResponse = FeedResponseDto(posts = listOf(post("p1"), post("p2")), nextCursor = null)
+            repository.refreshFeed()
+
+            repository.getPostFlow("p2").test {
+                assertEquals("p2", awaitItem().getOrNull()?.id)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `getPostFlow emits PostNotFound when the post is not cached`() =
+        runTest {
+            val repository = repo()
+
+            repository.getPostFlow("missing").test {
+                val error = awaitItem().leftOrNull()
+                assertIs<AppError.ContentError.PostNotFound>(error)
+                assertEquals("missing", error.postId)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun `a failing cache read surfaces as Left rather than crashing the collector`() =
         runTest {
             val dao = FakePostDao().apply { readException = IllegalStateException("db corrupt") }

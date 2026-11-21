@@ -34,6 +34,10 @@ interface PostDao {
     @Query("SELECT * FROM posts WHERE id = :postId")
     suspend fun findPost(postId: String): PostEntity?
 
+    @Transaction
+    @Query("SELECT * FROM posts WHERE id = :postId")
+    fun observePost(postId: String): Flow<PostWithListings?>
+
     @Upsert
     suspend fun upsertPosts(posts: List<PostEntity>)
 
