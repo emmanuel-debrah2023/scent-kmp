@@ -212,6 +212,35 @@ data class PostListing(
 )
 ```
 
+#### Wire Contract Names Live in `contracts`
+
+**CRITICAL**: Any name both the client and the server put on the wire is defined once, in the `contracts` module. That covers DTOs and, just as importantly, the things DTOs don't: query parameter names, path segments and header names. `shared` and `server` both depend on `contracts`, so a single constant is the only copy either side can read.
+
+```kotlin
+// contracts/src/commonMain/kotlin/org/scent/project/data/remote/api/FragranceQueryParams.kt
+object FragranceQueryParams {
+    const val QUERY = "query"
+    const val CURSOR = "cursor"
+    const val LIMIT = "limit"
+}
+
+// Client: shared/.../data/remote/api/FragranceApi.kt
+parameter(FragranceQueryParams.QUERY, query)
+
+// Server: server/.../routing/FragranceRoutes.kt
+call.request.queryParameters[FragranceQueryParams.QUERY]
+```
+
+A shared constant stops the two sides drifting apart, but a rename of the constant still changes the wire silently for every other caller (Maestro flows, curl scripts, older builds). So the client-side API test pins the **literal** string, not the constant:
+
+```kotlin
+// shared/src/commonTest/.../data/remote/api/FragranceApiTest.kt
+assertEquals("baccarat", lastUrl?.parameters?.get("query"))   // ✅ literal pins the wire
+assertNull(lastUrl?.parameters?.get("q"))
+```
+
+Server route tests may use the constant. A server test that calls the route with a hand-written name proves nothing about what the client sends; that gap is how `?q=` versus `?query=` shipped.
+
 #### Mapper Pattern - Safe Conversion from DTO to Domain
 
 **CRITICAL**: All DTO to Domain conversions MUST return `Either<AppError, DomainModel>`
@@ -376,6 +405,29 @@ object PostMapper {
 }
 ```
 
+#### Mapper Placement: Data Mappers vs UI Mappers
+
+Scent has two kinds of mapper, and each lives with the layer that owns its output:
+
+| Mapper | Converts | Lives in | Returns |
+|---|---|---|---|
+| Data mapper | DTO or Room entity → domain model | `shared/.../data/mapper/<Model>Mapper.kt` | `Either<AppError, T>` (the input is untrusted) |
+| UI mapper | domain model → `*Ui` model for one screen | `composeApp/.../ui/<feature>/<Feature>Mapper.kt`, next to the screen and ViewModel | the `*Ui` model directly (domain models are already valid) |
+
+A UI mapper owns every display decision: formatted strings, plurals, accessibility labels, star counts, placeholder choice. Composables render its output and nothing else.
+
+```kotlin
+// composeApp/src/commonMain/kotlin/ui/home/VideoPostMapper.kt
+data class VideoPostUi(/* display-ready fields */)
+
+internal fun Post.toVideoPostUi(likeOverride: LikeResult? = null): VideoPostUi
+```
+
+- ✅ One `<Feature>Mapper.kt` per screen feature (`AskUiMapper`, `CommunityFeedMapper`, `VideoPostMapper`, `HomeFragrancesMapper`), with `internal` or `private` extension functions.
+- ✅ A `*Ui` model used by a shared `ui/components` composable lives beside that component, so components never depend on a feature package. The feature mapper still produces it.
+- ❌ Don't put UI mapping in `shared/data/mapper`; display strings are not a data-layer concern.
+- ❌ Don't map inside a screen file or a ViewModel. A private `toXUiModel()` at the bottom of `XScreen.kt` belongs in `XMapper.kt`.
+
 #### Repository Implementation with Safe Mapping
 
 ```kotlin
@@ -388,12 +440,12 @@ class FragranceRepositoryImpl(
     
     override suspend fun searchFragrances(
         query: String,
-        page: Int,
+        cursor: String?,
         limit: Int
     ): Result<List<Fragrance>> {
         return try {
             val response: ApiResponseDto<List<FragranceDto>> = 
-                apiClient.searchFragrances(query, page, limit)
+                apiClient.searchFragrances(query, cursor, limit)
             
             // Handle nullable API response
             if (response.success != true) {
@@ -843,7 +895,7 @@ typealias Result<T> = Either<AppError, T>
 interface FragranceRepository {
     suspend fun searchFragrances(
         query: String,
-        page: Int = 0,
+        cursor: String? = null,
         limit: Int = 20
     ): Result<List<Fragrance>>
     
@@ -860,18 +912,18 @@ class FragranceRepositoryImpl(
     
     override suspend fun searchFragrances(
         query: String,
-        page: Int,
+        cursor: String?,
         limit: Int
     ): Result<List<Fragrance>> {
         return try {
             // Try cache first
-            val cached = localCache.search(query, page, limit)
+            val cached = localCache.search(query, cursor, limit)
             if (cached.isNotEmpty()) {
                 return cached.asRight()
             }
             
             // Fetch from API
-            val response = apiClient.searchFragrances(query, page, limit)
+            val response = apiClient.searchFragrances(query, cursor, limit)
             
             when {
                 response.isSuccessful && response.data != null -> {
@@ -960,13 +1012,11 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             
-            postRepository.getFeed(page = 0, limit = 20)
+            postRepository.refreshFeed(limit = 20)
                 .handleResult(
-                    onSuccess = { posts ->
-                        _uiState.value = UiState.Success(
-                            HomeScreenData(posts = posts)
-                        )
-                    },
+                    // refreshFeed only writes the cache; the posts reach the UI
+                    // through getFeedFlow() (see "Repository Layer: Flow SSOT").
+                    onSuccess = { },
                     onError = { error ->
                         _uiState.value = UiState.Error(error)
                         handleError(error)
@@ -1374,8 +1424,12 @@ interface PostRepository {
     // Mutation — stays suspend, one-shot
     suspend fun createPost(request: CreatePostRequest): Result<Post>
 
-    // Live-sensitive read — Flow SSOT, Room-backed
-    fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>>
+    // Live-sensitive read — Flow SSOT, Room-backed. Observes only; never fetches.
+    fun getFeedFlow(): Flow<Result<List<Post>>>
+
+    // Writers — replace the first page, or append the next one by server cursor
+    suspend fun refreshFeed(limit: Int = DEFAULT_PAGE_SIZE): Result<Unit>
+    suspend fun loadMoreFeed(limit: Int = DEFAULT_PAGE_SIZE): Result<Unit>
 }
 
 // Implementation sketch
@@ -1394,21 +1448,29 @@ class PostRepositoryImpl(
         }
     }
 
-    override fun getFeedFlow(page: Int, limit: Int): Flow<Result<List<Post>>> =
-        postDao.getFeed(page, limit) // Room Flow query — local DB is the only reader
+    // The server's next-page cursor, kept from the last page written
+    private var nextCursor: String? = null
+
+    override fun getFeedFlow(): Flow<Result<List<Post>>> =
+        postDao.getFeed() // Room Flow query — local DB is the only reader
             .map { entities -> entities.map { it.toDomain() }.asRight() }
-            .onStart { refreshFeedFromNetwork(page, limit) } // network only ever writes
             .catch { e -> emit(AppError.Unknown(cause = e).asLeft()) }
 
-    private suspend fun refreshFeedFromNetwork(page: Int, limit: Int) {
-        val response = apiClient.getFeed(page, limit)
-        if (response.isSuccessful && response.data != null) {
-            postDao.upsertAll(response.data.map { it.toEntity() }) // triggers re-emission
+    override suspend fun refreshFeed(limit: Int): Result<Unit> =
+        safeApiCall { apiClient.getFeed(cursor = null, limit = limit) }.map { page ->
+            postDao.replaceFeed(page.posts.map { it.toEntity() }) // triggers re-emission
+            nextCursor = page.nextCursor
         }
-        // Network failure here is silent to the Flow by design — the last good
-        // Room state keeps rendering; surface the failure via a separate side channel
-        // (e.g. a SharedFlow<AppError>) if the screen needs to show a toast/snackbar.
+
+    override suspend fun loadMoreFeed(limit: Int): Result<Unit> {
+        val cursor = nextCursor ?: return Unit.asRight() // feed exhausted
+        return safeApiCall { apiClient.getFeed(cursor = cursor, limit = limit) }.map { page ->
+            postDao.upsertAll(page.posts.map { it.toEntity() })
+            nextCursor = page.nextCursor
+        }
     }
+    // A failed write returns its Left to the caller; the Flow keeps rendering the
+    // last good Room state, so the ViewModel shows the error as a snackbar.
 }
 ```
 
@@ -2287,7 +2349,7 @@ class SearchFragrancesUseCase(
     
     data class Params(
         val query: String,
-        val page: Int = 0,
+        val cursor: String? = null,
         val limit: Int = 20
     )
     
@@ -2300,7 +2362,7 @@ class SearchFragrancesUseCase(
         // Call repository
         return fragranceRepository.searchFragrances(
             query = params.query,
-            page = params.page,
+            cursor = params.cursor,
             limit = params.limit
         )
     }
@@ -2583,7 +2645,7 @@ class FakeFragranceRepository : FragranceRepository {
     
     override suspend fun searchFragrances(
         query: String,
-        page: Int,
+        cursor: String?,
         limit: Int
     ): Result<List<Fragrance>> {
         if (shouldReturnError) {
