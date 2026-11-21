@@ -4,7 +4,7 @@ sealed interface CommunityFeedItem {
     val id: String
     val username: String
     val timeAgo: String
-    val timeAgoDescription: String
+    val headerDescription: String
     val caption: String
     val hashtags: String
     val likeCount: String
@@ -14,7 +14,7 @@ sealed interface CommunityFeedItem {
         override val id: String,
         override val username: String,
         override val timeAgo: String,
-        override val timeAgoDescription: String,
+        override val headerDescription: String,
         override val caption: String,
         override val hashtags: String,
         override val likeCount: String,
@@ -25,7 +25,7 @@ sealed interface CommunityFeedItem {
         override val id: String,
         override val username: String,
         override val timeAgo: String,
-        override val timeAgoDescription: String,
+        override val headerDescription: String,
         override val caption: String,
         override val hashtags: String,
         override val likeCount: String,
@@ -37,7 +37,7 @@ sealed interface CommunityFeedItem {
         override val id: String,
         override val username: String,
         override val timeAgo: String,
-        override val timeAgoDescription: String,
+        override val headerDescription: String,
         override val caption: String,
         override val hashtags: String,
         override val likeCount: String,
