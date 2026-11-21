@@ -103,10 +103,11 @@ reset_seed() { # reset_seed <what> <path>
 }
 reset_seed "feed posts" /api/v1/dev/reset-seed-feed
 reset_seed "listings" /api/v1/dev/reset-seed-listings
+# Listings first: seed-feed tags its video post with the newest seeded fragrance (the Home hero).
+check_seeded "$SEED_COUNT listings" "$(post "/api/v1/dev/seed-listings?count=$SEED_COUNT")" 201
 # The stored video URL takes the request's Host, so send the emulator's address or the app can't reach it.
 check_seeded "$SEED_COUNT feed posts and a video post" \
     "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/api/v1/dev/seed-feed?count=$SEED_COUNT" -H "Host: $EMULATOR_HOST")" 201
-check_seeded "$SEED_COUNT listings" "$(post "/api/v1/dev/seed-listings?count=$SEED_COUNT")" 201
 
 echo
 echo "E2E stack ready at $API_URL. Sign in as $EMAIL."
