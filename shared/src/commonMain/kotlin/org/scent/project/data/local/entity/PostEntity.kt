@@ -16,6 +16,7 @@ import androidx.room.PrimaryKey
 data class PostEntity(
     @PrimaryKey val id: String,
     val userId: String,
+    val username: String,
     val contentFormat: String,
     val textContent: String,
     val mediaUrls: List<String>,
