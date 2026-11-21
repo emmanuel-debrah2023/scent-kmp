@@ -7,6 +7,7 @@ import ui.ask.AskViewModel
 import ui.auth.AuthViewModel
 import ui.auth.SessionViewModel
 import ui.feed.FeedViewModel
+import ui.home.VideoPostViewModel
 import ui.listing.CreateListingViewModel
 import ui.listing.EditListingViewModel
 import ui.marketplace.BrandSuggestionViewModel
@@ -41,6 +42,7 @@ val viewModelModule =
         viewModel { (userId: Int) -> EditProfileViewModel(userId, get()) }
         viewModel { (userId: Int) -> SettingsViewModel(userId, get()) }
         viewModel { (url: String) -> VideoViewModel(url) }
+        viewModel { (postId: String) -> VideoPostViewModel(postId, get(), get()) }
         viewModel { MarketplaceViewModel(get()) }
         viewModel { BrandSuggestionViewModel(get()) }
         viewModel { CreateListingViewModel(get(), get(), get()) }

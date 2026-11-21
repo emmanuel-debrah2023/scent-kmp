@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ui.navigation.HomeRoute
+import ui.navigation.PlaceholderScreen
 import ui.theme.ScentTheme
 
 // TODO(chore/unify-home-nav-tab-state): `topTab` below is a second, independent copy of the Fragrances/
@@ -16,7 +17,8 @@ import ui.theme.ScentTheme
 @Composable
 fun ScentHomeHost(
     route: HomeRoute,
-    onOpenVideo: (url: String) -> Unit,
+    onOpenVideo: (postId: String) -> Unit,
+    onOpenUserProfile: (userId: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onNavTabSelected: (Int) -> Unit = {},
@@ -25,15 +27,16 @@ fun ScentHomeHost(
     when (route) {
         is HomeRoute.VideoDetail ->
             VideoPostScreen(
-                url = route.url,
+                postId = route.postId,
                 onBack = onBack,
+                onOpenAuthor = onOpenUserProfile,
                 modifier = modifier,
             )
+        is HomeRoute.UserProfile -> PlaceholderScreen("User Profile", onBack = onBack)
         // Nothing pushes the other Home routes yet; they fall back to the feed rather than a blank screen.
         is HomeRoute.Feed,
         is HomeRoute.PostDetail,
         is HomeRoute.FragranceDetail,
-        is HomeRoute.UserProfile,
         ->
             HomeFullBleedScreen(
                 onOpenVideo = onOpenVideo,
@@ -53,7 +56,12 @@ fun ScentHomeHost(
 @Composable
 fun ScentHomeHostHomeFeedPreview() {
     ScentTheme {
-        ScentHomeHost(route = HomeRoute.Feed, onOpenVideo = {}, onBack = {})
+        ScentHomeHost(
+            route = HomeRoute.Feed,
+            onOpenVideo = {},
+            onOpenUserProfile = {},
+            onBack = {},
+        )
     }
 }
 
@@ -61,6 +69,11 @@ fun ScentHomeHostHomeFeedPreview() {
 @Composable
 fun ScentHomeHostVideoPostPreview() {
     ScentTheme {
-        ScentHomeHost(route = HomeRoute.VideoDetail(""), onOpenVideo = {}, onBack = {})
+        ScentHomeHost(
+            route = HomeRoute.VideoDetail("preview"),
+            onOpenVideo = {},
+            onOpenUserProfile = {},
+            onBack = {},
+        )
     }
 }

@@ -31,7 +31,7 @@ sealed interface HomeRoute {
     ) : HomeRoute
 
     data class VideoDetail(
-        val url: String,
+        val postId: String,
     ) : HomeRoute
 }
 

@@ -1,15 +1,11 @@
 package ui.home
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,40 +18,45 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.ModeComment
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
+import ui.accessibility.accessibleClickable
+import ui.accessibility.accessibleLabel
+import ui.accessibility.accessibleToggle
+import ui.accessibility.clearedDescription
+import ui.accessibility.decorative
+import ui.accessibility.mergedGroup
+import ui.base.UiState
 import ui.components.BackButton
+import ui.components.ErrorState
+import ui.components.ErrorStateVariant
 import ui.components.VideoPlayer
-import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
@@ -66,6 +67,29 @@ private val Ink = Color(0xFF140E07)
 private val VideoPlaceholderAmberStart = Color(0xFFE67E22)
 private val VideoPlaceholderAmberEnd = Color(0xFF9C5F17)
 private val VideoLikeRed = Color(0xFFE4362E)
+private val VideoPlaceholderBrush =
+    Brush.radialGradient(listOf(VideoPlaceholderAmberStart, VideoPlaceholderAmberEnd))
+
+// ─────────────────────────────────────────────
+// Actions
+// ─────────────────────────────────────────────
+
+data class VideoPostActions(
+    val onBack: () -> Unit,
+    val onToggleLike: () -> Unit,
+    val onOpenAuthor: (userId: String) -> Unit,
+    val onRetry: () -> Unit,
+) {
+    companion object {
+        fun noOp(): VideoPostActions =
+            VideoPostActions(
+                onBack = {},
+                onToggleLike = {},
+                onOpenAuthor = {},
+                onRetry = {},
+            )
+    }
+}
 
 // ─────────────────────────────────────────────
 // Screen
@@ -73,69 +97,86 @@ private val VideoLikeRed = Color(0xFFE4362E)
 
 @Composable
 fun VideoPostScreen(
-    url: String = "",
+    postId: String,
     onBack: () -> Unit,
+    onOpenAuthor: (userId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // TODO(feature/video-post-screen-wiring): entire screen is hardcoded — no ViewModel,
-    // no post data passed in beyond `url`. Caption, handle, like count ("1,208" below),
-    // and the Velvet Orchid listing row are all literal strings; comment/share/save/
-    // FOLLOW/Buy are every one a no-op. See also fix/community-card-like-wiring for the
-    // `liked` local-state pattern duplicated here.
-    val colorScheme = MaterialTheme.colorScheme
-    // TODO(chore/remove-intermediate-theme-token-vals): this file has 2 intermediate
-    // `val = ScentThemeExtras.*` assignments — inline to ScentThemeExtras.<token>.<field>.
-    val spacing = ScentThemeExtras.spacing
+    val viewModel: VideoPostViewModel = koinViewModel(parameters = { parametersOf(postId) })
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    var liked by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { viewModel.load() }
+
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
+    }
+
+    val actions =
+        VideoPostActions(
+            onBack = onBack,
+            onToggleLike = viewModel::toggleLike,
+            onOpenAuthor = onOpenAuthor,
+            onRetry = viewModel::retry,
+        )
 
     Box(modifier = modifier.fillMaxSize().background(Ink)) {
-        // 1 — Video player (falls back to amber gradient when url is blank)
-        if (url.isNotBlank()) {
-            VideoPlayer(
-                url = url,
-                thumbnailUrl = null,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color(0xFF2A1F12), Color(0xFF55391C), Color(0xFF7E5700)),
-                            ),
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Movie,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.62f),
-                        modifier = Modifier.size(56.dp),
-                    )
-                    Text(
-                        text = "VIDEO PLACEHOLDER",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.3.sp,
-                        color = Color.White.copy(alpha = 0.62f),
-                    )
-                }
-            }
+        when (val state = uiState) {
+            is UiState.Idle, is UiState.Loading ->
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color.White,
+                )
+            is UiState.Error ->
+                ErrorState(
+                    variant = ErrorStateVariant.Error,
+                    title = "Couldn't load this post",
+                    message = state.error.message,
+                    modifier = Modifier.align(Alignment.Center).padding(horizontal = 24.dp),
+                    actionLabel = "RETRY",
+                    onAction = actions.onRetry,
+                    announce = true,
+                )
+            is UiState.Success -> VideoPostContent(state = state.data, actions = actions)
         }
 
-        // 2 — Top scrim
+        BackButton(
+            onBack = actions.onBack,
+            tint = Color.White,
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 12.dp),
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+// ─────────────────────────────────────────────
+// Content
+// ─────────────────────────────────────────────
+
+@Composable
+private fun VideoPostContent(
+    state: VideoPostUi,
+    actions: VideoPostActions,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        VideoSurface(state)
+
+        // Top scrim
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(190.dp)
+                    .height(192.dp)
                     .align(Alignment.TopStart)
                     .background(
                         Brush.verticalGradient(
@@ -144,7 +185,7 @@ fun VideoPostScreen(
                     ),
         )
 
-        // 3 — Bottom scrim
+        // Bottom scrim
         Box(
             modifier =
                 Modifier
@@ -158,280 +199,239 @@ fun VideoPostScreen(
                     ),
         )
 
-        // 4 — Top row
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 12.dp)
-                    .align(Alignment.TopStart),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BackButton(onBack = onBack, tint = Color.White)
-            // TODO: Playfair Display
-            Text(
-                text = "Community",
-                fontSize = 19.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                fontFamily = PlayfairDisplayFamily,
-            )
-            IconButton(onClick = {}, modifier = Modifier.size(spacing.xxl)) {
-                Icon(
-                    imageVector = Icons.Default.MoreHoriz,
-                    contentDescription = "More options",
-                    tint = Color.White,
-                )
-            }
-        }
-
-        // 5 — Action rail (center-end)
+        // Action rail (center-end)
         Column(
             modifier =
                 Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ActionRailItem(
-                icon = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                tint = if (liked) VideoLikeRed else Color.White,
-                label = if (liked) "1,209" else "1,208",
-                onClick = { liked = !liked },
-            )
-            ActionRailItem(
-                icon = Icons.Default.ModeComment,
-                tint = Color.White,
-                label = "86",
-                onClick = {},
-            )
-            ActionRailItem(
-                icon = Icons.AutoMirrored.Filled.Send,
-                tint = Color.White,
-                label = "",
-                onClick = {},
-            )
-            ActionRailItem(
-                icon = Icons.Default.BookmarkBorder,
-                tint = Color.White,
-                label = "",
-                onClick = {},
-            )
+            LikeRailItem(state = state, onToggleLike = actions.onToggleLike)
+            // TODO(feature/post-comments): comment count is read-only until comments exist.
+            CommentRailItem(commentCount = state.commentCount, commentCountLabel = state.commentCountLabel)
+            // TODO(feature/post-share-sheet): share action removed until a share sheet exists.
+            // TODO(feature/post-save-bookmark): save action removed until bookmarks exist.
+            // TODO(feature/post-overflow-actions): overflow menu removed until it has actions.
         }
 
-        // 6 — Bottom column
+        // Bottom column
         Column(
             modifier =
                 Modifier
                     .align(Alignment.BottomStart)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Author row
+            // TODO(feature/post-author-summary): the post payload carries only the author id, so the
+            // display name is the id and the verified state is not shown.
             Row(
-                modifier = Modifier.widthIn(max = 270.dp),
+                modifier =
+                    Modifier
+                        .widthIn(max = 268.dp)
+                        .accessibleClickable(
+                            label = "View ${state.authorLabel}'s profile",
+                            onClick = { actions.onOpenAuthor(state.authorId) },
+                        ),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
             ) {
-                // Avatar
                 Box(
                     modifier =
                         Modifier
                             .size(36.dp)
-                            .background(colorScheme.background.copy(alpha = 0.9f), CircleShape),
+                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp),
                     )
                 }
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
-                    ) {
-                        Text(
-                            text = "maya.decants",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Verified",
-                            tint = ScentThemeExtras.accent,
-                            modifier = Modifier.size(15.dp),
-                        )
-                    }
-                    Text(
-                        text = "Verified seller · 2h ago",
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.72f),
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = {},
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
-                    modifier = Modifier.height(34.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                ) {
-                    Text(
-                        text = "FOLLOW",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                    )
-                }
-            }
-
-            // Caption
-            Text(
-                text = "Nothing compares to the silage on this one \uD83C\uDF39",
-                fontSize = 15.sp,
-                lineHeight = 21.sp,
-                color = Color.White,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            // Hashtags
-            Text(
-                text = "#tomford #vanilla #decant",
-                fontSize = 13.sp,
-                color = ScentThemeExtras.accent,
-            )
-
-            // Listing row
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(colorScheme.background.copy(alpha = 0.95f), RoundedCornerShape(16.dp))
-                        .padding(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Thumbnail
-                Box(
-                    modifier =
-                        Modifier
-                            .size(44.dp)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(VideoPlaceholderAmberStart, VideoPlaceholderAmberEnd),
-                                ),
-                                RoundedCornerShape(12.dp),
-                            ),
+                Text(
+                    text = state.authorLabel,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
                 )
+                // TODO(feature/follow-unfollow-endpoint): FOLLOW button hidden until follow and
+                // unfollow exist server-side.
+            }
 
-                Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.mergedGroup(),
+                verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xxs),
+            ) {
+                Text(
+                    text = state.caption,
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp,
+                    color = Color.White,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (state.hashtags.isNotBlank()) {
                     Text(
-                        text = "Velvet Orchid · 50ml",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        text = state.hashtags,
+                        fontSize = 12.sp,
+                        color = ScentThemeExtras.accent,
                     )
-                    Text(
-                        text = "Like new · 80% full · $124",
-                        fontSize = 13.sp,
-                        color = colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                Button(
-                    onClick = {},
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = Color.White,
-                        ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(44.dp),
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp),
-                ) {
-                    Text(text = "BUY", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
-            // Progress row
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Box(
+            state.listing?.let { listing ->
+                // TODO(feature/post-listing-summary): BUY button and the fragrance name and size line
+                // are removed until a listing resolves to a fragrance and a checkout exists.
+                Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(3.dp),
+                            .mergedGroup()
+                            .padding(12.dp)
+                            .background(
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+                                RoundedCornerShape(16.dp),
+                            ),
+                    horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Track
                     Box(
                         modifier =
                             Modifier
-                                .fillMaxSize()
-                                .background(Color.White.copy(alpha = 0.28f), RoundedCornerShape(2.dp)),
+                                .decorative()
+                                .size(48.dp)
+                                .background(
+                                    VideoPlaceholderBrush,
+                                    RoundedCornerShape(12.dp),
+                                ),
                     )
-                    // Progress
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth(0.38f)
-                                .fillMaxHeight()
-                                .background(ScentThemeExtras.accent, RoundedCornerShape(2.dp)),
-                    )
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = listing.priceLabel,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = listing.conditionLabel,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                Spacer(Modifier.height(spacing.xxs))
-                Text(
-                    text = "0:14 / 0:37",
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.8f),
-                )
             }
+
+            // TODO(feature/video-player-progress): the playback progress bar is removed until the
+            // player reports its position.
+        }
+    }
+}
+
+@Composable
+private fun VideoSurface(state: VideoPostUi) {
+    val videoUrl = state.videoUrl
+    if (!videoUrl.isNullOrBlank()) {
+        VideoPlayer(
+            url = videoUrl,
+            thumbnailUrl = null,
+            modifier = Modifier.fillMaxSize().clearedDescription("Video by ${state.authorLabel}. ${state.caption}"),
+        )
+    } else {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .clearedDescription("Video by ${state.authorLabel}. ${state.caption}")
+                    .background(
+                        Brush.verticalGradient(listOf(Color(0xFF2A1F12), Color(0xFF55391C), Color(0xFF7E5700))),
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Movie,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.62f),
+                modifier = Modifier.size(56.dp),
+            )
         }
     }
 }
 
 // ─────────────────────────────────────────────
-// Action rail item
+// Action rail items
 // ─────────────────────────────────────────────
 
 @Composable
-private fun ActionRailItem(
-    icon: ImageVector,
-    tint: Color,
-    label: String,
-    onClick: () -> Unit,
+private fun LikeRailItem(
+    state: VideoPostUi,
+    onToggleLike: () -> Unit,
 ) {
-    val spacing = ScentThemeExtras.spacing
-
     Column(
+        modifier =
+            Modifier.accessibleToggle(
+                value = state.isLiked,
+                label = "Like, ${state.likeCount} likes",
+                role = Role.Checkbox,
+                onValueChange = { onToggleLike() },
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.size(spacing.xxl)) {
+        Box(
+            modifier = Modifier.size(ScentThemeExtras.spacing.xxl),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
-                imageVector = icon,
+                imageVector = if (state.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = null,
-                tint = tint,
+                tint = if (state.isLiked) VideoLikeRed else Color.White,
                 modifier = Modifier.size(28.dp),
             )
         }
-        if (label.isNotEmpty()) {
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
+        Text(
+            text = state.likeCountLabel,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+        )
+    }
+}
+
+@Composable
+private fun CommentRailItem(
+    commentCount: Int,
+    commentCountLabel: String,
+) {
+    Column(
+        modifier = Modifier.accessibleLabel("$commentCount comments"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(ScentThemeExtras.spacing.xxl),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.ModeComment,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(28.dp).decorative(),
             )
         }
+        Text(
+            text = commentCountLabel,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            modifier = Modifier.decorative(),
+        )
     }
 }
 
@@ -439,10 +439,28 @@ private fun ActionRailItem(
 // Preview
 // ─────────────────────────────────────────────
 
+private val previewPost =
+    VideoPostUi(
+        postId = "preview",
+        authorId = "maya-decants",
+        authorLabel = "maya.decants",
+        caption = "Nothing compares to the silage on this one",
+        hashtags = "#tomford #vanilla #decant",
+        videoUrl = null,
+        isLiked = false,
+        likeCount = 1208,
+        likeCountLabel = "1k",
+        commentCount = 86,
+        commentCountLabel = "86",
+        listing = VideoPostListingUi(priceLabel = "\$124", conditionLabel = "Like new"),
+    )
+
 @Preview(device = "spec:width=412dp,height=892dp")
 @Composable
 fun VideoPostScreenPreview() {
     ScentTheme {
-        VideoPostScreen(onBack = {})
+        Box(modifier = Modifier.fillMaxSize().background(Ink)) {
+            VideoPostContent(state = previewPost, actions = VideoPostActions.noOp())
+        }
     }
 }
