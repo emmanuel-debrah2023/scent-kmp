@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,9 +51,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
-import ui.accessibility.clearedDescription
 import ui.base.UiState
 import ui.components.BlendedScaffold
+import ui.components.PostAuthorHeader
 import ui.components.VideoPlayer
 import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
@@ -586,34 +585,11 @@ private fun TextPostCard(item: CommunityFeedItem.Text) {
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
     ) {
         Column(modifier = Modifier.padding(spacing.cardPadding)) {
-            Row(
-                modifier = Modifier.clearedDescription(headerDescription),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(32.dp)
-                            .background(colorScheme.primaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(spacing.iconSizeSmall),
-                    )
-                }
-                Text(
-                    text = username,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onSurface,
-                )
-                Box(modifier = Modifier.size(3.dp).background(colorScheme.outline, CircleShape))
-                Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
-            }
+            PostAuthorHeader(
+                username = username,
+                timeAgo = timeAgo,
+                accessibilityDescription = headerDescription,
+            )
             Text(
                 text = caption,
                 fontSize = 14.sp,
@@ -709,34 +685,11 @@ private fun PhotoPostCard(item: CommunityFeedItem.Photo) {
                         ),
             )
             Column(modifier = Modifier.padding(spacing.cardPadding)) {
-                Row(
-                    modifier = Modifier.clearedDescription(headerDescription),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(spacing.xs),
-                ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(32.dp)
-                                .background(colorScheme.primaryContainer, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(spacing.iconSizeSmall),
-                        )
-                    }
-                    Text(
-                        text = username,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colorScheme.onSurface,
-                    )
-                    Box(modifier = Modifier.size(3.dp).background(colorScheme.outline, CircleShape))
-                    Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
-                }
+                PostAuthorHeader(
+                    username = username,
+                    timeAgo = timeAgo,
+                    accessibilityDescription = headerDescription,
+                )
                 Text(
                     text = caption,
                     fontSize = 14.sp,
@@ -880,39 +833,11 @@ private fun CommunityPostCard(
             // Body
             Column(modifier = Modifier.padding(spacing.cardPadding)) {
                 // Author row
-                Row(
-                    modifier = Modifier.clearedDescription(headerDescription),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(spacing.xs),
-                ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(32.dp)
-                                .background(colorScheme.primaryContainer, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(spacing.iconSizeSmall),
-                        )
-                    }
-                    Text(
-                        text = username,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colorScheme.onSurface,
-                    )
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(3.dp)
-                                .background(colorScheme.outline, CircleShape),
-                    )
-                    Text(text = timeAgo, fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
-                }
+                PostAuthorHeader(
+                    username = username,
+                    timeAgo = timeAgo,
+                    accessibilityDescription = headerDescription,
+                )
 
                 // Caption
                 Text(
