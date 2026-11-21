@@ -38,6 +38,12 @@ class FakePostDao : PostDao {
                 .map { it.withListings() }
         }
 
+    override fun observePost(postId: String): Flow<PostWithListings?> =
+        posts.map { entities ->
+            readException?.let { throw it }
+            entities.firstOrNull { it.id == postId }?.withListings()
+        }
+
     private fun PostEntity.withListings() =
         PostWithListings(
             post = this,

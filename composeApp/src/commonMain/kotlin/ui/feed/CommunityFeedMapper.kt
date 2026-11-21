@@ -3,8 +3,6 @@ package ui.feed
 import org.scent.project.domain.model.ContentFormat
 import org.scent.project.domain.model.Post
 
-private fun Int.toDisplayCount(): String = if (this >= 1000) "${this / 1000}k" else toString()
-
 private val mockCommunityItems: List<CommunityFeedItem> =
     listOf(
         CommunityFeedItem.Text(

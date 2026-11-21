@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -76,7 +75,7 @@ private val LikeRed = Color(0xFFE4362E)
 
 @Composable
 fun HomeFullBleedScreen(
-    onOpenVideo: (url: String) -> Unit,
+    onOpenVideo: (postId: String) -> Unit,
     modifier: Modifier = Modifier,
     initialTab: Int = 0,
     onTopTabSelected: (Int) -> Unit = {},
@@ -142,7 +141,7 @@ fun HomeFullBleedScreen(
                 // (Santal 33 / Oud Wood / Bal d'Afrique) — is literal content. Both
                 // SearchFragrancesUseCase and GET /fragrances already exist and sit
                 // unused; "See all" below is plain Text with no click handler.
-                item { HeroItem(onOpenVideo = { onOpenVideo("") }) }
+                item { HeroItem() }
 
                 item {
                     Row(
@@ -220,7 +219,7 @@ fun HomeFullBleedScreen(
                         is CommunityFeedItem.Video ->
                             CommunityPostCard(
                                 item = item,
-                                onOpenVideo = { onOpenVideo(item.videoUrl) },
+                                onOpenVideo = { onOpenVideo(item.id) },
                             )
                     }
                 }
@@ -254,7 +253,7 @@ private fun NotificationsAction(tint: androidx.compose.ui.graphics.Color) {
 // ─────────────────────────────────────────────
 
 @Composable
-private fun HeroItem(onOpenVideo: () -> Unit) {
+private fun HeroItem() {
     val colorScheme = MaterialTheme.colorScheme
     val spacing = ScentThemeExtras.spacing
 
@@ -398,22 +397,8 @@ private fun HeroItem(onOpenVideo: () -> Unit) {
                     )
                 }
 
-                OutlinedIconButton(
-                    onClick = onOpenVideo,
-                    modifier = Modifier.size(spacing.xxl),
-                    border =
-                        androidx.compose.foundation.BorderStroke(
-                            width = 1.dp,
-                            color = colorScheme.outlineVariant,
-                        ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play video",
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
+                // TODO(feature/home-fragrances-tab-wiring): the hero has no post id to open, so its
+                // play button was removed rather than opening a video with no data behind it.
             }
         }
     }

@@ -43,7 +43,8 @@ fun MainGraph(
             val homeRoute by nav.homeNav.current
             ScentHomeHost(
                 route = homeRoute,
-                onOpenVideo = { url -> nav.homeNav.navigateTo(HomeRoute.VideoDetail(url)) },
+                onOpenVideo = { id -> nav.homeNav.navigateTo(HomeRoute.VideoDetail(id)) },
+                onOpenUserProfile = { id -> nav.homeNav.navigateTo(HomeRoute.UserProfile(id)) },
                 onBack = { nav.onBackPressed() },
                 onNavTabSelected = { nav.selectTab(Tab.entries[it]) },
             )

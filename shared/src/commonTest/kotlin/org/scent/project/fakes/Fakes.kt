@@ -238,6 +238,11 @@ class FakePostRepository : PostRepository {
 
     override fun getFeedFlow(): Flow<Result<List<Post>>> = feedFlow
 
+    /** Drive the single-post read by emitting into this from a test. */
+    val postFlow = MutableStateFlow<Result<Post>>(AppError.Unknown().asLeft())
+
+    override fun getPostFlow(postId: String): Flow<Result<Post>> = postFlow
+
     override suspend fun refreshFeed(limit: Int): Result<Unit> {
         refreshFeedCallCount++
         lastFeedLimit = limit
