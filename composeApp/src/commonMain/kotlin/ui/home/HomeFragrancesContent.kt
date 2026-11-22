@@ -6,9 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ui.accessibility.accessibleHeading
@@ -192,16 +193,17 @@ private fun HeroItem(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
+    // A minimum, not a fixed height: at large text the title and stacked actions outgrow it and would be squeezed.
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(ScentThemeExtras.spacing.heroHeight),
+                .heightIn(min = ScentThemeExtras.spacing.heroHeight),
     ) {
         Box(
             modifier =
                 Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
                     .background(
                         Brush.radialGradient(
                             listOf(ScentThemeExtras.heroPlaceholderStart, ScentThemeExtras.heroPlaceholderEnd),
@@ -295,52 +297,81 @@ private fun HeroItem(
                 }
             }
 
-            // TODO(fix/a11y-contrast-and-tab-semantics): at 2x font the button squeezes Favourite and Play video
-            // to 10dp/44dp wide and their labels drop out of the Android tree; iOS Favourite is 40pt wide.
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            // At large text the button would leave the icon buttons no room beside it, so they wrap below.
+            val largeText = LocalDensity.current.fontScale >= HERO_ACTIONS_LARGE_TEXT_SCALE
+            val viewFragrance: @Composable (Modifier) -> Unit = { buttonModifier ->
                 ScentPrimaryButton(
                     text = "VIEW FRAGRANCE",
                     onClick = { onOpenFragrance(hero.fragranceId) },
-                    // The button fills its width, so it takes what the two icon buttons leave.
-                    modifier = Modifier.weight(1f),
+                    modifier = buttonModifier,
                 )
-
-                OutlinedIconToggleButton(
-                    checked = isFavourite,
-                    onCheckedChange = { onToggleFavourite() },
-                    modifier =
-                        Modifier
-                            .size(ScentThemeExtras.spacing.xxl)
-                            .accessibleToggle(value = isFavourite, label = "Favourite") { onToggleFavourite() },
-                    border = BorderStroke(width = 1.dp, color = colorScheme.outline),
-                ) {
-                    Icon(
-                        imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (isFavourite) colorScheme.error else colorScheme.primary,
-                        modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeMedium),
-                    )
+            }
+            val iconButtons: @Composable () -> Unit = {
+                HeroFavouriteButton(isFavourite = isFavourite, onToggleFavourite = onToggleFavourite)
+                HeroPlayButton(onClick = { onOpenVideo(hero.postId) })
+            }
+            if (largeText) {
+                Column(verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm)) {
+                    viewFragrance(Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm)) { iconButtons() }
                 }
-
-                OutlinedIconButton(
-                    onClick = { onOpenVideo(hero.postId) },
-                    modifier = Modifier.size(ScentThemeExtras.spacing.xxl),
-                    border = BorderStroke(width = 1.dp, color = colorScheme.outline),
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.PlayArrow,
-                        contentDescription = "Play video",
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeMedium),
-                    )
+                    // The button fills its width, so it takes what the two icon buttons leave.
+                    viewFragrance(Modifier.weight(1f))
+                    iconButtons()
                 }
             }
         }
     }
 }
+
+@Composable
+private fun HeroFavouriteButton(
+    isFavourite: Boolean,
+    onToggleFavourite: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    OutlinedIconToggleButton(
+        checked = isFavourite,
+        onCheckedChange = { onToggleFavourite() },
+        modifier =
+            Modifier
+                .size(ScentThemeExtras.spacing.xxl)
+                .accessibleToggle(value = isFavourite, label = "Favourite") { onToggleFavourite() },
+        border = BorderStroke(width = 1.dp, color = colorScheme.outline),
+    ) {
+        Icon(
+            imageVector = if (isFavourite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+            contentDescription = null,
+            tint = if (isFavourite) colorScheme.error else colorScheme.primary,
+            modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeMedium),
+        )
+    }
+}
+
+@Composable
+private fun HeroPlayButton(onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    OutlinedIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(ScentThemeExtras.spacing.xxl),
+        border = BorderStroke(width = 1.dp, color = colorScheme.outline),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.PlayArrow,
+            contentDescription = "Play video",
+            tint = colorScheme.primary,
+            modifier = Modifier.size(ScentThemeExtras.spacing.iconSizeMedium),
+        )
+    }
+}
+
+// Font scale from which the hero's action row stacks instead of sharing one line.
+private const val HERO_ACTIONS_LARGE_TEXT_SCALE = 1.3f
 
 // ─────────────────────────────────────────────
 // Previews
