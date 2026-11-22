@@ -58,7 +58,7 @@ fun ReviewCard(
                                 letterSpacing = 1.2.sp,
                                 fontWeight = FontWeight.SemiBold,
                             ),
-                        color = ScentThemeExtras.gray400,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row(

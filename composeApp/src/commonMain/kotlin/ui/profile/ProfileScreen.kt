@@ -467,7 +467,7 @@ private fun ProfileHeader(
                             letterSpacing = 1.6.sp,
                             fontWeight = FontWeight.SemiBold,
                         ),
-                    color = ScentThemeExtras.gray400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -580,7 +580,7 @@ private fun ProfileStat(
                     letterSpacing = 1.2.sp,
                     fontWeight = FontWeight.SemiBold,
                 ),
-            color = ScentThemeExtras.gray400,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 2.dp),
         )
     }
@@ -812,7 +812,12 @@ private fun ProfileTabRow(
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 1.1.sp,
                             ),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else ScentThemeExtras.gray400,
+                        color =
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                         modifier = Modifier.padding(top = 12.dp),
                     )
                     Spacer(Modifier.height(9.dp))
@@ -1036,7 +1041,7 @@ private fun CollectionSection(
             Text(
                 text = entries.size.toString(),
                 style = MaterialTheme.typography.bodySmall,
-                color = ScentThemeExtras.gray400,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         LazyRow(
@@ -1117,7 +1122,7 @@ private fun LazyListScope.listingsTabContent(
                 Text(
                     text = "$activeCount active",
                     style = MaterialTheme.typography.bodySmall,
-                    color = ScentThemeExtras.gray400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (isOwnProfile) {
                     Text(

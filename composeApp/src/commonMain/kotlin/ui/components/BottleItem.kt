@@ -31,7 +31,6 @@ import org.scent.project.domain.model.CollectionEntry
 import org.scent.project.domain.model.CollectionStatus
 import org.scent.project.domain.model.Fragrance
 import ui.theme.ScentTheme
-import ui.theme.ScentThemeExtras
 
 @Composable
 fun BottleItem(
@@ -99,7 +98,7 @@ fun BottleItem(
             Text(
                 text = sizeMeta,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                color = ScentThemeExtras.gray400,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),

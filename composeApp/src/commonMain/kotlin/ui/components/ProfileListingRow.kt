@@ -142,7 +142,7 @@ fun ProfileListingRow(
             Text(
                 text = listing.brand,
                 style = eyebrowStyle(),
-                color = ScentThemeExtras.gray400,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(spacing.xxs))
             Text(
@@ -162,7 +162,7 @@ fun ProfileListingRow(
                 Text(
                     text = listing.termsText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = ScentThemeExtras.gray400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             listing.metaText?.let { line ->

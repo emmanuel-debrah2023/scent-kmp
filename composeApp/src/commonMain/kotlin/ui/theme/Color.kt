@@ -109,10 +109,6 @@ val ScentCardShadow = Color(0xFF503714)
 val ScentInteractive = Color(0xFF7E5700)
 val ScentOnInteractive = Color(0xFFFFFFFF)
 
-// Neutral grey — inactive tab labels, faint metadata.
-// Accessed via ScentThemeExtras.gray400.
-val ScentGray400 = Color(0xFF9E9E9E)
-
 // Listing placeholder tint — mirrors Home's FragranceCardItem placeholder
 // tones so Marketplace and Home full-bleed cards read as one visual family.
 val ScentListingPlaceholder = Color(0xFFB08052)
