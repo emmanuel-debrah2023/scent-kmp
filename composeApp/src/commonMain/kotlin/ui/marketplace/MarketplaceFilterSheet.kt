@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -31,6 +33,7 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.validation.Validator
 import ui.accessibility.accessibleClickable
 import ui.accessibility.accessibleHeading
+import ui.accessibility.accessibleLabel
 import ui.accessibility.accessibleLiveRegion
 import ui.accessibility.accessiblePane
 import ui.accessibility.accessibleState
@@ -105,9 +108,19 @@ fun MarketplaceFilterSheet(
         }
     }
 
-    // TODO(fix/a11y-contrast-and-tab-semantics): the default drag handle adds an unlabelled 32x48dp clickable
-    // on Android; pass a labelled >=48dp dragHandle.
-    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        // The default handle adds an unlabelled 32x48dp clickable on Android; this one is labelled and 48dp square.
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                modifier =
+                    Modifier
+                        .sizeIn(minWidth = spacing.xxl, minHeight = spacing.xxl)
+                        .accessibleLabel("Filters sheet handle"),
+            )
+        },
+    ) {
         Column(
             modifier =
                 Modifier
