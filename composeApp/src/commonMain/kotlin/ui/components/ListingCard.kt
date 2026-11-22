@@ -186,7 +186,7 @@ private fun ListingCardScaffold(
             Text(
                 text = listing.fragrance.brand.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
-                color = ScentThemeExtras.gray400,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = listing.fragrance.name,
@@ -213,14 +213,14 @@ private fun ListingCardScaffold(
                 Text(
                     text = if (listing.isNegotiable) "or offer" else "firm",
                     style = MaterialTheme.typography.bodySmall,
-                    color = ScentThemeExtras.gray400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (listing.stockQuantity > 1) {
                 Text(
                     text = "${listing.stockQuantity} available",
                     style = MaterialTheme.typography.bodySmall,
-                    color = ScentThemeExtras.gray400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 

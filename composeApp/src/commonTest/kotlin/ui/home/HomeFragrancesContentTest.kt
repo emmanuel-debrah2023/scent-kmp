@@ -1,22 +1,33 @@
 package ui.home
 
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import org.scent.project.domain.error.AppError
 import ui.base.UiState
 import ui.components.FragranceCardUi
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** Shared by both platforms; Android hosts it through Robolectric in a thin subclass. */
 @OptIn(ExperimentalTestApi::class)
@@ -163,5 +174,36 @@ abstract class HomeFragrancesContentTest {
             show(UiState.Success(HomeFragrancesState(hero = hero, cards = listOf(santal))))
 
             onNodeWithContentDescription(hero.a11yLabel).assertExists()
+        }
+
+    @Test
+    fun `at double text size the hero icon buttons keep their labels and a 48dp target`() =
+        runComposeUiTest {
+            setContent {
+                val density = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                    MaterialTheme {
+                        LazyColumn(Modifier.width(360.dp)) {
+                            homeFragrancesContent(
+                                UiState.Success(HomeFragrancesState(hero = hero, cards = listOf(santal))),
+                                {},
+                                {},
+                                {},
+                            )
+                        }
+                    }
+                }
+            }
+
+            listOf("Favourite", "Play video").forEach { label ->
+                onNodeWithContentDescription(label)
+                    .assertIsDisplayed()
+                    .assertWidthIsEqualTo(48.dp)
+                    .assertHeightIsEqualTo(48.dp)
+            }
+            // Beside the button the icons sit at the far end of a 360dp row; wrapped below it they start the line.
+            val favouriteLeft = onNodeWithContentDescription("Favourite").getUnclippedBoundsInRoot().left
+            assertTrue(favouriteLeft < 90.dp, "Favourite left $favouriteLeft")
+            onNodeWithText("VIEW FRAGRANCE").assertIsDisplayed()
         }
 }

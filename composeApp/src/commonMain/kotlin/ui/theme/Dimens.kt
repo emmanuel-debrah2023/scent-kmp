@@ -35,7 +35,8 @@ data class ScentSpacing(
     val cardHeroHeight: Dp = 172.dp,
     // For small inline tap targets (a text link, an icon-only affordance) — distinct
     // from buttonHeight, which governs full-width CTA buttons and stays at 52dp.
-    val inlineActionMinTouchTarget: Dp = 44.dp,
+    // 48dp meets Android's minimum and clears iOS's 44pt.
+    val inlineActionMinTouchTarget: Dp = 48.dp,
     // Profile listing row — one-off dimensions from its design spec, not part of the
     // general spacing ramp.
     val profileRowThumbnailWidth: Dp = 72.dp,

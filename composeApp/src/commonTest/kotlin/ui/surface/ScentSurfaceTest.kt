@@ -15,10 +15,14 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -640,6 +644,51 @@ abstract class ScentSurfaceTest {
             val (detailBottom, actionTop) = retryAtFontScale(1.8f)
 
             assertTrue(actionTop >= detailBottom, "action top $actionTop, detail bottom $detailBottom")
+        }
+
+    @Test
+    fun `each rating thumb is a 48dp touch target`() =
+        runComposeUiTest {
+            setContent {
+                MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_WRITTEN, rateAction), onEvent = {}) }
+            }
+
+            listOf("These reasons helped", "These reasons did not help").forEach { label ->
+                onNodeWithContentDescription(label)
+                    .assertHeightIsEqualTo(48.dp)
+                    .assertWidthIsEqualTo(48.dp)
+            }
+        }
+
+    @Test
+    fun `Try again is at least a 48dp touch target`() =
+        runComposeUiTest {
+            val retry = ActionTemplate("retry_ask", mapOf("family" to "/answers/family"))
+            setContent {
+                MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_UNAVAILABLE, retry), onEvent = {}) }
+            }
+
+            // The label is wider than 48dp, so only the height is exact.
+            onNodeWithContentDescription("Try again")
+                .assertHeightIsEqualTo(48.dp)
+                .assertWidthIsAtLeast(48.dp)
+        }
+
+    @Test
+    fun `at double text size Try again is still shown and a 48dp touch target`() =
+        runComposeUiTest {
+            val retry = ActionTemplate("retry_ask", mapOf("family" to "/answers/family"))
+            setContent {
+                val density = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                    MaterialTheme { ScentSurface(noteSurface(SurfaceProvenance.AI_UNAVAILABLE, retry), onEvent = {}) }
+                }
+            }
+
+            onNodeWithContentDescription("Try again")
+                .assertIsDisplayed()
+                .assertHeightIsEqualTo(48.dp)
+                .assertWidthIsAtLeast(48.dp)
         }
 
     @Test

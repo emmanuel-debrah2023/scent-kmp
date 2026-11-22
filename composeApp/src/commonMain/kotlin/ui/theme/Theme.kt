@@ -147,9 +147,6 @@ object ScentThemeExtras {
     val heroPlaceholderStart: Color get() = ScentHeroPlaceholderStart
     val heroPlaceholderEnd: Color get() = ScentHeroPlaceholderEnd
 
-    // Neutral grey for inactive labels and faint metadata.
-    val gray400: Color get() = ScentGray400
-
     // Brand wordmark — Playfair Display Bold 27sp, −1sp tracking.
     // Use for the "scent" logotype in TopAppBar and BlendedHeader.
     // Colour is always colorScheme.primary — callers set it via the Text color param.
