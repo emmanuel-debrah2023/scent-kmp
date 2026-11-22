@@ -95,8 +95,8 @@ button-text:
 fontFamily: DM Sans
 fontSize: 16px
 fontWeight: '500'
-lineHeight: '1'
-letterSpacing: 0.15em
+lineHeight: '1.25'
+letterSpacing: 0.025em
 rounded:
 sm: 0.25rem
 DEFAULT: 0.5rem
@@ -166,6 +166,7 @@ Components
 
 Buttons (Primary): Solid primary background with on-primary text. Hover state uses primary-container background with on-primary-container text.
 Buttons (Secondary): Transparent background with 1px primary border and primary text.
+Button Labels: Title case as written (Sign In, Continue with Google), never uppercased, in button-text. Light tracking keeps mixed case even; the 1.25 line height keeps a label readable when it wraps at large text sizes. Uppercase with wide tracking stays for label-uppercase field labels only.
 Input Fields: No background, single bottom border in outline-variant. Label above in uppercase label-uppercase style. On focus, border transitions to primary.
 Dividers: 1px outline-variant line with centered text in on-surface-variant.
 Social Sign-in Buttons: Secondary button style with integrated SVG icons. Icon size ≤ 20px. Visual treatment only — backend integration is roadmap Phase 2 (Google) and Phase 3 (Apple). Stub these handlers in generated code.

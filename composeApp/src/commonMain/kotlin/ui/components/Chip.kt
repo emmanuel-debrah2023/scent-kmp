@@ -65,6 +65,8 @@ fun AppliedFilterChip(
     Row(
         modifier =
             modifier
+                // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                // scale; use heightIn(min = …) per design.md Text Scaling.
                 .height(spacing.buttonHeight)
                 .drawBehind {
                     val pillHeight = spacing.chipHeight.toPx()

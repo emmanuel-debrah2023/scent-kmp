@@ -161,7 +161,7 @@ private fun EditProfileForm(
 
         ScentDivider()
         ScentPrimaryButton(
-            text = "Save changes",
+            text = "Save Changes",
             onClick = onSave,
             enabled = formState.canSave,
             modifier =

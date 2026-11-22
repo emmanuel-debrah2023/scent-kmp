@@ -130,7 +130,7 @@ class ListingCardSemanticsTest {
 
         composeRule
             .onNode(hasContentDescription(DESCRIPTION))
-            .assert(hasCustomActionLabels(listOf("Offer", "Buy now")))
+            .assert(hasCustomActionLabels(listOf("Offer", "Buy Now")))
     }
 
     @Test
@@ -139,7 +139,7 @@ class ListingCardSemanticsTest {
 
         composeRule
             .onNode(hasContentDescription(FIRM_DESCRIPTION))
-            .assert(hasCustomActionLabels(listOf("Buy now")))
+            .assert(hasCustomActionLabels(listOf("Buy Now")))
     }
 
     @Test
@@ -156,7 +156,7 @@ class ListingCardSemanticsTest {
     fun `Buy now custom action on negotiable card invokes onBuyNow only`() {
         setOfferCard(testListing)
 
-        performCustomAction(DESCRIPTION, "Buy now")
+        performCustomAction(DESCRIPTION, "Buy Now")
 
         assertEquals(1, buyNows)
         assertEquals(0, makeOffers)
@@ -166,7 +166,7 @@ class ListingCardSemanticsTest {
     fun `Buy now custom action on firm card invokes onBuyNow`() {
         setOfferCard(firmListing)
 
-        performCustomAction(FIRM_DESCRIPTION, "Buy now")
+        performCustomAction(FIRM_DESCRIPTION, "Buy Now")
 
         assertEquals(1, buyNows)
         assertEquals(0, makeOffers)
@@ -210,7 +210,7 @@ class ListingCardSemanticsTest {
     fun `offer card button text stays cleared`() {
         setOfferCard(testListing)
 
-        composeRule.onAllNodesWithText("Buy now").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Buy Now").assertCountEquals(0)
     }
 
     private var cardClicks = 0

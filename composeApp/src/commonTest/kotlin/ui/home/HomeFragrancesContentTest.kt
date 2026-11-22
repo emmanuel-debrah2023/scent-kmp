@@ -163,7 +163,7 @@ abstract class HomeFragrancesContentTest {
                 onOpenFragrance = { opened = it },
             )
 
-            onNodeWithText("VIEW FRAGRANCE").performClick()
+            onNodeWithText("View Fragrance").performClick()
 
             assertEquals(9, opened)
         }

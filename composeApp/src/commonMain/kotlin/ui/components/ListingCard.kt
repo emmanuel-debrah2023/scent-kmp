@@ -41,7 +41,7 @@ import kotlin.math.roundToInt
 
 private const val CONDITION_MAX_LENGTH = 14
 private const val OFFER_LABEL = "Offer"
-private const val BUY_NOW_LABEL = "Buy now"
+private const val BUY_NOW_LABEL = "Buy Now"
 
 @Composable
 fun ListingCard(
@@ -83,6 +83,8 @@ fun ListingCardWithOffer(
         modifier = modifier,
         customActions = customActions,
     ) {
+        // TODO(fix/text-scaling-app-wide): weight(1f) halves the width, so labels break mid-word at large font scale;
+        // use ScentButtonRow per design.md Text Scaling.
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
             horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
@@ -135,18 +137,20 @@ fun OwnerListingCard(
                 )
             },
     ) {
+        // TODO(fix/text-scaling-app-wide): weight(1f) halves the width, so labels break mid-word at large font scale;
+        // use ScentButtonRow per design.md Text Scaling.
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
             horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
         ) {
             ScentSecondaryButton(
-                text = toggleLabel.uppercase(),
+                text = toggleLabel,
                 onClick = onToggleActive,
                 modifier = Modifier.weight(1f),
                 enabled = !isActionInFlight,
             )
             ScentSecondaryButton(
-                text = "DELETE",
+                text = "Delete",
                 onClick = onDeleteRequest,
                 modifier = Modifier.weight(1f),
                 enabled = !isActionInFlight,

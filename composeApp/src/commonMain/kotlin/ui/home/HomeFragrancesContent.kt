@@ -301,7 +301,7 @@ private fun HeroItem(
             val largeText = LocalDensity.current.fontScale >= HERO_ACTIONS_LARGE_TEXT_SCALE
             val viewFragrance: @Composable (Modifier) -> Unit = { buttonModifier ->
                 ScentPrimaryButton(
-                    text = "VIEW FRAGRANCE",
+                    text = "View Fragrance",
                     onClick = { onOpenFragrance(hero.fragranceId) },
                     modifier = buttonModifier,
                 )

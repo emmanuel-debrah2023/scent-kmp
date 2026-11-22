@@ -150,7 +150,7 @@ private fun EditListingContent(
             onMove = { id, delta -> onEvent(EditListingEvent.PhotoMoved(id, delta)) },
         )
         if (formState.photos.size < MAX_LISTING_PHOTOS) {
-            ScentSecondaryButton(text = "Add photos", onClick = onAddPhotos)
+            ScentSecondaryButton(text = "Add Photos", onClick = onAddPhotos)
         }
 
         ScentTextField(
@@ -266,7 +266,7 @@ private fun EditListingContent(
         }
 
         ScentPrimaryButton(
-            text = if (submitState is UiState.Loading) "Saving…" else "Save changes",
+            text = if (submitState is UiState.Loading) "Saving…" else "Save Changes",
             onClick = { onEvent(EditListingEvent.Submit) },
             enabled = formState.canSubmit && submitState !is UiState.Loading,
         )

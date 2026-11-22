@@ -76,7 +76,7 @@ abstract class ScentSurfaceTest {
         """{"budget":{"min":30,"max":50,"step":5}""" + (stored?.let { ""","answers":{"budget":$it}""" } ?: "") + "}"
 
     // ScentPrimaryButton upper-cases its label.
-    private val submitText = "SHOW PICKS"
+    private val submitText = "Show picks"
 
     private val submit = SurfaceNode.Button("submit", "Show picks", ActionTemplate("answer_questions", emptyMap()))
 
@@ -746,7 +746,7 @@ abstract class ScentSurfaceTest {
                     )
                 }
             }
-            onNodeWithText("SHOW GIFTS").performScrollTo().performClick()
+            onNodeWithText("Show gifts").performScrollTo().performClick()
 
             assertEquals(listOf(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "submit")), actions)
         }
