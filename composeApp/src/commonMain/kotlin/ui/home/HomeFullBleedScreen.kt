@@ -23,15 +23,11 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
+import ui.accessibility.collectionContainer
 import ui.base.UiState
 import ui.components.BlendedScaffold
 import ui.components.PostAuthorHeader
@@ -58,15 +55,13 @@ import ui.components.VideoPlayer
 import ui.feed.CommunityFeedItem
 import ui.feed.FeedViewModel
 import ui.theme.DmSansFamily
-import ui.theme.PlayfairDisplayFamily
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
 // ─────────────────────────────────────────────
 // Local design tokens
 // ─────────────────────────────────────────────
-private val PlaceholderAmberStart = Color(0xFFE67E22)
-private val PlaceholderAmberEnd = Color(0xFF9C5F17)
+// TODO(chore/design-system-conformance): hex literals here must become theme tokens (docs/design.md).
 private val LikeRed = Color(0xFFE4362E)
 
 // ─────────────────────────────────────────────
@@ -76,6 +71,7 @@ private val LikeRed = Color(0xFFE4362E)
 @Composable
 fun HomeFullBleedScreen(
     onOpenVideo: (postId: String) -> Unit,
+    onOpenFragrance: (fragranceId: Int) -> Unit,
     modifier: Modifier = Modifier,
     initialTab: Int = 0,
     onTopTabSelected: (Int) -> Unit = {},
@@ -83,12 +79,27 @@ fun HomeFullBleedScreen(
 ) {
     val feedViewModel: FeedViewModel = koinViewModel()
     val feedUiState by feedViewModel.uiState.collectAsState()
+    val fragrancesViewModel: HomeFragrancesViewModel = koinViewModel()
+    val fragrancesUiState by fragrancesViewModel.uiState.collectAsState()
+    val fragrances = (fragrancesUiState as? UiState.Success)?.data
+    val cardCount = fragrances?.cardCount ?: 0
+    val hasHero = fragrances?.hasHero ?: false
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { feedViewModel.loadFeed() }
+    // Re-entering Home keeps what is already loaded; the retry button is the explicit reload.
+    LaunchedEffect(Unit) {
+        if (fragrancesViewModel.uiState.value is UiState.Idle) fragrancesViewModel.load()
+    }
 
     LaunchedEffect(Unit) {
         feedViewModel.error.collect { error ->
+            snackbarHostState.showSnackbar(error.message)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        fragrancesViewModel.error.collect { error ->
             snackbarHostState.showSnackbar(error.message)
         }
     }
@@ -128,75 +139,33 @@ fun HomeFullBleedScreen(
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
-            // Fragrances is intentionally full-bleed — HeroItem is tall enough to
-            // clear the header on its own. Community has no hero, so its first
-            // item needs the header's real clearance or it renders underneath it.
+            // The cards are the list as far as a screen reader is concerned; the hero and heading
+            // would otherwise count as rows.
+            modifier =
+                if (topTab == 0 && cardCount > 0) {
+                    Modifier.fillMaxSize().collectionContainer(rowCount = cardCount)
+                } else {
+                    Modifier.fillMaxSize()
+                },
+            // The Fragrances hero is full-bleed and tall enough to clear the header on its own.
+            // Every other first item (Community, or Fragrances without a hero) needs the
+            // header's real clearance or it renders underneath it.
             contentPadding =
-                if (topTab == 1) PaddingValues(top = innerPadding.calculateTopPadding()) else PaddingValues(0.dp),
+                if (topTab == 0 &&
+                    hasHero
+                ) {
+                    PaddingValues(0.dp)
+                } else {
+                    PaddingValues(top = innerPadding.calculateTopPadding())
+                },
         ) {
             if (topTab == 0) {
-                // TODO(feature/home-fragrances-tab-wiring): this entire "Trending now"
-                // section — HeroItem plus the three FragranceCardItems below
-                // (Santal 33 / Oud Wood / Bal d'Afrique) — is literal content. Both
-                // SearchFragrancesUseCase and GET /fragrances already exist and sit
-                // unused; "See all" below is plain Text with no click handler.
-                item { HeroItem() }
-
-                item {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                                .padding(top = 26.dp, bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Trending now",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontFamily = DmSansFamily,
-                        )
-                        // TODO(feature/home-fragrances-tab-wiring): "See all" is plain
-                        // Text — no onClick, no destination.
-                        Text(
-                            text = "See all",
-                            fontSize = 14.sp,
-                            color = ScentThemeExtras.interactive,
-                        )
-                    }
-                }
-
-                item {
-                    FragranceCardItem(
-                        name = "Santal 33",
-                        brand = "Le Labo",
-                        rating = 4.3f,
-                        reviewCount = 189,
-                        placeholderColor = Color(0xFFE8D5B7),
-                    )
-                }
-                item {
-                    FragranceCardItem(
-                        name = "Oud Wood",
-                        brand = "Tom Ford",
-                        rating = 4.6f,
-                        reviewCount = 402,
-                        placeholderColor = Color(0xFFB08052),
-                    )
-                }
-                item {
-                    FragranceCardItem(
-                        name = "Bal d'Afrique",
-                        brand = "Byredo",
-                        rating = 4.1f,
-                        reviewCount = 96,
-                        placeholderColor = Color(0xFFD9A05B),
-                    )
-                }
+                homeFragrancesContent(
+                    state = fragrancesUiState,
+                    onOpenFragrance = onOpenFragrance,
+                    onOpenVideo = onOpenVideo,
+                    onRetry = fragrancesViewModel::retry,
+                )
             } else {
                 item { CommunityFeedHeader() }
 
@@ -249,282 +218,6 @@ private fun NotificationsAction(tint: androidx.compose.ui.graphics.Color) {
 }
 
 // ─────────────────────────────────────────────
-// Hero
-// ─────────────────────────────────────────────
-
-@Composable
-private fun HeroItem() {
-    val colorScheme = MaterialTheme.colorScheme
-    val spacing = ScentThemeExtras.spacing
-
-    // TODO(feature/home-fragrances-tab-wiring): favorite toggle on the hardcoded
-    // hero card — no persistence once this tab is wired to real data.
-    var liked by remember { mutableStateOf(false) }
-
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(470.dp),
-    ) {
-        // Background gradient placeholder
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.radialGradient(listOf(PlaceholderAmberStart, PlaceholderAmberEnd)),
-                    ),
-        )
-
-        // Top scrim
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(210.dp)
-                    .align(Alignment.TopStart)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                colorScheme.background,
-                                colorScheme.background.copy(alpha = 0.82f),
-                                Color.Transparent,
-                            ),
-                        ),
-                    ),
-        )
-
-        // Bottom scrim
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .align(Alignment.BottomStart)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Transparent,
-                                colorScheme.background.copy(alpha = 0.9f),
-                                colorScheme.background,
-                            ),
-                        ),
-                    ),
-        )
-
-        // Content column – bottom-start
-        Column(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = 20.dp, vertical = spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                text = "FEATURED TODAY",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.7.sp,
-                color = colorScheme.onSurfaceVariant,
-                fontFamily = DmSansFamily,
-            )
-
-            // TODO: Playfair Display
-            Text(
-                text = "Velvet Orchid",
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 42.sp,
-                color = colorScheme.primary,
-                fontFamily = PlayfairDisplayFamily,
-            )
-
-            // Meta row
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(text = "Tom Ford", fontSize = 15.sp, color = colorScheme.onSurface)
-                Box(
-                    modifier =
-                        Modifier
-                            .size(4.dp)
-                            .background(colorScheme.outline, CircleShape),
-                )
-                StarRow(rating = 4, totalStars = 5)
-                Text(text = "4.5 (215)", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
-            }
-
-            // Action row
-            // TODO(fix/a11y-contrast-and-tab-semantics): at 2x font the button squeezes Favourite and Play video
-            // to 10dp/44dp wide and their labels drop out of the Android tree; iOS Favourite is 40pt wide.
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Button(
-                    onClick = {},
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = Color.White,
-                        ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(spacing.xxl),
-                ) {
-                    Text(
-                        text = "VIEW FRAGRANCE",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-
-                OutlinedIconButton(
-                    onClick = { liked = !liked },
-                    modifier = Modifier.size(spacing.xxl),
-                    border =
-                        androidx.compose.foundation.BorderStroke(
-                            width = 1.dp,
-                            color = colorScheme.outlineVariant,
-                        ),
-                ) {
-                    Icon(
-                        imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Favourite",
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-
-                // TODO(feature/home-fragrances-tab-wiring): the hero has no post id to open, so its
-                // play button was removed rather than opening a video with no data behind it.
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
-// Fragrance card list item
-// ─────────────────────────────────────────────
-
-@Composable
-private fun FragranceCardItem(
-    name: String,
-    brand: String,
-    rating: Float,
-    reviewCount: Int,
-    placeholderColor: Color,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val spacing = ScentThemeExtras.spacing
-    val elevation = ScentThemeExtras.elevation
-
-    // TODO(feature/home-fragrances-tab-wiring): favorite toggle on a hardcoded
-    // fragrance card — no persistence once this tab is wired to real data.
-    var liked by remember { mutableStateOf(false) }
-
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = spacing.xs),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation.card),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-    ) {
-        Column {
-            // Media area
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(spacing.cardImageHeight)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(placeholderColor, placeholderColor.copy(alpha = 0.6f)),
-                            ),
-                        ),
-            ) {
-                // Favourite button – top-end
-                Box(
-                    modifier =
-                        Modifier
-                            .size(spacing.xxl)
-                            .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(36.dp)
-                                .background(Color.White.copy(alpha = 0.85f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        IconButton(onClick = { liked = !liked }, modifier = Modifier.size(36.dp)) {
-                            Icon(
-                                imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Favourite",
-                                tint = if (liked) LikeRed else colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Body
-            Column(modifier = Modifier.padding(spacing.cardPadding)) {
-                Text(
-                    text = name,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorScheme.primary,
-                    fontFamily = DmSansFamily,
-                )
-                Text(text = brand, fontSize = 14.sp, color = colorScheme.onSurfaceVariant)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
-                    modifier = Modifier.padding(top = spacing.xxs),
-                ) {
-                    StarRow(rating = rating.toInt(), totalStars = 5)
-                    Text(
-                        text = "$rating ($reviewCount reviews)",
-                        fontSize = 13.sp,
-                        color = colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
-// Reusable star row
-// ─────────────────────────────────────────────
-
-@Composable
-private fun StarRow(
-    rating: Int,
-    totalStars: Int,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val spacing = ScentThemeExtras.spacing
-
-    Row {
-        repeat(totalStars) { index ->
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                tint = if (index < rating) ScentThemeExtras.accent else colorScheme.outline,
-                modifier = Modifier.size(spacing.iconSizeSmall),
-            )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────
 // Community tab composables
 // ─────────────────────────────────────────────
 
@@ -557,6 +250,7 @@ private fun CommunityFeedHeader() {
     }
 }
 
+// TODO(chore/design-system-conformance): hex literals here must become theme tokens (docs/design.md).
 private val PostPlaceholderColors = listOf(Color(0xFFB08052), Color(0xFF7E5700), Color(0xFFE8D5B7))
 
 @Composable
@@ -909,7 +603,7 @@ private fun CommunityPostCard(
 @Composable
 fun HomeFullBleedScreenPreview() {
     ScentTheme {
-        HomeFullBleedScreen(onOpenVideo = {})
+        HomeFullBleedScreen(onOpenVideo = {}, onOpenFragrance = {})
     }
 }
 
@@ -917,6 +611,6 @@ fun HomeFullBleedScreenPreview() {
 @Composable
 fun CommunityTabPreview() {
     ScentTheme {
-        HomeFullBleedScreen(onOpenVideo = {}, initialTab = 1)
+        HomeFullBleedScreen(onOpenVideo = {}, onOpenFragrance = {}, initialTab = 1)
     }
 }

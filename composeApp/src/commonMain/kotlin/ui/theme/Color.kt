@@ -117,6 +117,16 @@ val ScentGray400 = Color(0xFF9E9E9E)
 // tones so Marketplace and Home full-bleed cards read as one visual family.
 val ScentListingPlaceholder = Color(0xFFB08052)
 
+// Fragrance card media tones, stand-ins until fragrances carry images. The middle tone
+// is the listing placeholder so Marketplace and Home stay one visual family.
+val ScentFragrancePlaceholder1 = Color(0xFFE8D5B7)
+val ScentFragrancePlaceholder2 = ScentListingPlaceholder
+val ScentFragrancePlaceholder3 = Color(0xFFD9A05B)
+
+// Home hero media gradient, a stand-in until the featured video has a poster frame.
+val ScentHeroPlaceholderStart = Color(0xFFE67E22)
+val ScentHeroPlaceholderEnd = Color(0xFF9C5F17)
+
 // Aliases kept for components that reference these by semantic name
 val ScentStarYellow = ScentAccent
 val ScentTextMuted = ScentOnSurfaceVariant

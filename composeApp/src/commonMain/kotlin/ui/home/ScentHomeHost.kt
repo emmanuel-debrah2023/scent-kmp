@@ -18,6 +18,7 @@ import ui.theme.ScentTheme
 fun ScentHomeHost(
     route: HomeRoute,
     onOpenVideo: (postId: String) -> Unit,
+    onOpenFragrance: (fragranceId: Int) -> Unit,
     onOpenUserProfile: (userId: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -35,13 +36,16 @@ fun ScentHomeHost(
         // TODO(feature/get-profile-by-id-endpoint): another user's profile can't be loaded yet, so the
         // author row from VideoPostScreen lands on a placeholder.
         is HomeRoute.UserProfile -> PlaceholderScreen("User Profile", onBack = onBack)
-        // Nothing pushes the other Home routes yet; they fall back to the feed rather than a blank screen.
+        // TODO(feature/fragrance-detail-a2ui-screen): the Fragrances tab can now open a fragrance, but its
+        // detail screen does not exist yet.
+        is HomeRoute.FragranceDetail -> PlaceholderScreen("Fragrance Detail", onBack = onBack)
+        // Nothing pushes PostDetail yet; it falls back to the feed rather than a blank screen.
         is HomeRoute.Feed,
         is HomeRoute.PostDetail,
-        is HomeRoute.FragranceDetail,
         ->
             HomeFullBleedScreen(
                 onOpenVideo = onOpenVideo,
+                onOpenFragrance = onOpenFragrance,
                 modifier = modifier,
                 initialTab = topTab,
                 onTopTabSelected = { topTab = it },
@@ -61,6 +65,7 @@ fun ScentHomeHostHomeFeedPreview() {
         ScentHomeHost(
             route = HomeRoute.Feed,
             onOpenVideo = {},
+            onOpenFragrance = {},
             onOpenUserProfile = {},
             onBack = {},
         )
@@ -74,6 +79,7 @@ fun ScentHomeHostVideoPostPreview() {
         ScentHomeHost(
             route = HomeRoute.VideoDetail("preview"),
             onOpenVideo = {},
+            onOpenFragrance = {},
             onOpenUserProfile = {},
             onBack = {},
         )

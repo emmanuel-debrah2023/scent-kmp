@@ -102,6 +102,9 @@ fun ScentTheme(
     }
 }
 
+private val FragrancePlaceholderTones =
+    listOf(ScentFragrancePlaceholder1, ScentFragrancePlaceholder2, ScentFragrancePlaceholder3)
+
 object ScentThemeExtras {
     val spacing: ScentSpacing
         @Composable
@@ -112,6 +115,11 @@ object ScentThemeExtras {
         @Composable
         @ReadOnlyComposable
         get() = LocalScentElevation.current
+
+    val alpha: ScentAlpha
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalScentAlpha.current
 
     val motion: ScentMotion
         @Composable
@@ -131,6 +139,13 @@ object ScentThemeExtras {
 
     // Listing image placeholder tint — mirrors Home's full-bleed card tones.
     val listingPlaceholder: Color get() = ScentListingPlaceholder
+
+    // Fragrance card media tones, indexed by FragranceCardUi.placeholderIndex.
+    val fragrancePlaceholderTones: List<Color> get() = FragrancePlaceholderTones
+
+    // Home hero media gradient.
+    val heroPlaceholderStart: Color get() = ScentHeroPlaceholderStart
+    val heroPlaceholderEnd: Color get() = ScentHeroPlaceholderEnd
 
     // Neutral grey for inactive labels and faint metadata.
     val gray400: Color get() = ScentGray400
