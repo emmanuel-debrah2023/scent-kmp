@@ -8,6 +8,8 @@ import preferences.PriceRange
 import preferences.ScentPreferences
 
 const val RULES_HEADING = "A few quick questions"
+
+// TODO(fix/text-scaling-app-wide): sentence case now shows as-is on the client; see AskSurfaceBuilder.
 const val RULES_BUTTON = "Show picks"
 const val GENERIC_WHY = "A good match for what you asked for"
 private const val NOTES_PER_LINE = 2

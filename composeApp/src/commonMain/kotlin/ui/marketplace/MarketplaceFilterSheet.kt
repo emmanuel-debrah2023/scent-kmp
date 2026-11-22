@@ -196,7 +196,7 @@ fun MarketplaceFilterSheet(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 ScentSecondaryButton(
-                    text = "Clear all",
+                    text = "Clear All",
                     // Resets the sheet's own selections only — it doesn't call onApply, so the
                     // sheet stays open and nothing is re-queried until the user hits Apply. A
                     // user clearing filters is very often about to pick different ones, not
@@ -383,6 +383,8 @@ private fun BrandSuggestionList(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
+                                    // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips
+                                    // it at large font scale; use heightIn(min = …) per design.md Text Scaling.
                                     .height(ScentThemeExtras.spacing.buttonHeight)
                                     .collectionItem(rowIndex = index)
                                     .accessibleClickable(label = "Use brand $brandName") { onSelect(brandName) }

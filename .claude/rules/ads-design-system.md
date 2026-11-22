@@ -47,8 +47,11 @@ interactive outline. Gold *text* is permitted only on dark surfaces (`primary`,
 - Inputs: bottom border only, `outlineVariant` at rest, transitioning to
   `primary` on focus. Uppercase `label-uppercase` label above the field.
 - Containers and buttons: 12px (`rounded-md`) radius.
-- Touch targets: `button-height` (52px). Focused/auth layouts cap at
-  `auth-max-width` (384px).
+- Touch targets: `button-height` (52px) is a **minimum**. Anything holding text
+  uses `heightIn(min = …)`, never `height(…)`, so it grows with font scale.
+  Focused/auth layouts cap at `auth-max-width` (384px).
+- Text scaling: check at 2× font scale. Nothing clips, and no word breaks
+  mid-word; side-by-side items that can't fit their labels stack instead.
 - Vertical rhythm: `section-gap` (64px) between sections, `element-gap` (32px)
   within one.
 - Icons: Material Symbols Outlined, weight axis 100–300 to match the Playfair

@@ -177,4 +177,18 @@ object ScentThemeExtras {
                 fontWeight = FontWeight.Normal,
                 fontSize = 20.sp,
             )
+
+    // Button label — DM Sans Medium 16sp, title case as passed (never uppercased). Light
+    // tracking only: labelLarge's 0.15em is tuned for all-caps field labels. The 20sp line
+    // height keeps a label readable when it wraps at large font scale.
+    val buttonLabel: TextStyle
+        @Composable
+        get() =
+            TextStyle(
+                fontFamily = DmSansFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
+                letterSpacing = 0.4.sp,
+            )
 }

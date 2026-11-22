@@ -58,7 +58,7 @@ abstract class AskContentTest {
             val actions = AskActions.noOp().copy(onSubmit = { submits++ })
             setContent { MaterialTheme { AskContent(AskUiState(query = "a gift").toUiModel(), actions) } }
 
-            onNodeWithText("ASK").performClick()
+            onNodeWithText("Ask").performClick()
 
             assertEquals(1, submits)
         }
@@ -71,7 +71,7 @@ abstract class AskContentTest {
             }
 
             onNodeWithText("Finding your questions…").assert(liveRegion(LiveRegionMode.Polite))
-            onNodeWithText("ASK").assertIsNotEnabled()
+            onNodeWithText("Ask").assertIsNotEnabled()
         }
 
     @Test
@@ -93,7 +93,7 @@ abstract class AskContentTest {
 
             onNodeWithText("Three quick picks and we'll find him something").assertExists()
             onNodeWithText("Questions ready").assert(liveRegion(LiveRegionMode.Polite))
-            onNodeWithText("SHOW GIFTS").performScrollTo().performClick()
+            onNodeWithText("Show gifts").performScrollTo().performClick()
 
             assertEquals(listOf<SurfaceEvent>(SurfaceEvent.ActionTriggered(ASK_SURFACE_ID, "submit")), events)
         }

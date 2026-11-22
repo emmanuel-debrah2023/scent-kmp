@@ -305,6 +305,10 @@ object AskSurfaceBuilder {
             preferences.size?.label(),
         )
 
+    // TODO(fix/text-scaling-app-wide): button labels are title case since
+    // fix/ios-dynamic-type-auth-wrap (design.md Button Labels) and the client no longer uppercases them,
+    // so these show as sentence case. Same strings in RULES_BUTTON, FakeAskBackAgent and the AskBackPrompts
+    // schema; update server tests and the shared/contracts fixtures with them.
     private fun buttonFor(intent: Intent?) = if (intent == Intent.GIFT) "Show gifts" else "Show picks"
 
     private fun create(surfaceId: String) =

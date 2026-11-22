@@ -65,6 +65,8 @@ fun AuthTextField(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                    // scale; use heightIn(min = …) per design.md Text Scaling.
                     .height(40.dp)
                     .accessibleLabel(label)
                     .onFocusChanged { isFocused = it.isFocused },

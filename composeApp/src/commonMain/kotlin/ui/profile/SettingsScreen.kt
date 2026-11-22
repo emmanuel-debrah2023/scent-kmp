@@ -142,7 +142,7 @@ private fun SettingsContent(
         ScentConfirmDialog(
             title = "Log out of scent?",
             message = "You'll need to sign in again to buy, sell or message sellers.",
-            confirmLabel = "LOG OUT",
+            confirmLabel = "Log Out",
             onConfirm = {
                 showLogoutConfirm = false
                 onLogout()

@@ -1,11 +1,8 @@
 package ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +30,8 @@ import ui.auth.components.AuthTextField
 import ui.auth.components.BrandWordmark
 import ui.auth.components.PrimaryButton
 import ui.auth.components.SecondaryButton
+import ui.components.ScentLinkPrompt
+import ui.components.buttons.ScentButtonRow
 import ui.theme.ScentTheme
 
 @Composable
@@ -115,7 +114,7 @@ fun RegisterScreen(
             }
 
             PrimaryButton(
-                text = if (isLoading) "Creating account..." else "Create account",
+                text = if (isLoading) "Creating Account…" else "Create Account",
                 onClick = { onCreateAccountClick(username, email, displayName, password) },
                 enabled = !isLoading,
                 modifier = Modifier.padding(bottom = 32.dp),
@@ -126,42 +125,26 @@ fun RegisterScreen(
                 modifier = Modifier.padding(bottom = 32.dp),
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+            ScentButtonRow(modifier = Modifier.fillMaxWidth()) {
                 // TODO(feature/social-signin-client-wiring): same gap as LoginScreen.kt —
                 // backend is live, client is stubbed.
                 SecondaryButton(
                     text = "Google",
                     onClick = { /* TODO: Phase 2 */ },
-                    modifier = Modifier.weight(1f),
                 )
                 SecondaryButton(
                     text = "Apple",
                     onClick = { /* TODO: Phase 3 */ },
-                    modifier = Modifier.weight(1f),
                 )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Row {
-                Text(
-                    text = "Already have an account? ",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "Sign in",
-                    style =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                        ),
-                    modifier = Modifier.clickable { onNavigateToLogin() },
-                )
-            }
+            ScentLinkPrompt(
+                prompt = "Already have an account?",
+                linkText = "Sign in",
+                onLinkClick = onNavigateToLogin,
+            )
         }
     }
 }

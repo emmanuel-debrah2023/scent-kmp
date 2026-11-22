@@ -117,6 +117,9 @@ fun BlendedHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
+                    // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                    // scale; use heightIn(min = …) per design.md Text Scaling. The wordmark is cut off at the largest
+                    // iOS size.
                     modifier = Modifier.height(spacing.xxl),
                     contentAlignment = Alignment.CenterStart,
                 ) {
@@ -131,6 +134,8 @@ fun BlendedHeader(
 
             // Tab row — omitted when no tabs are supplied
             if (tabs.isNotEmpty()) {
+                // TODO(fix/text-scaling-app-wide): tabs split the row width, so "Community" breaks as "Commun / ity" at
+                // the largest iOS size; stack or scroll the tabs instead.
                 Row(
                     modifier = Modifier.padding(bottom = 10.dp).accessibleSelectableGroup(),
                     horizontalArrangement = Arrangement.spacedBy(28.dp),

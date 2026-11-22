@@ -343,7 +343,7 @@ private fun ProfileLoaded(
         ScentConfirmDialog(
             title = "Delete ${pendingListing.fragrance.name}?",
             message = "This cannot be undone.",
-            confirmLabel = "DELETE",
+            confirmLabel = "Delete",
             onConfirm = actions.listings.deleteConfirm.onConfirm,
             onDismiss = actions.listings.deleteConfirm.onDismiss,
             isDestructive = true,
@@ -369,6 +369,8 @@ private fun CollapsingTopBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                    // scale; use heightIn(min = …) per design.md Text Scaling.
                     .height(56.dp)
                     .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -409,6 +411,8 @@ private fun FollowPillButton(
 ) {
     Button(
         onClick = onClick,
+        // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font scale; use
+        // heightIn(min = …) per design.md Text Scaling.
         modifier = modifier.height(52.dp),
         shape = RoundedCornerShape(50),
         contentPadding =
@@ -602,6 +606,9 @@ private fun OwnProfileActions(
             modifier =
                 Modifier
                     .weight(1f)
+                    // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                    // scale; use heightIn(min = …) per design.md Text Scaling. Sits in a weight(1f) row too; see
+                    // ScentButtonRow.
                     .height(52.dp),
             shape = MaterialTheme.shapes.medium,
             elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp),
@@ -652,6 +659,9 @@ private fun OtherProfileActions(
             modifier =
                 Modifier
                     .weight(1f)
+                    // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                    // scale; use heightIn(min = …) per design.md Text Scaling. Sits in a weight(1f) row too; see
+                    // ScentButtonRow.
                     .height(52.dp),
             shape = MaterialTheme.shapes.medium,
             elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp),

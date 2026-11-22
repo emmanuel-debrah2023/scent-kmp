@@ -39,6 +39,8 @@ fun SearchEntryField(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                    // scale; use heightIn(min = …) per design.md Text Scaling.
                     .height(ScentThemeExtras.spacing.buttonHeight)
                     .padding(horizontal = ScentThemeExtras.spacing.sm),
             verticalAlignment = Alignment.CenterVertically,

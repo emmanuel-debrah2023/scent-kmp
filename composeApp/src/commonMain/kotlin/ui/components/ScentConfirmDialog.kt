@@ -59,6 +59,8 @@ fun ScentConfirmDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // TODO(fix/text-scaling-app-wide): weight(1f) halves the width, so labels break mid-word at large font
+                // scale; use ScentButtonRow per design.md Text Scaling.
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = ScentThemeExtras.spacing.xs),
                     horizontalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs),
@@ -94,7 +96,7 @@ private fun ScentConfirmDialogUnlistPreview() {
         ScentConfirmDialog(
             title = "Unlist Aventus?",
             message = "It will no longer appear in the marketplace, search, or feed. You can relist it anytime.",
-            confirmLabel = "UNLIST",
+            confirmLabel = "Unlist",
             onConfirm = {},
             onDismiss = {},
         )
@@ -108,7 +110,7 @@ private fun ScentConfirmDialogDeletePreview() {
         ScentConfirmDialog(
             title = "Delete Aventus?",
             message = "This cannot be undone.",
-            confirmLabel = "DELETE",
+            confirmLabel = "Delete",
             onConfirm = {},
             onDismiss = {},
             isDestructive = true,
@@ -123,7 +125,7 @@ private fun ScentConfirmDialogLogoutPreview() {
         ScentConfirmDialog(
             title = "Log out of scent?",
             message = "You'll need to sign in again to buy, sell or message sellers.",
-            confirmLabel = "LOG OUT",
+            confirmLabel = "Log Out",
             onConfirm = {},
             onDismiss = {},
             isDestructive = true,

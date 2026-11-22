@@ -163,7 +163,7 @@ abstract class HomeFragrancesContentTest {
                 onOpenFragrance = { opened = it },
             )
 
-            onNodeWithText("VIEW FRAGRANCE").performClick()
+            onNodeWithText("View Fragrance").performClick()
 
             assertEquals(9, opened)
         }
@@ -204,6 +204,6 @@ abstract class HomeFragrancesContentTest {
             // Beside the button the icons sit at the far end of a 360dp row; wrapped below it they start the line.
             val favouriteLeft = onNodeWithContentDescription("Favourite").getUnclippedBoundsInRoot().left
             assertTrue(favouriteLeft < 90.dp, "Favourite left $favouriteLeft")
-            onNodeWithText("VIEW FRAGRANCE").assertIsDisplayed()
+            onNodeWithText("View Fragrance").assertIsDisplayed()
         }
 }

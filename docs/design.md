@@ -95,8 +95,8 @@ button-text:
 fontFamily: DM Sans
 fontSize: 16px
 fontWeight: '500'
-lineHeight: '1'
-letterSpacing: 0.15em
+lineHeight: '1.25'
+letterSpacing: 0.025em
 rounded:
 sm: 0.25rem
 DEFAULT: 0.5rem
@@ -141,7 +141,9 @@ The system follows a Fixed Grid approach for utility screens (auth, settings) an
 
 Max Width: Authentication and focused tasks are constrained to auth-max-width (384px).
 Vertical Rhythm: section-gap (64px) between major sections; element-gap (32px) within sections.
-Touch Targets: Inputs and buttons use button-height (52px) — comfortable touch target, sleek profile.
+Touch Targets: Inputs and buttons use button-height (52px) — comfortable touch target, sleek profile. It is a minimum, not a fixed height: anything that holds text sets heightIn(min = button-height), never height(button-height), so it grows when the text does.
+
+Text Scaling: Text follows the user's text size (Dynamic Type on iOS, font scale on Android), so every layout is checked at 2× and nothing may clip. A container that holds text never fixes its height. Words never break mid-word: when side-by-side items can't fit their labels, they stack instead of squeezing, and an inline link sits inside its sentence so it wraps as a whole word. Uppercase labels with 0.1em tracking are much wider than the same word in body text, so they are the first thing to break; check them first.
 
 Elevation & Depth
 This system uses Tonal Layering and Border Focus for most surfaces, with one deliberate exception: cards carry a soft, warm-tinted shadow.
@@ -164,6 +166,7 @@ Components
 
 Buttons (Primary): Solid primary background with on-primary text. Hover state uses primary-container background with on-primary-container text.
 Buttons (Secondary): Transparent background with 1px primary border and primary text.
+Button Labels: Title case as written (Sign In, Continue with Google), never uppercased, in button-text. Light tracking keeps mixed case even; the 1.25 line height keeps a label readable when it wraps at large text sizes. Uppercase with wide tracking stays for label-uppercase field labels only.
 Input Fields: No background, single bottom border in outline-variant. Label above in uppercase label-uppercase style. On focus, border transitions to primary.
 Dividers: 1px outline-variant line with centered text in on-surface-variant.
 Social Sign-in Buttons: Secondary button style with integrated SVG icons. Icon size ≤ 20px. Visual treatment only — backend integration is roadmap Phase 2 (Google) and Phase 3 (Apple). Stub these handlers in generated code.

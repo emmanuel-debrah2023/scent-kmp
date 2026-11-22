@@ -120,7 +120,7 @@ private fun CreateListingContent(
             onMove = { id, delta -> onEvent(CreateListingEvent.PhotoMoved(id, delta)) },
         )
         if (formState.photos.size < MAX_LISTING_PHOTOS) {
-            ScentSecondaryButton(text = "Add photos", onClick = onAddPhotos)
+            ScentSecondaryButton(text = "Add Photos", onClick = onAddPhotos)
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(ScentThemeExtras.spacing.xs)) {
@@ -233,7 +233,7 @@ private fun CreateListingContent(
         }
 
         ScentPrimaryButton(
-            text = if (submitState is UiState.Loading) "Publishing…" else "Publish listing",
+            text = if (submitState is UiState.Loading) "Publishing…" else "Publish Listing",
             onClick = { onEvent(CreateListingEvent.Submit) },
             enabled = formState.canSubmit && submitState !is UiState.Loading,
         )

@@ -128,6 +128,8 @@ fun ScentTextField(
                     .fillMaxWidth()
                     .let {
                         if (singleLine) {
+                            // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at
+                            // large font scale; use heightIn(min = …) per design.md Text Scaling.
                             it.height(ScentThemeExtras.spacing.buttonHeight)
                         } else {
                             it.heightIn(min = ScentThemeExtras.spacing.buttonHeight)
@@ -234,6 +236,8 @@ fun ScentSearchBar(
         modifier =
             modifier
                 .fillMaxWidth()
+                // TODO(fix/text-scaling-app-wide): fixed height on a container holding text clips it at large font
+                // scale; use heightIn(min = …) per design.md Text Scaling.
                 .height(ScentThemeExtras.spacing.buttonHeight)
                 .onFocusChanged { isFocused = it.isFocused },
         enabled = enabled,
