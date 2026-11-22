@@ -159,9 +159,16 @@ The backend must be running on `localhost:8080` with dev routes mounted.
 One command brings up Postgres, the server and the seeded data:
 
 ```bash
-./scripts/e2e-up.sh          # reuses anything already running
-./scripts/e2e-up.sh --down   # stops a server it started
+./scripts/e2e-up.sh          # reuses anything already running, restarts a stale server it started
+./scripts/e2e-up.sh --down   # stops the server it started, from any worktree
 ```
+
+There is one server on port 8080 for every worktree. When the script starts it, it records the
+server's process ID, the checkout and a fingerprint of the code the server is built from
+(`server/`, `contracts/`, `shared/` and the root Gradle files, including uncommitted changes) in
+`~/.cache/scent/e2e-server-8080.env`. A later run from a checkout with different server code
+stops that server and starts a fresh one; set `E2E_REUSE=always` to keep it. A server the script
+didn't start, such as one run from Android Studio, is reused with a warning and never stopped.
 
 Override the account with `-e E2E_EMAIL=... -e E2E_PASSWORD=...` or the
 backend with `-e E2E_API_URL=...`.
