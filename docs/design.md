@@ -141,7 +141,9 @@ The system follows a Fixed Grid approach for utility screens (auth, settings) an
 
 Max Width: Authentication and focused tasks are constrained to auth-max-width (384px).
 Vertical Rhythm: section-gap (64px) between major sections; element-gap (32px) within sections.
-Touch Targets: Inputs and buttons use button-height (52px) — comfortable touch target, sleek profile.
+Touch Targets: Inputs and buttons use button-height (52px) — comfortable touch target, sleek profile. It is a minimum, not a fixed height: anything that holds text sets heightIn(min = button-height), never height(button-height), so it grows when the text does.
+
+Text Scaling: Text follows the user's text size (Dynamic Type on iOS, font scale on Android), so every layout is checked at 2× and nothing may clip. A container that holds text never fixes its height. Words never break mid-word: when side-by-side items can't fit their labels, they stack instead of squeezing, and an inline link sits inside its sentence so it wraps as a whole word. Uppercase labels with 0.1em tracking are much wider than the same word in body text, so they are the first thing to break; check them first.
 
 Elevation & Depth
 This system uses Tonal Layering and Border Focus for most surfaces, with one deliberate exception: cards carry a soft, warm-tinted shadow.
