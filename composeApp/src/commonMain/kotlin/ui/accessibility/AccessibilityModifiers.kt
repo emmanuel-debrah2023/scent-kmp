@@ -110,6 +110,10 @@ fun Modifier.clearedDescription(
  * role and checked state all sit on the one toggle node. Without this, a child with its
  * own semantics (e.g. a chip's `Text`) makes Android move the label and role onto fake
  * child nodes, leaving the real toggle node unlabelled.
+ *
+ * The state is also given as a stateDescription. The iOS bridge exposes a toggleable node as a
+ * plain button and drops its checked state, but it does carry stateDescription through as the
+ * accessibility value, so VoiceOver can still announce on and off.
  */
 fun Modifier.accessibleToggle(
     value: Boolean,
@@ -118,7 +122,20 @@ fun Modifier.accessibleToggle(
     onValueChange: (Boolean) -> Unit,
 ): Modifier =
     toggleable(value = value, onValueChange = onValueChange, role = role)
-        .clearAndSetSemantics { contentDescription = label }
+        .clearAndSetSemantics {
+            contentDescription = label
+            stateDescription = toggleStateDescription(value, role)
+        }
+
+private fun toggleStateDescription(
+    value: Boolean,
+    role: Role,
+): String =
+    when (role) {
+        Role.RadioButton, Role.Tab -> if (value) "Selected" else "Not selected"
+        Role.Switch -> if (value) "On" else "Off"
+        else -> if (value) "Checked" else "Unchecked"
+    }
 
 /**
  * Marks the container of a set of single-select options (radio chips, tiles) so a screen reader

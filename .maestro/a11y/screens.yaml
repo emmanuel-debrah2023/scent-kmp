@@ -17,6 +17,10 @@ screens:
     sources:
       - composeApp/src/commonMain/kotlin/ui/home/**
       - composeApp/src/commonMain/kotlin/ui/feed/**
+  video-post:
+    sources:
+      - composeApp/src/commonMain/kotlin/ui/home/VideoPost*
+      - composeApp/src/commonMain/kotlin/ui/feed/**
   marketplace:
     sources:
       - composeApp/src/commonMain/kotlin/ui/marketplace/**
