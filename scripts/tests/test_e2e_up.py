@@ -141,6 +141,23 @@ def test_unknown_server_does_not_offer_to_stop_it(repo, api_port, state_dir, run
     assert "--down" not in result.stdout
 
 
+def test_state_naming_another_process_is_ignored_and_cleared(repo, api_port, state_dir, running_server):
+    bystander = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    write_state(state_dir, api_port, SERVER_PID=bystander.pid, CHECKOUT="/elsewhere", FINGERPRINT="stale")
+
+    result = run_e2e_up(repo, api_port, state_dir)
+
+    try:
+        assert result.returncode == 0, result.stderr
+        assert "not started by e2e-up.sh" in result.stdout
+        assert running_server.poll() is None
+        assert bystander.poll() is None
+        assert not state_file(state_dir, api_port).exists()
+    finally:
+        bystander.kill()
+        bystander.wait()
+
+
 def test_server_with_matching_fingerprint_is_reused(repo, api_port, state_dir, running_server):
     write_state(state_dir, api_port, SERVER_PID=running_server.pid, CHECKOUT=repo,
                 FINGERPRINT=fingerprint(repo, api_port, state_dir))

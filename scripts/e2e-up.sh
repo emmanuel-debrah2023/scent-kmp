@@ -61,7 +61,9 @@ stop_recorded_server() {
     checkout=$(state_get CHECKOUT)
     kill "$pid" 2>/dev/null
     for _ in $(seq 1 "$STOP_TIMEOUT_S"); do [ -z "$(listener_pid)" ] && break; sleep 1; done
-    if [ -n "$(listener_pid)" ]; then
+    # Escalate only while the recorded server still holds the port; if it exited, the port is
+    # either free or belongs to someone else, and neither is ours to kill.
+    if [ "$(listener_pid)" = "$pid" ]; then
         kill -9 "$pid" 2>/dev/null
         sleep 1
     fi
