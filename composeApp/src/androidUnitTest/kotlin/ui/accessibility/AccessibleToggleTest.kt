@@ -73,6 +73,20 @@ class AccessibleToggleTest {
         composeRule.onNodeWithContentDescription("Like").assertIsOff().assert(hasStateDescription("Not selected"))
     }
 
+    @Test
+    fun `a switch toggle is described as on and off`() {
+        setToggle(value = true, role = Role.Switch)
+
+        composeRule.onNodeWithContentDescription("Like").assert(hasStateDescription("On"))
+    }
+
+    @Test
+    fun `an unselected tab toggle is described as not selected`() {
+        setToggle(value = false, role = Role.Tab)
+
+        composeRule.onNodeWithContentDescription("Like").assert(hasStateDescription("Not selected"))
+    }
+
     private fun hasStateDescription(description: String) =
         SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, description)
 
