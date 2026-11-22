@@ -1,0 +1,20 @@
+appId: ${APP_ID}
+tags:
+  - a11y
+---
+# Pre-merge a11y: opens the seeded video post full screen and ends settled on VideoPostScreen.
+# e2e-up.sh seeds one video post per run, captioned "Watch the amber pour in slow motion".
+- runFlow: subflows/start-signed-in.yaml
+- tapOn: "Community"
+- extendedWaitUntil:
+    visible: "Latest posts"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Full screen"
+    direction: DOWN
+- tapOn: "Full screen"
+- extendedWaitUntil:
+    visible:
+      text: "View .*'s profile"
+    timeout: 15000
+- assertVisible: "Back"

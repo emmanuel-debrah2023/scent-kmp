@@ -1,0 +1,8 @@
+required:
+  - Back
+  - "re:View .*'s profile"
+  - "re:\\d+ comments"
+  - "re:Video by .*"
+# The like control is a toggle: it must expose a checked state (A11Y-003).
+toggles:
+  - "re:Like, \\d+ likes"
