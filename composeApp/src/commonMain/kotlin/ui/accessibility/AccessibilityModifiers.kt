@@ -3,6 +3,7 @@ package ui.accessibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Modifier
@@ -136,6 +137,22 @@ private fun toggleStateDescription(
         Role.Switch -> if (value) "On" else "Off"
         else -> if (value) "Checked" else "Unchecked"
     }
+
+/**
+ * One option in a single-select set (a navigation tab), backed by `Modifier.selectable`.
+ *
+ * Unlike [accessibleToggle], descendant text is merged rather than cleared, so the option's
+ * visible label names it. The selected state is repeated as a stateDescription for the same
+ * reason as [accessibleToggle]: the iOS bridge drops it otherwise. Put the options inside an
+ * [accessibleSelectableGroup].
+ */
+fun Modifier.accessibleSelectable(
+    selected: Boolean,
+    role: Role = Role.Tab,
+    onClick: () -> Unit,
+): Modifier =
+    selectable(selected = selected, role = role, onClick = onClick)
+        .semantics { stateDescription = toggleStateDescription(selected, role) }
 
 /**
  * Marks the container of a set of single-select options (radio chips, tiles) so a screen reader

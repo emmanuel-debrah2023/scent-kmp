@@ -2935,7 +2935,7 @@ Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())
 
 ## Accessibility (Compose Semantics)
 
-**CRITICAL**: All interactive and meaningful UI elements MUST expose correct Compose semantics so TalkBack and other accessibility services can announce and operate them correctly. Don't hand-write `Modifier.semantics { ... }` blocks inline in screen code — use the shared accessibility Modifier extensions in `ui/accessibility/AccessibilityModifiers.kt` (`accessibleLabel`, `accessibleClickable`, `accessibleCombinedClickable`, `mergedGroup`, `accessibleToggle`, `clearedDescription`, `withCustomActions`, `collectionContainer`/`collectionItem`, `accessibleHeading`, `accessiblePane`, `accessibleState`, `accessibleLiveRegion`, `decorative`) so the merge-vs-clear distinction stays consistent across the codebase instead of being re-decided ad hoc on every card.
+**CRITICAL**: All interactive and meaningful UI elements MUST expose correct Compose semantics so TalkBack and other accessibility services can announce and operate them correctly. Don't hand-write `Modifier.semantics { ... }` blocks inline in screen code — use the shared accessibility Modifier extensions in `ui/accessibility/AccessibilityModifiers.kt` (`accessibleLabel`, `accessibleClickable`, `accessibleCombinedClickable`, `mergedGroup`, `accessibleToggle`, `accessibleSelectable`, `clearedDescription`, `withCustomActions`, `collectionContainer`/`collectionItem`, `accessibleHeading`, `accessiblePane`, `accessibleState`, `accessibleLiveRegion`, `decorative`) so the merge-vs-clear distinction stays consistent across the codebase instead of being re-decided ad hoc on every card.
 
 ### Core rule: merge vs. clear
 

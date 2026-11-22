@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +31,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import ui.accessibility.accessibleSelectable
 import ui.accessibility.accessibleSelectableGroup
 import ui.navigation.mainNavTabs
 import ui.theme.ScentTheme
@@ -40,7 +40,8 @@ import ui.theme.ScentThemeExtras
 /**
  * Full-bleed bottom navigation overlay on a solid background, with a fade painted above its top
  * edge so content scrolling underneath dissolves before it reaches the tabs. Driven by [mainNavTabs].
- * Each item is a selectable tab ([Role.Tab]) at least 48dp tall, and the row is one selectable group.
+ * Each item is a selectable tab ([Role.Tab]) at least 48dp tall that states whether it is selected, and the
+ * row is one selectable group.
  *
  * Shows a gold active-tab pip under the selected item for visual consistency with [BlendedHeader]'s
  * tab underlines.
@@ -108,7 +109,7 @@ fun BlendedBottomNav(
                         Modifier
                             .weight(1f)
                             .heightIn(min = spacing.xxl)
-                            .selectable(selected = isActive, role = Role.Tab, onClick = { onTabSelected(index) })
+                            .accessibleSelectable(selected = isActive, onClick = { onTabSelected(index) })
                             .padding(vertical = spacing.xxs),
                 ) {
                     // Decorative: the label below already names the tab.

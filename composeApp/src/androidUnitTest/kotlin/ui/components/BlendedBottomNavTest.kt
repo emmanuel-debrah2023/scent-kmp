@@ -62,6 +62,19 @@ class BlendedBottomNavTest {
     }
 
     @Test
+    fun `each tab states whether it is selected`() {
+        show(selectedTab = 3)
+
+        // The iOS bridge drops selectable state; the state description is what reaches VoiceOver.
+        composeRule
+            .onNodeWithText("Market")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Selected"))
+        composeRule
+            .onNodeWithText("Home")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not selected"))
+    }
+
+    @Test
     fun `each tab has the tab role`() {
         show(selectedTab = 0)
 
