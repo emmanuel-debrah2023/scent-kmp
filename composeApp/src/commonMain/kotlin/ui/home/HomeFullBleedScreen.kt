@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -149,15 +148,13 @@ fun HomeFullBleedScreen(
                 },
             // The Fragrances hero is full-bleed and tall enough to clear the header on its own.
             // Every other first item (Community, or Fragrances without a hero) needs the
-            // header's real clearance or it renders underneath it.
+            // header's real clearance or it renders underneath it. The last item clears the
+            // bottom nav and the fade painted above it.
             contentPadding =
-                if (topTab == 0 &&
-                    hasHero
-                ) {
-                    PaddingValues(0.dp)
-                } else {
-                    PaddingValues(top = innerPadding.calculateTopPadding())
-                },
+                PaddingValues(
+                    top = if (topTab == 0 && hasHero) 0.dp else innerPadding.calculateTopPadding(),
+                    bottom = innerPadding.calculateBottomPadding() + ScentThemeExtras.spacing.bottomNavFadeHeight,
+                ),
         ) {
             if (topTab == 0) {
                 homeFragrancesContent(
@@ -193,8 +190,6 @@ fun HomeFullBleedScreen(
                     }
                 }
             }
-
-            item { Spacer(Modifier.height(150.dp)) }
         }
     }
 }

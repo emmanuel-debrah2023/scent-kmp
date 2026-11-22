@@ -65,6 +65,8 @@ data class ScentSpacing(
     val skeletonBadgeWidth: Dp = 32.dp,
     // Bottom-nav clearance for full-bleed scrolling lists: nav height + element-gap breathing room.
     val listBottomClearance: Dp = 96.dp,
+    // Fade painted above the bottom nav's top edge so content scrolling under it dissolves first.
+    val bottomNavFadeHeight: Dp = 32.dp,
     // Home hero: the full-bleed media block and the two scrims that fade it into the page.
     val heroHeight: Dp = 468.dp,
     val heroTopScrimHeight: Dp = 208.dp,

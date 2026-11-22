@@ -8,39 +8,48 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import ui.accessibility.accessibleSelectable
+import ui.accessibility.accessibleSelectableGroup
 import ui.navigation.mainNavTabs
 import ui.theme.ScentTheme
 import ui.theme.ScentThemeExtras
 
 /**
- * Full-bleed bottom navigation overlay with a fade-to-background scrim,
- * driven by [mainNavTabs]. Shows a gold active-tab pip under the selected item
- * for visual consistency with [BlendedHeader]'s tab underlines.
+ * Full-bleed bottom navigation overlay on a solid background, with a fade painted above its top
+ * edge so content scrolling underneath dissolves before it reaches the tabs. Driven by [mainNavTabs].
+ * Each item is a selectable tab ([Role.Tab]) at least 48dp tall that states whether it is selected, and the
+ * row is one selectable group.
+ *
+ * Shows a gold active-tab pip under the selected item for visual consistency with [BlendedHeader]'s
+ * tab underlines.
  *
  * @param selectedTab   Index of the currently active tab.
  * @param onTabSelected Called with the tapped tab index.
  * @param onHeightMeasured Reports the bar's real measured height (visible content
- *                      only — the scrim paints in the draw phase and adds no layout
+ *                      only — the fade paints in the draw phase and adds no layout
  *                      size) so callers can reserve bottom clearance for content.
  */
 @Composable
@@ -64,13 +73,20 @@ fun BlendedBottomNav(
                 .fillMaxWidth()
                 .onGloballyPositioned { onHeightMeasured(with(density) { it.size.height.toDp() }) }
                 .drawBehind {
-                    // Gradient scrim — fades from transparent to the background colour
+                    // The fade sits above the bar's top edge and only paints, so the measured height is
+                    // unchanged. Content scrolling under the bar dissolves before it reaches the tabs.
+                    val fadeHeight = spacing.bottomNavFadeHeight.toPx()
                     drawRect(
                         brush =
                             Brush.verticalGradient(
-                                listOf(Color.Transparent, colorScheme.background, colorScheme.background),
+                                listOf(Color.Transparent, colorScheme.background),
+                                startY = -fadeHeight,
+                                endY = 0f,
                             ),
+                        topLeft = Offset(0f, -fadeHeight),
+                        size = Size(size.width, fadeHeight),
                     )
+                    drawRect(color = colorScheme.background)
                 },
     ) {
         Row(
@@ -78,32 +94,31 @@ fun BlendedBottomNav(
                 Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(vertical = spacing.xs),
+                    .padding(vertical = spacing.xs)
+                    .accessibleSelectableGroup(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             navItems.forEachIndexed { index, item ->
                 val isActive = index == selectedTab
+                // The whole item is the tab: one target, announced by its label with its selected state.
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                     modifier =
                         Modifier
                             .weight(1f)
+                            .heightIn(min = spacing.xxl)
+                            .accessibleSelectable(selected = isActive, onClick = { onTabSelected(index) })
                             .padding(vertical = spacing.xxs),
                 ) {
-                    // TODO(fix/a11y-contrast-and-tab-semantics): the item's target measures 48x35dp on Android
-                    // (font 2.0) and 48x36pt on iOS; make the whole item the >=48dp target.
-                    IconButton(
-                        onClick = { onTabSelected(index) },
+                    // Decorative: the label below already names the tab.
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = null,
+                        tint = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(spacing.iconSizeMedium),
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.title,
-                            tint = if (isActive) colorScheme.primary else colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(spacing.iconSizeMedium),
-                        )
-                    }
+                    )
                     Text(
                         text = item.title,
                         style = MaterialTheme.typography.labelSmall,
