@@ -32,6 +32,7 @@ object PostEntityMapper {
         return PostEntity(
             id = id,
             userId = userId,
+            username = username ?: "",
             contentFormat = contentFormat ?: "",
             textContent = textContent ?: "",
             mediaUrls = mediaUrls.orEmpty(),
@@ -64,6 +65,7 @@ object PostEntityMapper {
         Post(
             id = post.id,
             userId = post.userId,
+            username = post.username,
             contentFormat = ContentFormat.fromString(post.contentFormat),
             textContent = post.textContent,
             mediaUrls = post.mediaUrls,

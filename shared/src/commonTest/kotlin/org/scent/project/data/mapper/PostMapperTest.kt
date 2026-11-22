@@ -91,6 +91,20 @@ class PostMapperTest {
         assertEquals(emptyList(), result.getOrNull()!!.fragranceIds)
     }
 
+    @Test
+    fun `toDomain maps username from the DTO`() {
+        val dto = PostDto(id = "post_1", userId = "user_1", username = "amara", createdAt = 1L)
+        assertEquals("amara", dto.toDomain().getOrNull()?.username)
+    }
+
+    @Test
+    fun `toDomain keeps the post with an empty username when username is missing`() {
+        val dto = PostDto(id = "post_1", userId = "user_1", username = null, createdAt = 1L)
+        val result = dto.toDomain()
+        assertTrue(result.isRight)
+        assertEquals("", result.getOrNull()?.username)
+    }
+
     // -------------------------------------------------------------------------
     // LikeResponseDto.toLikeResult
     // -------------------------------------------------------------------------

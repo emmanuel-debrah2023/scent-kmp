@@ -26,6 +26,7 @@ data class PostListing(
 data class Post(
     val id: String,
     val userId: String,
+    val username: String = "",
     val contentFormat: ContentFormat,
     val textContent: String = "",
     val mediaUrls: List<String> = emptyList(),

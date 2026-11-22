@@ -8,6 +8,7 @@ data class PostDto(
     val id: String? = null, // TODO: server-guaranteed invariant — make non-nullable
     @SerialName("user_id")
     val userId: String? = null, // TODO: server-guaranteed invariant — make non-nullable
+    val username: String? = null,
     @SerialName("content_format")
     val contentFormat: String? = null,
     @SerialName("text_content")

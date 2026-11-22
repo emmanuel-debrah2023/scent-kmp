@@ -29,7 +29,7 @@ val viewModelModule =
         viewModel { AskViewModel(get(), get(), timestamp = { Clock.System.now().toString() }) }
         viewModel { AuthViewModel(get(), get(), get()) }
         viewModel { SessionViewModel(get(), get()) }
-        viewModel { FeedViewModel(get(), get()) }
+        viewModel { FeedViewModel(get(), get(), nowMillis = { Clock.System.now().toEpochMilliseconds() }) }
         viewModel { (authUser: AuthUser) ->
             ProfileViewModel(authUser, get(), get(), get(), get())
         }
