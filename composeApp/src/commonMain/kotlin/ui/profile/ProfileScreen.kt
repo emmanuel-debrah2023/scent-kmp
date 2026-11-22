@@ -794,6 +794,8 @@ private fun ProfileTabRow(
                     .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
+            // TODO(fix/profile-tab-semantics): these tabs are plain clickables with no Role.Tab, selected
+            // state or selectable group, and are under 48dp tall; use accessibleSelectable as BlendedHeader does.
             tabs.forEach { tab ->
                 val isSelected = tab == selected
                 Column(

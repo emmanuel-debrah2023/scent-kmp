@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -25,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,12 +33,12 @@ import org.scent.project.domain.error.AppError
 import org.scent.project.domain.validation.Validator
 import ui.accessibility.accessibleClickable
 import ui.accessibility.accessibleHeading
-import ui.accessibility.accessibleLabel
 import ui.accessibility.accessibleLiveRegion
 import ui.accessibility.accessiblePane
 import ui.accessibility.accessibleState
 import ui.accessibility.collectionContainer
 import ui.accessibility.collectionItem
+import ui.accessibility.decorative
 import ui.base.UiState
 import ui.components.CONDITION_OPTIONS
 import ui.components.ScentTextField
@@ -111,16 +111,12 @@ fun MarketplaceFilterSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        // The default handle adds an unlabelled 32x48dp clickable on Android; this one is labelled and 48dp square.
-        dragHandle = {
-            BottomSheetDefaults.DragHandle(
-                modifier =
-                    Modifier
-                        .sizeIn(minWidth = spacing.xxl, minHeight = spacing.xxl)
-                        .accessibleLabel("Filters sheet handle"),
-            )
-        },
+        // Material wraps any dragHandle in a tooltip anchor whose long-press node Android exposes without a label,
+        // and nothing passed here can label it. So the sheet gets no Material handle, only the visual one below;
+        // it still drags anywhere, and back or a scrim tap dismisses it.
+        dragHandle = null,
     ) {
+        BottomSheetDefaults.DragHandle(modifier = Modifier.align(Alignment.CenterHorizontally).decorative())
         Column(
             modifier =
                 Modifier
