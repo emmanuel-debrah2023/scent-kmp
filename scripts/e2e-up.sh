@@ -9,7 +9,7 @@
 # Overrides: E2E_API_URL, E2E_PG_CONTAINER, E2E_EMAIL, E2E_PASSWORD, E2E_SEED_COUNT, E2E_EMULATOR_HOST
 
 set -uo pipefail
-cd "$(git rev-parse --show-toplevel)"
+cd "$(git rev-parse --show-toplevel)" || exit 1
 
 API_URL="${E2E_API_URL:-http://localhost:8080}"
 EMAIL="${E2E_EMAIL:-e2e@scent.dev}"
@@ -112,6 +112,7 @@ check_seeded "$SEED_COUNT feed posts and a video post" \
 echo
 echo "E2E stack ready at $API_URL. Sign in as $EMAIL."
 echo "Each run replaces the seed data: $SEED_COUNT feed posts plus one video post, and $SEED_COUNT listings."
-# TODO(fix/e2e-up-reused-server-exit): returns 1 when a reused server left no PID file, so
-#  pre-merge-check.sh (pipefail) reports the backend as down even though it is ready.
-[ -f "$PID_FILE" ] && echo "Stop the server with: ./scripts/e2e-up.sh --down"
+# An if, not `[ ] && echo`: as the last command, a false test would make a reused server exit 1.
+if [ -f "$PID_FILE" ]; then
+    echo "Stop the server with: ./scripts/e2e-up.sh --down"
+fi
