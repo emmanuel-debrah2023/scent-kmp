@@ -32,7 +32,6 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import plugins.configureSecurity
 import routing.userRoutes
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -77,7 +76,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -109,7 +108,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -138,7 +137,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -157,7 +156,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -171,7 +170,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -185,7 +184,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -212,7 +211,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -244,7 +243,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -264,7 +263,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -285,7 +284,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -308,7 +307,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 
@@ -330,7 +329,7 @@ class UserRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { userRoutes() }
             }
 

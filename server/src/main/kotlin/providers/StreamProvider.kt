@@ -24,7 +24,7 @@ interface StreamProvider {
      * [signatureHeader] is the full value of the provider's signature header
      * (e.g. `time=1234567890,sig1=abc...`).
      * Returns true only if the HMAC matches and the timestamp is within the
-     * replay-window; always returns true when no secret is configured.
+     * replay-window; always returns false when no secret is configured.
      */
     fun verifyWebhookSignature(
         body: String,

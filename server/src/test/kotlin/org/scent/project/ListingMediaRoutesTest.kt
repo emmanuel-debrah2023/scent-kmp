@@ -23,7 +23,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import plugins.configureSecurity
 import routing.listingRoutes
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -44,7 +43,7 @@ class ListingMediaRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing { listingRoutes() }
             }
             block()

@@ -2544,42 +2544,81 @@ the clients. Sources: the Koin Ktor reference
 
 ```kotlin
 fun Application.module() {
+    val serverConfig = loadServerConfig(environment.config).fold(
+        ifLeft = { error -> throw IllegalStateException("Refusing to start: ${error.message}") },
+        ifRight = { it },
+    )
+    initDatabase(serverConfig.database)
+    configureApp(serverConfig)
+}
+
+fun Application.configureApp(serverConfig: ServerConfig) {
     install(KoinIsolated) {
-        modules(preferenceModule, providerModule(fakeStream = fakeMode, fakeImage = fakeImageMode))
+        modules(preferenceModule, providerModule(stream = serverConfig.stream, image = serverConfig.image))
     }
     val streamProvider: StreamProvider = get() // org.koin.ktor.ext.get, resolved at boot
-    routing { mediaRoutes(streamProvider, ...) }
+    routing {
+        mediaRoutes(streamProvider, ...)
+        if (serverConfig.devRoutes) devRoutes()
+    }
 }
 ```
 
-- **`Application.module()` is the composition root.** It is the only place that
+- **Configuration is loaded and validated once, at boot.** `loadServerConfig` reads
+  every setting into one `ServerConfig` and returns `Result<ServerConfig>`, so a
+  missing secret stops the server at startup rather than failing open on a request.
+  `ServerConfig` has no secret defaults: no `?: "secret"`, no `?: ""` (non-secret
+  values such as the JWT issuer or the storage bucket may default). `SCENT_ENV` unset means
+  prod, so a missing flag fails closed. Dev-only settings (`STREAM_PROVIDER=fake`,
+  `IMAGE_PROVIDER=fake`, `DEV_ROUTES=true`) are rejected unless `SCENT_ENV=dev`.
+  Every missing key is named in one error, and secret values are redacted in
+  `toString`. `module()` is the boot edge that turns a `Left` into a startup failure.
+- **`configureApp(serverConfig)` is the composition root.** It is the only place that
   resolves with `get()`. Route functions and classes take their dependencies as
   parameters, exactly like the constructor-injection rule above. Resolving inside
   a route would be service location, and would break route tests that pass fakes
-  directly.
+  directly. Nothing below the composition root reads the environment
+  (`System.getProperty`, `System.getenv`, `environment.config`); it receives typed
+  config. A read that still bypasses `ServerConfig` is tolerated only with a tracked
+  `TODO` at the call site. Today those are the OAuth audiences in `AuthRoutes.kt`
+  (`fix/oauth-audience-config`) and the agent settings in `configureApp`
+  (`chore/agent-settings-in-server-config`).
 - **`KoinIsolated`, not `install(Koin)`.** Koin's docs make `install(Koin)` the
   default; it starts Koin in the global context, and `KoinIsolated` is documented
-  for keeping Koin out of it. Scent chooses isolated on purpose: `testApplication`
-  boots `module()` many times in one JVM, and a global context is shared state that
+  for keeping Koin out of it. Scent chooses isolated on purpose: tests boot
+  `configureApp` many times in one JVM, and a global context is shared state that
   outlives each application.
 - **One module per package, bound to the interface.**
   `single<ListingCandidateSource> { NotesOverlapCandidateSource() }` in
-  `preferenceModule`; a configuration-dependent choice (fake vs real) is made
-  inside the module from the arguments the composition root passes in.
-- **Resolve eagerly.** Use `get()`, not `by inject()`, in `module()`, so a missing
+  `preferenceModule`. A configuration-dependent choice (fake vs real) is made
+  inside the module from the typed config the composition root passes in:
+  `providerModule(stream: StreamConfig, image: ImageConfig)` switches on the sealed
+  types, so a real provider can only be built from validated keys.
+- **Resolve eagerly.** Use `get()`, not `by inject()`, in `configureApp`, so a missing
   binding fails at boot, not on the first request.
 - **Dev-only routes are separate functions mounted from the composition root.**
-  `fakeStreamRoutes()` and `fakeImageRoutes(store)` live beside the production
-  `mediaRoutes(...)`, which takes no dev flags. An optional dependency such as
-  `FakeImageStore` is bound only under its config and read with
-  `getKoin().getOrNull()`; its presence is what mounts the routes. This is the one
-  case where `get()` is not used, because the binding is optional by design. A guard
-  test must pin both the absent and the mounted case (`DevRoutesGuardTest`).
-- **Test wiring by booting the real module.** Use `testApplication { application { module() } }`
-  (Ktor's documented way to load modules) and resolve the bindings. Assert the
-  implementation type per configuration, and assert `GlobalContext.getOrNull()` is
-  null afterwards. See `KoinWiringTest`. `startKoin`/`stopKoin` with `KoinTest`
-  (section 4) is the client pattern, not the server one.
+  There are two kinds, gated differently:
+  - The unauthenticated seed and reset routes under `/api/v1/dev/*` (`devRoutes()`)
+    are mounted only when `serverConfig.devRoutes` is true, which requires
+    `SCENT_ENV=dev` and `DEV_ROUTES=true`. A fake provider alone never mounts them.
+  - Fake provider routes, `fakeStreamRoutes()` and `fakeImageRoutes(store)`, live
+    beside the production `mediaRoutes(...)`, which takes no dev flags. They follow
+    the provider config. An optional dependency such as `FakeImageStore` is bound
+    only under `ImageConfig.Fake` and read with `getKoin().getOrNull()`; its presence
+    is what mounts the routes. This is the one case where `get()` is not used,
+    because the binding is optional by design.
+
+  A guard test must pin both the absent and the mounted case for each
+  (`DevRoutesGuardTest`).
+- **Test wiring by booting the real composition root.** Use
+  `testApplication { application { configureApp(testServerConfig(...)) } }` and
+  resolve the bindings. `testServerConfig` (`ServerTestFixtures.kt`) builds a typed
+  config, so a test picks providers by type rather than by setting system
+  properties, and needs no database unless a mounted route queries one. Assert the implementation type per
+  configuration, and assert `GlobalContext.getOrNull()` is null afterwards. See
+  `KoinWiringTest`. Config validation itself is tested on `loadServerConfig`
+  (`ServerConfigTest`). `startKoin`/`stopKoin` with `KoinTest` (section 4) is the
+  client pattern, not the server one.
 - **Future:** Ktor 3.4 adds a built-in DI plugin (`ktor-server-di`), and Koin offers
   a bridge to it. The server is on Ktor 3.3.x, so Koin stays until an ADR says
   otherwise.

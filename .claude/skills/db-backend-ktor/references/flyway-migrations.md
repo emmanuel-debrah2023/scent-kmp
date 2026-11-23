@@ -73,9 +73,9 @@ Flyway
 
 `migrate()` throws `FlywayException` on failure and nothing catches it, so a
 bad migration stops the boot. Keep it that way: a server running against a
-half-migrated schema produces confusing downstream errors. The whole function
-returns early, with no migration, when `DATABASE_URL` is blank or
-`ci-placeholder`.
+half-migrated schema produces confusing downstream errors. There is no skip
+path: `ServerConfig` refuses to start without `DATABASE_URL`, so
+`initDatabase` always connects and migrates.
 
 ## Adopting Flyway on an existing database
 

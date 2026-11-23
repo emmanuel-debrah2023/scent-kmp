@@ -66,7 +66,7 @@ Copy `.env.example` to `.env` and fill in your database and Cloudflare credentia
 
 To enable the AI agent foundation, set `OPENROUTER_API_KEY` (hosted free models) or `OLLAMA_BASE_URL` (local Ollama); see [`docs/ai-agents.md`](docs/ai-agents.md). With neither set the server runs as normal and `GET /api/v1/agent/health` reports `not_configured`.
 
-To seed the local feed with sample posts (requires `STREAM_PROVIDER=fake`):
+To seed the local feed with sample posts (requires dev routes: `SCENT_ENV=dev` and `DEV_ROUTES=true`):
 
 ```bash
 curl -X POST "http://localhost:8080/api/v1/dev/seed-feed?count=10"
@@ -133,7 +133,7 @@ no Gradle dependency, just a CLI you install once.
   before it can join the suite.
 - **Signed-in flows** — need the backend running with dev routes mounted and
   seeded. `./scripts/e2e-up.sh` does all of it: starts your local Postgres
-  container if it's down, starts the server with `-DSTREAM_PROVIDER=fake`
+  container if it's down, starts the server with `-DSCENT_ENV=dev -DDEV_ROUTES=true -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake`
   (Flyway migrates on startup), and seeds the E2E account, feed posts and
   listings. It reuses anything already running, but restarts a server it
   started from different server code; `./scripts/e2e-up.sh --down` stops that

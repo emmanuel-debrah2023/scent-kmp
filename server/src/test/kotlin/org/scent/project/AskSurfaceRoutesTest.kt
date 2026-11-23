@@ -42,7 +42,6 @@ import org.scent.project.domain.model.ListingKind
 import org.scent.project.domain.util.Result
 import org.scent.project.domain.util.asLeft
 import org.scent.project.domain.util.asRight
-import plugins.configureSecurity
 import preferences.ListingCandidate
 import preferences.ListingCandidateSource
 import preferences.NoteVocabulary
@@ -170,7 +169,7 @@ class AskSurfaceRoutesTest {
     ) = testApplication {
         application {
             install(ContentNegotiation) { json() }
-            configureSecurity()
+            configureTestSecurity()
             routing { askSurfaceRoutes(agent, source) }
         }
         block()

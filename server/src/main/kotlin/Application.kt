@@ -4,6 +4,9 @@ import agent.AgentLlm
 import agent.agentModule
 import askback.AskBackAgent
 import askback.askBackModule
+import config.ServerConfig
+import config.StreamConfig
+import config.loadServerConfig
 import data.initDatabase
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.serialization.kotlinx.json.json
@@ -17,6 +20,7 @@ import io.ktor.server.routing.routing
 import org.koin.ktor.ext.get
 import org.koin.ktor.ext.getKoin
 import org.koin.ktor.plugin.KoinIsolated
+import plugins.JwtTokenService
 import plugins.configureSecurity
 import preferences.ListingCandidateSource
 import preferences.preferenceModule
@@ -69,21 +73,36 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    initDatabase(environment.config)
+    val serverConfig =
+        loadServerConfig(environment.config).fold(
+            ifLeft = { error ->
+                val message = "Refusing to start: ${error.message}"
+                environment.log.error(message)
+                throw IllegalStateException(message)
+            },
+            ifRight = { it },
+        )
+    initDatabase(serverConfig.database)
+    configureApp(serverConfig)
+}
+
+fun Application.configureApp(serverConfig: ServerConfig) {
     install(ContentNegotiation) {
         json()
     }
-    configureSecurity()
+    val tokens = JwtTokenService(serverConfig.jwt)
+    configureSecurity(tokens)
 
-    val fakeMode = System.getProperty("STREAM_PROVIDER") == "fake"
-    val fakeImageMode = System.getProperty("IMAGE_PROVIDER") == "fake"
+    val fakeMode = serverConfig.stream is StreamConfig.Fake
 
     // KoinIsolated keeps the container on this Application, not in Koin's global context, so
     // booting module() repeatedly in one JVM (tests) never shares or leaks bindings.
     install(KoinIsolated) {
         modules(
             preferenceModule,
-            providerModule(fakeStream = fakeMode, fakeImage = fakeImageMode),
+            providerModule(stream = serverConfig.stream, image = serverConfig.image),
+            // TODO(chore/agent-settings-in-server-config): the agent settings below bypass ServerConfig, so
+            //  OPENROUTER_API_KEY and the ASK_BACK_* limits get no startup validation. Fold them in.
             agentModule(
                 openRouterApiKey = System.getProperty("OPENROUTER_API_KEY"),
                 ollamaBaseUrl = System.getProperty("OLLAMA_BASE_URL"),
@@ -111,7 +130,7 @@ fun Application.module() {
         }
         agentRoutes(agentLlm)
         askSurfaceRoutes(askBackAgent, candidateSource)
-        authRoutes()
+        authRoutes(tokens)
         collectionStatusRoutes()
         fragranceRoutes()
         listingRoutes()
@@ -120,6 +139,6 @@ fun Application.module() {
         fakeImageStore?.let { fakeImageRoutes(it) }
         postRoutes()
         userRoutes()
-        if (fakeMode || fakeImageMode) devRoutes()
+        if (serverConfig.devRoutes) devRoutes()
     }
 }

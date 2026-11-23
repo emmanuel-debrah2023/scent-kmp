@@ -38,7 +38,6 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mindrot.jbcrypt.BCrypt
 import org.scent.project.data.remote.dto.AuthResponse
 import org.scent.project.data.remote.dto.MeResponse
-import plugins.configureSecurity
 import routing.ResetListingsResponse
 import routing.SEED_PRICED_BOTTLE_ML
 import routing.SeedResponse
@@ -554,10 +553,10 @@ class DevRoutesTest {
         testApplication {
             application {
                 install(ContentNegotiation) { json() }
-                configureSecurity()
+                configureTestSecurity()
                 routing {
                     devRoutes()
-                    authRoutes()
+                    authRoutes(testJwtTokens)
                 }
             }
             seedUser(password = "First-Passw0rd")
