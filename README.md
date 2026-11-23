@@ -135,8 +135,9 @@ no Gradle dependency, just a CLI you install once.
   seeded. `./scripts/e2e-up.sh` does all of it: starts your local Postgres
   container if it's down, starts the server with `-DSTREAM_PROVIDER=fake`
   (Flyway migrates on startup), and seeds the E2E account, feed posts and
-  listings. It reuses anything already running; `./scripts/e2e-up.sh --down`
-  stops a server it started. See [`.maestro/README.md`](.maestro/README.md)
+  listings. It reuses anything already running, but restarts a server it
+  started from different server code; `./scripts/e2e-up.sh --down` stops that
+  server from any worktree. See [`.maestro/README.md`](.maestro/README.md)
   for how the session is injected.
 
 ### Maestro MCP (agent-driven E2E)

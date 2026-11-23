@@ -1,12 +1,15 @@
 #!/bin/bash
 # Brings up the local E2E stack: Postgres, the Ktor server with dev routes mounted
 # (Flyway migrations run as it starts), and seeded data (E2E account, feed, listings).
-# Anything already running is reused; only what's missing is started.
+# Anything already running is reused; only what's missing is started. A server this script
+# started from different server code (another branch or worktree) is restarted instead.
 #
-# Usage: ./scripts/e2e-up.sh          start or reuse the stack, then seed it
-#        ./scripts/e2e-up.sh --down   stop a server this script started
+# Usage: ./scripts/e2e-up.sh                start or reuse the stack, then seed it
+#        ./scripts/e2e-up.sh --down         stop the server this script started, from any checkout
+#        ./scripts/e2e-up.sh --fingerprint  print this checkout's server-code fingerprint
 #
-# Overrides: E2E_API_URL, E2E_PG_CONTAINER, E2E_EMAIL, E2E_PASSWORD, E2E_SEED_COUNT, E2E_EMULATOR_HOST
+# Overrides: E2E_API_URL, E2E_PG_CONTAINER, E2E_EMAIL, E2E_PASSWORD, E2E_SEED_COUNT, E2E_EMULATOR_HOST,
+#            E2E_STATE_DIR (default ~/.cache/scent), E2E_REUSE=always (keep a stale server)
 
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
@@ -16,22 +19,74 @@ EMAIL="${E2E_EMAIL:-e2e@scent.dev}"
 PASSWORD="${E2E_PASSWORD:-ScentE2e-Passw0rd}"
 SEED_COUNT="${E2E_SEED_COUNT:-10}"
 EMULATOR_HOST="${E2E_EMULATOR_HOST:-10.0.2.2:8080}"
-PID_FILE="build/e2e-server.pid"
 LOG_FILE="build/e2e-server.log"
 SERVER_TIMEOUT_S=180
+STOP_TIMEOUT_S=30
 PG_TIMEOUT_S=30
 
 fail() { echo "e2e-up: $*" >&2; exit 1; }
 
-if [ "${1:-}" = "--down" ]; then
-    if [ -f "$PID_FILE" ] && kill "$(cat "$PID_FILE")" 2>/dev/null; then
-        echo "e2e-up: stopped the server (pid $(cat "$PID_FILE"))"
-    else
-        echo "e2e-up: no server started by this script is running"
+# ---- Server state ------------------------------------------------------------
+# One server per port serves every worktree, so its state is machine-wide, not in build/.
+API_PORT=$(echo "$API_URL" | sed -n 's|.*://[^/]*:\([0-9]*\).*|\1|p'); API_PORT="${API_PORT:-80}"
+STATE_DIR="${E2E_STATE_DIR:-$HOME/.cache/scent}"
+STATE_FILE="$STATE_DIR/e2e-server-$API_PORT.env"
+# What the server is built from: its module, the modules it depends on, and the root build files.
+SERVER_INPUTS=(server contracts shared gradle/libs.versions.toml settings.gradle.kts build.gradle.kts gradle.properties)
+
+state_get() { [ -f "$STATE_FILE" ] && grep -E "^$1=" "$STATE_FILE" | head -1 | cut -d= -f2-; }
+
+listener_pid() { lsof -tiTCP:"$API_PORT" -sTCP:LISTEN 2>/dev/null | head -1; }
+
+# Committed trees plus uncommitted and untracked changes, so a local edit counts as different code.
+fingerprint() {
+    {
+        for input in "${SERVER_INPUTS[@]}"; do git rev-parse "HEAD:$input" 2>/dev/null || echo "none:$input"; done
+        git diff HEAD -- "${SERVER_INPUTS[@]}" 2>/dev/null
+        git ls-files --others --exclude-standard -z -- "${SERVER_INPUTS[@]}" | xargs -0 shasum 2>/dev/null
+    } | shasum | cut -c1-12
+}
+
+# The recorded server counts only while that exact process still listens on the port, so a
+# reused PID is never killed.
+recorded_server_running() {
+    local pid
+    pid=$(state_get SERVER_PID)
+    [ -n "$pid" ] && [ "$(listener_pid)" = "$pid" ]
+}
+
+stop_recorded_server() {
+    local pid checkout
+    pid=$(state_get SERVER_PID)
+    checkout=$(state_get CHECKOUT)
+    kill "$pid" 2>/dev/null
+    for _ in $(seq 1 "$STOP_TIMEOUT_S"); do [ -z "$(listener_pid)" ] && break; sleep 1; done
+    # Escalate only while the recorded server still holds the port; if it exited, the port is
+    # either free or belongs to someone else, and neither is ours to kill.
+    if [ "$(listener_pid)" = "$pid" ]; then
+        kill -9 "$pid" 2>/dev/null
+        sleep 1
     fi
-    rm -f "$PID_FILE"
-    exit 0
-fi
+    [ -z "$(listener_pid)" ] || fail "the server (pid $pid) didn't stop within ${STOP_TIMEOUT_S}s"
+    rm -f "$STATE_FILE"
+    echo "e2e-up: stopped the server (pid $pid, started from $checkout)"
+}
+
+case "${1:-}" in
+    --fingerprint)
+        fingerprint
+        exit 0
+        ;;
+    --down)
+        if recorded_server_running; then
+            stop_recorded_server
+        else
+            rm -f "$STATE_FILE"
+            echo "e2e-up: no server started by this script is running on port $API_PORT"
+        fi
+        exit 0
+        ;;
+esac
 
 # ---- .env ------------------------------------------------------------------
 [ -f .env ] || fail "no .env at the repo root. In a worktree, symlink the main checkout's: ln -s <main-checkout>/.env .env"
@@ -58,20 +113,39 @@ fi
 # ---- Server (migrations run on start) ---------------------------------------
 server_up() { curl -s -o /dev/null --max-time 2 "$API_URL/"; }
 
-if server_up; then
-    echo "e2e-up: server already up at $API_URL (reusing it)"
-else
-    mkdir -p build
+start_server() {
+    local gradle_pid
+    mkdir -p build "$STATE_DIR"
     echo "e2e-up: starting the server with dev routes mounted; log in $LOG_FILE"
     nohup ./gradlew :server:run -DSTREAM_PROVIDER=fake -DIMAGE_PROVIDER=fake -DASK_BACK_AGENT=fake >"$LOG_FILE" 2>&1 &
-    echo $! >"$PID_FILE"
+    gradle_pid=$!
     for _ in $(seq 1 "$SERVER_TIMEOUT_S"); do
         server_up && break
-        kill -0 "$(cat "$PID_FILE")" 2>/dev/null || { tail -20 "$LOG_FILE" >&2; rm -f "$PID_FILE"; fail "the server exited during startup"; }
+        kill -0 "$gradle_pid" 2>/dev/null || { tail -20 "$LOG_FILE" >&2; fail "the server exited during startup"; }
         sleep 1
     done
     server_up || { tail -20 "$LOG_FILE" >&2; fail "the server didn't answer within ${SERVER_TIMEOUT_S}s"; }
+    # Record the process listening on the port (the server JVM), not the gradlew client.
+    printf 'SERVER_PID=%s\nCHECKOUT=%s\nFINGERPRINT=%s\n' "$(listener_pid)" "$PWD" "$FINGERPRINT" >"$STATE_FILE"
     echo "e2e-up: server up; Flyway migrations applied on startup"
+}
+
+FINGERPRINT=$(fingerprint)
+if ! server_up; then
+    rm -f "$STATE_FILE"
+    start_server
+elif ! recorded_server_running; then
+    rm -f "$STATE_FILE"
+    echo "e2e-up: server already up at $API_URL but not started by e2e-up.sh, so its code is unknown (reusing it)."
+    echo "e2e-up: if it's out of date, stop it and rerun this script so it can track the server."
+elif [ "$(state_get FINGERPRINT)" = "$FINGERPRINT" ]; then
+    echo "e2e-up: server already up at $API_URL with this checkout's server code (reusing it)"
+elif [ "${E2E_REUSE:-}" = "always" ]; then
+    echo "e2e-up: warning: the server at $API_URL runs different server code (started from $(state_get CHECKOUT)); reusing it because E2E_REUSE=always"
+else
+    echo "e2e-up: the server at $API_URL runs different server code (started from $(state_get CHECKOUT)); restarting it"
+    stop_recorded_server
+    start_server
 fi
 
 # ---- Seed ------------------------------------------------------------------
@@ -113,6 +187,6 @@ echo
 echo "E2E stack ready at $API_URL. Sign in as $EMAIL."
 echo "Each run replaces the seed data: $SEED_COUNT feed posts plus one video post, and $SEED_COUNT listings."
 # An if, not `[ ] && echo`: as the last command, a false test would make a reused server exit 1.
-if [ -f "$PID_FILE" ]; then
+if recorded_server_running; then
     echo "Stop the server with: ./scripts/e2e-up.sh --down"
 fi
