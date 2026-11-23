@@ -4,7 +4,6 @@ import agent.AgentLlm
 import agent.agentModule
 import askback.AskBackAgent
 import askback.askBackModule
-import config.ImageConfig
 import config.ServerConfig
 import config.StreamConfig
 import config.loadServerConfig
@@ -102,6 +101,8 @@ fun Application.configureApp(serverConfig: ServerConfig) {
         modules(
             preferenceModule,
             providerModule(stream = serverConfig.stream, image = serverConfig.image),
+            // TODO(chore/agent-settings-in-server-config): the agent settings below bypass ServerConfig, so
+            //  OPENROUTER_API_KEY and the ASK_BACK_* limits get no startup validation. Fold them in.
             agentModule(
                 openRouterApiKey = System.getProperty("OPENROUTER_API_KEY"),
                 ollamaBaseUrl = System.getProperty("OLLAMA_BASE_URL"),
